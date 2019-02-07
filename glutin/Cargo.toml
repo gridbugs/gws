@@ -5,5 +5,5 @@ authors = ["Stephen Sherratt <sfsherratt@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-prototty_glutin = "0.23"
+prototty_glutin = { version = "0.23", features = ["storage"] }
 cherenkov_prototty = { path = "../prototty" }
