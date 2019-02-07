@@ -6,6 +6,7 @@ matrix:
     rust: stable
     sudo: required
     before_script:
+      - nvm install 10
       - npm install -g npx
       - rustup target add wasm32-unknown-unknown
       - cargo install -f wasm-bindgen-cli
