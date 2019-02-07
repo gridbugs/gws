@@ -3,11 +3,11 @@ matrix:
   include:
   - os: linux
     rust: stable
+    before_script:
+      - npm install -g npx
+      - rustup target add wasm32-unknown-unknown
+      - cargo install -f wasm-bindgen-cli
   - os: osx
     rust: stable
-before_script:
-  - npm install -g npx
-  - rustup target add wasm32-unknown-unknown
-  - cargo install -f wasm-bindgen-cli
 script:
 - scripts/build-cherenkov.sh
