@@ -30,18 +30,15 @@ if [ -z ${TRAVIS_OS_NAME+x} ]; then
 fi
 
 case $TRAVIS_OS_NAME in
-    linux)
-        PIP=pip
-        PYTHON=python
-        ;;
     osx)
         if ! which python3 > /dev/null; then
             brew install python3 || brew upgrade python
         fi
-        PIP=pip3
-        PYTHON=python3
         ;;
 esac
+
+PIP=pip3
+PYTHON=python3
 
 $PIP install --quiet --user sh toml
 
