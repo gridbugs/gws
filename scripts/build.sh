@@ -55,9 +55,9 @@ wasm_build() {
         BINARYEN_DIR="binaryen-1.38.26"
         curl -sSL $BINARYEN_URL -o - | tar xzv
         WASM2JS=$BINARYEN_DIR/wasm2js
-        $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
+        $PYTHON $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
             --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME --release
-        $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
+        $PYTHON $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
             --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME-js --wasm2js=$WASM2JS --release
         rm -rvf $BINARYEN_DIR
 }
@@ -65,11 +65,11 @@ wasm_build() {
 case $TRAVIS_OS_NAME in
     linux)
         wasm_build
-        $BUILD_NATIVE --root-dir=$ROOT_DIR --unix-path=$UNIX_CRATE/Cargo.toml --glutin-path=$GLUTIN_CRATE/Cargo.toml \
+        $PYTHON $BUILD_NATIVE --root-dir=$ROOT_DIR --unix-path=$UNIX_CRATE/Cargo.toml --glutin-path=$GLUTIN_CRATE/Cargo.toml \
             --target-dir=$TARGET --output-dir=$UPLOADS --name=$APP_NAME --os=linux --release
         ;;
     osx)
-        $BUILD_NATIVE --root-dir=$ROOT_DIR --unix-path=$UNIX_CRATE/Cargo.toml --glutin-path=$GLUTIN_CRATE/Cargo.toml \
+        $PYTHON $BUILD_NATIVE --root-dir=$ROOT_DIR --unix-path=$UNIX_CRATE/Cargo.toml --glutin-path=$GLUTIN_CRATE/Cargo.toml \
             --target-dir=$TARGET --output-dir=$UPLOADS --name=$APP_NAME --os=macos --release --macos-app-name $MACOS_APP_NAME
         ;;
 esac
