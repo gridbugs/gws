@@ -39,7 +39,7 @@ build_script:
     powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('tmp', '%FULL_NAME%.zip'); }"
 
 artifacts:
-- path: '*'
+- path: '*.zip'
   name: files.gridbugs.org
 
 deploy:
