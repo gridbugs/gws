@@ -44,7 +44,6 @@ def build_web_app(webapp_dir, release, output_dir):
         webpack_mode = "production"
     else:
         webpack_mode = "development"
-    sh.npm.install(_cwd=webapp_dir, **SH_KWARGS)
     sh.npx.webpack(
         _cwd=webapp_dir,
         _env={"WEBPACK_MODE": webpack_mode, "OUTPUT_DIR": output_dir},

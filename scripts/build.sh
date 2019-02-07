@@ -48,6 +48,9 @@ mkdir -vp $UPLOADS
 mkdir -vp $WEB_UPLOADS
 
 wasm_build() {
+        pushd $WASM_CRATE
+        npm install
+        popd
         BINARYEN_URL="https://github.com/WebAssembly/binaryen/releases/download/1.38.26/binaryen-1.38.26-x86-linux.tar.gz"
         BINARYEN_DIR="binaryen-1.38.26"
         curl -sSL $BINARYEN_URL -o - | tar xzv
