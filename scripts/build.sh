@@ -45,10 +45,10 @@ esac
 
 $PIP install --quiet --user sh toml
 
-rm -rf $UPLOADS
-rm -rf $WEB_UPLOADS
-mkdir -p $UPLOADS
-mkdir -p $WEB_UPLOADS
+rm -rvf $UPLOADS
+rm -rvf $WEB_UPLOADS
+mkdir -vp $UPLOADS
+mkdir -vp $WEB_UPLOADS
 
 wasm_build() {
         BINARYEN_URL="https://github.com/WebAssembly/binaryen/releases/download/1.38.26/binaryen-1.38.26-x86-linux.tar.gz"
@@ -59,6 +59,7 @@ wasm_build() {
             --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME --release
         $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
             --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME-js --wasm2js=$WASM2JS --release
+        rm -rvf $BINARYEN_DIR
 }
 
 case $TRAVIS_OS_NAME in
