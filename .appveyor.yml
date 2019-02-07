@@ -11,7 +11,7 @@ environment:
 install:
 - cmd: >-
 
-    curl -sSf -o rust-install.exe   https://static.rust-lang.org/dist/rust-nightly-%TARGET%.exe
+    curl -sSf -o rust-install.exe   https://static.rust-lang.org/dist/rust-stable-%TARGET%.exe
 
     rust-install.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
 
