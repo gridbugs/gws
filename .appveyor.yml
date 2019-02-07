@@ -1,0 +1,47 @@
+version: '{build}'
+clone_depth: 1
+os: Visual Studio 2017
+environment:
+  matrix:
+  - TARGET: x86_64-pc-windows-msvc
+    IN_NAME: cherenkov_glutin
+    OUT_NAME: cherenkov
+    BIN_PATH: target\release
+    BIN_NAME: cherenkov-windows-x86_64
+install:
+- cmd: >-
+
+    curl -sSf -o rust-install.exe   https://static.rust-lang.org/dist/rust-nightly-%TARGET%.exe
+
+    rust-install.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+
+    set PATH=%PATH%;C:\Program Files (x86)\Rust\bin
+
+    rustc -V &
+    cargo -V
+
+build_script:
+- cmd: >-
+
+    cargo rustc --manifest-path=glutin/Cargo.toml --release -- -Clink-args="/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup" -Ctarget-feature=+crt-static -Zunstable-options
+
+    set FULL_NAME=%BIN_NAME%-%APPVEYOR_REPO_BRANCH%
+
+    mkdir tmp &
+    mkdir tmp\%FULL_NAME%
+
+    copy %BIN_PATH%\%IN_NAME%.exe tmp\%FULL_NAME%\%OUT_NAME%.exe
+
+    copy README.md tmp\%FULL_NAME%\README.txt
+
+    copy LICENSE tmp\%FULL_NAME%\LICENSE.txt
+
+    powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('tmp', '%FULL_NAME%.zip'); }"
+
+artifacts:
+- path: '*'
+  name: files.gridbugs.org
+
+deploy:
+- provider: Environment
+  name: files.gridbugs.org
