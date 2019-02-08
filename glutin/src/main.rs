@@ -34,7 +34,7 @@ fn main() {
         let period = frame_start - last_frame;
         last_frame = frame_start;
         context.buffer_input(&mut input_buffer);
-        if let Some(tick) = app.tick(input_buffer.drain(..), period) {
+        if let Some(tick) = app.tick(input_buffer.drain(..), period, &app_view) {
             match tick {
                 Tick::Quit => break,
                 Tick::GameInitialisedWithSeed(seed) => {

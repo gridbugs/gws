@@ -44,10 +44,11 @@ impl WebApp {
     }
 
     pub fn tick(&mut self, input_buffer: &InputBuffer, period_ms: f64) {
-        if let Some(tick) = self
-            .app
-            .tick(input_buffer.iter(), Duration::from_millis(period_ms as u64))
-        {
+        if let Some(tick) = self.app.tick(
+            input_buffer.iter(),
+            Duration::from_millis(period_ms as u64),
+            &self.app_view,
+        ) {
             match tick {
                 Tick::Quit => console_log!("Not supported"),
                 Tick::GameInitialisedWithSeed(seed) => {

@@ -20,7 +20,7 @@ fn main() {
         let frame_start = Instant::now();
         let period = frame_start - last_frame;
         last_frame = frame_start;
-        if let Some(tick) = app.tick(context.drain_input().unwrap(), period) {
+        if let Some(tick) = app.tick(context.drain_input().unwrap(), period, &app_view) {
             match tick {
                 Tick::Quit => break,
                 Tick::GameInitialisedWithSeed(_) | Tick::GameSaved => (),

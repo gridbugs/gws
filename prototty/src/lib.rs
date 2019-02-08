@@ -5,14 +5,20 @@ extern crate rand_isaac;
 #[macro_use]
 extern crate serde;
 
+pub mod frontend;
+pub mod menus;
+
+use menus::*;
 use prototty::*;
 use rand::{FromEntropy, Rng, SeedableRng};
 use rand_isaac::IsaacRng;
 use std::time::Duration;
 
-pub mod frontend;
+const TITLE: &'static str = "CHERENKOV";
 
-pub struct AppView;
+pub struct AppView {
+    menu_and_title_view: MenuAndTitleView,
+}
 
 pub enum Tick {
     Quit,
@@ -84,14 +90,25 @@ pub struct App<F: Frontend, S: Storage> {
     storage: S,
     app_state: AppState,
     rng_source: RngSource,
+    menu: MenuInstance<menu::Choice>,
+    pause_menu: MenuInstance<pause_menu::Choice>,
 }
 
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
-    fn view<G>(&mut self, _data: &App<F, S>, offset: Coord, depth: i32, grid: &mut G)
+    fn view<G>(&mut self, app: &App<F, S>, offset: Coord, depth: i32, grid: &mut G)
     where
         G: ViewGrid,
     {
-        StringView.view("It works!", offset, depth, grid);
+        match app.app_state {
+            AppState::Menu => self.menu_and_title_view.view(
+                &MenuAndTitle::new(&app.menu, TITLE),
+                offset + Coord::new(1, 1),
+                depth,
+                grid,
+            ),
+            AppState::PauseMenu(_) => (),
+            AppState::GameInProgress(_) => (),
+        }
     }
 }
 
@@ -105,23 +122,38 @@ impl<F: Frontend, S: Storage> App<F, S> {
             Err(_) => (InitStatus::NoSaveFound, AppState::Menu),
         };
         let rng_source = RngSource::new(first_rng_seed);
+        let menu = menu::create();
+        let pause_menu = pause_menu::create();
         let app = Self {
             frontend,
             storage,
             app_state,
             rng_source,
+            menu,
+            pause_menu,
         };
         (app, init_status)
     }
-    pub fn tick<I>(&mut self, i: I, _period: Duration) -> Option<Tick>
+    pub fn tick<I>(&mut self, inputs: I, _period: Duration, view: &AppView) -> Option<Tick>
     where
         I: IntoIterator<Item = ProtottyInput>,
     {
-        for input in i.into_iter() {
-            match input {
-                prototty_inputs::ETX => return Some(Tick::Quit),
-                _ => (),
+        match self.app_state {
+            AppState::Menu => {
+                match self
+                    .menu
+                    .tick_with_mouse(inputs, &view.menu_and_title_view.menu_view)
+                {
+                    None | Some(MenuOutput::Cancel) => (),
+                    Some(MenuOutput::Quit) => return Some(Tick::Quit),
+                    Some(MenuOutput::Finalise(selection)) => match selection {
+                        menu::Choice::Quit => return Some(Tick::Quit),
+                        menu::Choice::NewGame => (),
+                    },
+                }
             }
+            AppState::PauseMenu(_) => (),
+            AppState::GameInProgress(_) => (),
         }
         None
     }
@@ -129,7 +161,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
 
 impl AppView {
     pub fn new() -> Self {
-        AppView
+        Self {
+            menu_and_title_view: MenuAndTitleView::new(),
+        }
     }
     pub fn set_size(&mut self, _size: Size) {}
 }
