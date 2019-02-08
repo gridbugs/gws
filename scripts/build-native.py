@@ -115,7 +115,9 @@ def make_parser():
     parser.add_argument("--name", required=True)
     parser.add_argument("--os", required=True, choices=["linux", "macos"])
     parser.add_argument("--macos-app-name", required=False, type=str)
-    parser.add_argument("--branch", default=sh.git("rev-parse", "--abbrev-ref", "HEAD").strip())
+    parser.add_argument(
+        "--branch", default=sh.git("rev-parse", "--abbrev-ref", "HEAD").strip()
+    )
     return parser
 
 

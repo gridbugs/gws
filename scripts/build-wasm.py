@@ -66,7 +66,9 @@ def make_parser():
     parser.add_argument("--target-dir", default="target")
     parser.add_argument("--output-dir", required=False, type=str)
     parser.add_argument("--wasm2js", required=False, type=str)
-    parser.add_argument("--branch", default=sh.git("rev-parse", "--abbrev-ref", "HEAD").strip())
+    parser.add_argument(
+        "--branch", default=sh.git("rev-parse", "--abbrev-ref", "HEAD").strip()
+    )
     parser.add_argument("--release", action="store_true", default=False)
     return parser
 
