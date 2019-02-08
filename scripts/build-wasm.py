@@ -50,14 +50,13 @@ def build_web_app(webapp_dir, release, output_dir):
     sh.npx.webpack(_cwd=webapp_dir, _env=e, **SH_KWARGS)
 
 
-def build(manifest_path, webapp_dir, target_dir, release, wasm2js, output_dir):
+def build(manifest_path, webapp_dir, target_dir, release, wasm2js, branch, output_dir):
     manifest = toml.load(manifest_path)
     build_wasm(manifest_path, manifest, webapp_dir, target_dir, release, wasm2js)
     if output_dir is not None:
-        branch = sh.git("rev-parse", "--abbrev-ref", "HEAD").strip()
         version = manifest["package"]["version"]
         build_web_app(webapp_dir, release, path.join(output_dir, branch))
-        build_web_app(webapp_dir, release, path.join(output_dir, version))
+        build_web_app(webapp_dir, release, path.join(output_dir, "v%s" % version))
 
 
 def make_parser():
@@ -67,6 +66,7 @@ def make_parser():
     parser.add_argument("--target-dir", default="target")
     parser.add_argument("--output-dir", required=False, type=str)
     parser.add_argument("--wasm2js", required=False, type=str)
+    parser.add_argument("--branch", default=sh.git("rev-parse", "--abbrev-ref", "HEAD").strip())
     parser.add_argument("--release", action="store_true", default=False)
     return parser
 
@@ -78,6 +78,7 @@ def main(args):
         args.target_dir,
         args.release,
         args.wasm2js,
+        args.branch,
         args.output_dir,
     )
 

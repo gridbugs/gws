@@ -29,6 +29,10 @@ if [ -z ${TRAVIS_OS_NAME+x} ]; then
     esac
 fi
 
+if [ -z ${TRAVIS_BRANCH+x} ]; then
+    TRAVIS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+fi
+
 case $TRAVIS_OS_NAME in
     osx)
         if ! which python3 > /dev/null; then
@@ -56,9 +60,10 @@ wasm_build() {
         curl -sSL $BINARYEN_URL -o - | tar xzv
         WASM2JS=$BINARYEN_DIR/wasm2js
         $PYTHON $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
-            --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME --release
+            --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME --branch=$TRAVIS_BRANCH --release
         $PYTHON $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
-            --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME-js --wasm2js=$WASM2JS --release
+            --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME-js --wasm2js=$WASM2JS \
+            --branch=$TRAVIS_BRANCH --release
         rm -rvf $BINARYEN_DIR
 }
 
@@ -66,10 +71,11 @@ case $TRAVIS_OS_NAME in
     linux)
         wasm_build
         $PYTHON $BUILD_NATIVE --root-dir=$ROOT_DIR --unix-path=$UNIX_CRATE/Cargo.toml --glutin-path=$GLUTIN_CRATE/Cargo.toml \
-            --target-dir=$TARGET --output-dir=$UPLOADS --name=$APP_NAME --os=linux --release
+            --target-dir=$TARGET --output-dir=$UPLOADS --name=$APP_NAME --os=linux --branch=$TRAVIS_BRANCH --release
         ;;
     osx)
         $PYTHON $BUILD_NATIVE --root-dir=$ROOT_DIR --unix-path=$UNIX_CRATE/Cargo.toml --glutin-path=$GLUTIN_CRATE/Cargo.toml \
-            --target-dir=$TARGET --output-dir=$UPLOADS --name=$APP_NAME --os=macos --release --macos-app-name $MACOS_APP_NAME
+            --target-dir=$TARGET --output-dir=$UPLOADS --name=$APP_NAME --os=macos --macos-app-name $MACOS_APP_NAME \
+            --branch=$TRAVIS_BRANCH --release
         ;;
 esac

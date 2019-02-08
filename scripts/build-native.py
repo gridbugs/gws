@@ -42,6 +42,7 @@ def build(
     unix_path,
     glutin_path,
     release,
+    branch,
     target_dir,
     output_dir,
     macos_app_name,
@@ -72,7 +73,6 @@ def build(
     sh.git(
         "rev-parse", "HEAD", _err=sys.stdout, _out=path.join(stage_dir, "REVISION.txt")
     )
-    branch = sh.git("rev-parse", "--abbrev-ref", "HEAD").strip()
     version_number_name = "%(name)s-%(os)s-%(architecture)s-v%(version)s" % {
         "name": name,
         "os": os_name,
@@ -115,6 +115,7 @@ def make_parser():
     parser.add_argument("--name", required=True)
     parser.add_argument("--os", required=True, choices=["linux", "macos"])
     parser.add_argument("--macos-app-name", required=False, type=str)
+    parser.add_argument("--branch", default=sh.git("rev-parse", "--abbrev-ref", "HEAD").strip())
     return parser
 
 
@@ -126,6 +127,7 @@ def main(args):
         args.unix_path,
         args.glutin_path,
         args.release,
+        args.branch,
         args.target_dir,
         args.output_dir,
         args.macos_app_name,
