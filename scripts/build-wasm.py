@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import os
 from os import path
 import shutil
 import sys
@@ -44,9 +45,11 @@ def build_web_app(webapp_dir, release, output_dir):
         webpack_mode = "production"
     else:
         webpack_mode = "development"
+    e = {"WEBPACK_MODE": webpack_mode, "OUTPUT_DIR": output_dir}
+    e.update(os.environ)
     sh.npx.webpack(
         _cwd=webapp_dir,
-        _env={"WEBPACK_MODE": webpack_mode, "OUTPUT_DIR": output_dir},
+        _env=e,
         **SH_KWARGS
     )
 
