@@ -1,5 +1,4 @@
 [workspace]
-
 members = [
     "cherenkov",
     "prototty",
@@ -7,3 +6,6 @@ members = [
     "unix",
     "wasm",
 ]
+
+[profile.release]
+lto = true
