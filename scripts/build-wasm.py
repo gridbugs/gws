@@ -47,11 +47,7 @@ def build_web_app(webapp_dir, release, output_dir):
         webpack_mode = "development"
     e = {"WEBPACK_MODE": webpack_mode, "OUTPUT_DIR": output_dir}
     e.update(os.environ)
-    sh.npx.webpack(
-        _cwd=webapp_dir,
-        _env=e,
-        **SH_KWARGS
-    )
+    sh.npx.webpack(_cwd=webapp_dir, _env=e, **SH_KWARGS)
 
 
 def build(manifest_path, webapp_dir, target_dir, release, wasm2js, output_dir):
