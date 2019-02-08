@@ -13,7 +13,7 @@ SH_KWARGS = {"_out": sys.stdout, "_err": sys.stderr}
 TARGET = "wasm32-unknown-unknown"
 
 
-def build_wasm(manifest_path, webapp_dir, target_dir, release, wasm2js):
+def build_wasm(manifest_path, manifest, webapp_dir, target_dir, release, wasm2js):
     if release:
         cargo_args = ["--release"]
         mode = "release"
@@ -23,7 +23,6 @@ def build_wasm(manifest_path, webapp_dir, target_dir, release, wasm2js):
     sh.cargo.build(
         "--target", TARGET, "--manifest-path", manifest_path, *cargo_args, **SH_KWARGS
     )
-    manifest = toml.load(manifest_path)
     crate_name = manifest["package"]["name"]
     binary_path = path.join(target_dir, TARGET, mode, "%s.wasm" % crate_name)
     wasm_out_path = path.join(webapp_dir, WASM_OUT)
@@ -47,13 +46,18 @@ def build_web_app(webapp_dir, release, output_dir):
         webpack_mode = "development"
     e = {"WEBPACK_MODE": webpack_mode, "OUTPUT_DIR": output_dir}
     e.update(os.environ)
+    sh.mkdir("-p", output_dir)
     sh.npx.webpack(_cwd=webapp_dir, _env=e, **SH_KWARGS)
 
 
 def build(manifest_path, webapp_dir, target_dir, release, wasm2js, output_dir):
-    build_wasm(manifest_path, webapp_dir, target_dir, release, wasm2js)
+    manifest = toml.load(manifest_path)
+    build_wasm(manifest_path, manifest, webapp_dir, target_dir, release, wasm2js)
     if output_dir is not None:
-        build_web_app(webapp_dir, release, output_dir)
+        branch = sh.git("rev-parse", "--abbrev-ref", "HEAD").strip()
+        version = manifest["package"]["version"]
+        build_web_app(webapp_dir, release, path.join(output_dir, branch))
+        build_web_app(webapp_dir, release, path.join(output_dir, version))
 
 
 def make_parser():
