@@ -140,7 +140,7 @@ dependencies = [
 
 [[package]]
 name = "cherenkov_wasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cherenkov_prototty 0.1.0",
  "prototty_wasm 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",
