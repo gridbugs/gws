@@ -54,7 +54,7 @@ impl WebApp {
                 Tick::GameInitialisedWithSeed(seed) => {
                     console_log!("Initialised game with seed: {}", seed)
                 }
-                Tick::GameSaved => console_log!("Game saved"),
+                Tick::AutoSave => (),
             }
         }
         self.js_grid.render(&mut self.app_view, &self.app);

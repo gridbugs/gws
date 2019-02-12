@@ -110,6 +110,10 @@ dependencies = [
 [[package]]
 name = "cherenkov"
 version = "0.1.0"
+dependencies = [
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.87 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "cherenkov_glutin"
@@ -140,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "cherenkov_wasm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cherenkov_prototty 0.1.0",
  "prototty_wasm 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -23,7 +23,7 @@ fn main() {
         if let Some(tick) = app.tick(context.drain_input().unwrap(), period, &app_view) {
             match tick {
                 Tick::Quit => break,
-                Tick::GameInitialisedWithSeed(_) | Tick::GameSaved => (),
+                Tick::GameInitialisedWithSeed(_) | Tick::AutoSave => (),
             }
         }
         app_view.set_size(context.size().unwrap());

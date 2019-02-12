@@ -40,7 +40,7 @@ fn main() {
                 Tick::GameInitialisedWithSeed(seed) => {
                     eprintln!("Initialised game with seed: {}", seed)
                 }
-                Tick::GameSaved => eprintln!("Game saved"),
+                Tick::AutoSave => (),
             }
         }
         app_view.set_size(context.size());

@@ -12,9 +12,11 @@ use menus::*;
 use prototty::*;
 use rand::{FromEntropy, Rng, SeedableRng};
 use rand_isaac::IsaacRng;
+use std::marker::PhantomData;
 use std::time::Duration;
 
 const TITLE: &'static str = "CHERENKOV";
+const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
 
 pub struct AppView {
     menu_and_title_view: MenuAndTitleView,
@@ -23,7 +25,7 @@ pub struct AppView {
 pub enum Tick {
     Quit,
     GameInitialisedWithSeed(u64),
-    GameSaved,
+    AutoSave,
 }
 
 pub enum InitStatus {
@@ -44,17 +46,23 @@ struct RngWithSeed {
 #[derive(Serialize, Deserialize)]
 struct GameState {
     rng_with_seed: RngWithSeed,
+    all_inputs: Vec<cherenkov::Input>,
+    game: cherenkov::Cherenkov,
 }
 
 impl GameState {
-    fn new(rng_with_seed: RngWithSeed) -> Self {
-        Self { rng_with_seed }
+    fn new(mut rng_with_seed: RngWithSeed) -> Self {
+        let game = cherenkov::Cherenkov::new(&mut rng_with_seed.rng);
+        Self {
+            rng_with_seed,
+            all_inputs: Vec::new(),
+            game,
+        }
     }
 }
 
 enum AppState {
-    GameInProgress(GameState),
-    PauseMenu(GameState),
+    Game,
     Menu,
 }
 
@@ -86,12 +94,14 @@ impl RngSource {
 }
 
 pub struct App<F: Frontend, S: Storage> {
-    frontend: F,
+    frontend: PhantomData<F>,
     storage: S,
     app_state: AppState,
+    game_state: Option<GameState>,
     rng_source: RngSource,
     menu: MenuInstance<menu::Choice>,
     pause_menu: MenuInstance<pause_menu::Choice>,
+    time_until_next_auto_save: Duration,
 }
 
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
@@ -100,62 +110,152 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
         G: ViewGrid,
     {
         match app.app_state {
-            AppState::Menu => self.menu_and_title_view.view(
-                &MenuAndTitle::new(&app.menu, TITLE),
-                offset + Coord::new(1, 1),
-                depth,
-                grid,
-            ),
-            AppState::PauseMenu(_) => (),
-            AppState::GameInProgress(_) => (),
+            AppState::Menu => {
+                if app.game_state.is_some() {
+                    self.menu_and_title_view.view(
+                        &MenuAndTitle::new(&app.pause_menu, TITLE),
+                        offset + Coord::new(1, 1),
+                        depth,
+                        grid,
+                    );
+                } else {
+                    self.menu_and_title_view.view(
+                        &MenuAndTitle::new(&app.menu, TITLE),
+                        offset + Coord::new(1, 1),
+                        depth,
+                        grid,
+                    );
+                }
+            }
+            AppState::Game => (),
         }
     }
 }
 
 impl<F: Frontend, S: Storage> App<F, S> {
     pub fn new(frontend: F, storage: S, first_rng_seed: FirstRngSeed) -> (Self, InitStatus) {
-        let (init_status, app_state) = match storage.load::<_, GameState>(SAVE_KEY) {
+        let _ = frontend;
+        let (init_status, game_state) = match storage.load::<_, GameState>(SAVE_KEY) {
             Ok(game_state) => (
                 InitStatus::LoadedSaveWithSeed(game_state.rng_with_seed.seed),
-                AppState::PauseMenu(game_state),
+                Some(game_state),
             ),
-            Err(_) => (InitStatus::NoSaveFound, AppState::Menu),
+            Err(_) => (InitStatus::NoSaveFound, None),
         };
         let rng_source = RngSource::new(first_rng_seed);
         let menu = menu::create();
         let pause_menu = pause_menu::create();
         let app = Self {
-            frontend,
+            frontend: PhantomData,
             storage,
-            app_state,
+            app_state: AppState::Menu,
+            game_state,
             rng_source,
             menu,
             pause_menu,
+            time_until_next_auto_save: AUTO_SAVE_PERIOD,
         };
         (app, init_status)
     }
-    pub fn tick<I>(&mut self, inputs: I, _period: Duration, view: &AppView) -> Option<Tick>
+    pub fn save(&mut self) {
+        if let Some(game_state) = self.game_state.as_ref() {
+            self.storage
+                .store(SAVE_KEY, &game_state)
+                .expect("Failed to save game");
+        }
+    }
+    pub fn tick<I>(&mut self, inputs: I, period: Duration, view: &AppView) -> Option<Tick>
     where
         I: IntoIterator<Item = ProtottyInput>,
     {
         match self.app_state {
             AppState::Menu => {
-                match self
-                    .menu
-                    .tick_with_mouse(inputs, &view.menu_and_title_view.menu_view)
-                {
-                    None | Some(MenuOutput::Cancel) => (),
-                    Some(MenuOutput::Quit) => return Some(Tick::Quit),
-                    Some(MenuOutput::Finalise(selection)) => match selection {
-                        menu::Choice::Quit => return Some(Tick::Quit),
-                        menu::Choice::NewGame => (),
-                    },
+                if self.game_state.is_some() {
+                    match self
+                        .pause_menu
+                        .tick_with_mouse(inputs, &view.menu_and_title_view.menu_view)
+                    {
+                        None => (),
+                        Some(MenuOutput::Cancel) => {
+                            self.app_state = AppState::Game;
+                        }
+                        Some(MenuOutput::Quit) => return Some(Tick::Quit),
+                        Some(MenuOutput::Finalise(selection)) => match selection {
+                            pause_menu::Choice::Resume => {
+                                self.app_state = AppState::Game;
+                            }
+                            pause_menu::Choice::SaveAndQuit => {
+                                self.save();
+                                return Some(Tick::Quit);
+                            }
+                            pause_menu::Choice::NewGame => {
+                                self.game_state = Some(GameState::new(self.rng_source.next()));
+                                self.app_state = AppState::Game;
+                            }
+                        },
+                    }
+                } else {
+                    match self
+                        .menu
+                        .tick_with_mouse(inputs, &view.menu_and_title_view.menu_view)
+                    {
+                        None | Some(MenuOutput::Cancel) => (),
+                        Some(MenuOutput::Quit) => return Some(Tick::Quit),
+                        Some(MenuOutput::Finalise(selection)) => match selection {
+                            menu::Choice::Quit => return Some(Tick::Quit),
+                            menu::Choice::NewGame => {
+                                self.game_state = Some(GameState::new(self.rng_source.next()));
+                                self.app_state = AppState::Game;
+                            }
+                        },
+                    }
                 }
             }
-            AppState::PauseMenu(_) => (),
-            AppState::GameInProgress(_) => (),
+            AppState::Game => {
+                if let Some(game_state) = self.game_state.as_mut() {
+                    let input_start_index = game_state.all_inputs.len();
+                    let mut escape = false;
+                    for input in inputs {
+                        match input {
+                            ProtottyInput::Up => game_state.all_inputs.push(cherenkov::Input::Up),
+                            ProtottyInput::Down => {
+                                game_state.all_inputs.push(cherenkov::Input::Down)
+                            }
+                            ProtottyInput::Left => {
+                                game_state.all_inputs.push(cherenkov::Input::Left)
+                            }
+                            ProtottyInput::Right => {
+                                game_state.all_inputs.push(cherenkov::Input::Right)
+                            }
+                            prototty_inputs::ESCAPE => escape = true,
+                            prototty_inputs::ETX => return Some(Tick::Quit),
+                            _ => (),
+                        }
+                    }
+                    let input_end_index = game_state.all_inputs.len();
+                    game_state.game.tick(
+                        game_state.all_inputs[input_start_index..input_end_index]
+                            .into_iter()
+                            .cloned(),
+                        &mut game_state.rng_with_seed.rng,
+                    );
+                    if escape {
+                        self.app_state = AppState::Menu;
+                    }
+                } else {
+                    self.app_state = AppState::Menu;
+                }
+            }
         }
-        None
+        if let Some(time_until_next_auto_save) = self.time_until_next_auto_save.checked_sub(period)
+        {
+            self.time_until_next_auto_save = time_until_next_auto_save;
+            None
+        } else {
+            self.time_until_next_auto_save = AUTO_SAVE_PERIOD;
+            self.save();
+            Some(Tick::AutoSave)
+        }
     }
 }
 
