@@ -6,8 +6,10 @@ extern crate rand_isaac;
 extern crate serde;
 
 pub mod frontend;
+pub mod game_view;
 pub mod menus;
 
+use game_view::GameView;
 use menus::*;
 use prototty::*;
 use rand::{FromEntropy, Rng, SeedableRng};
@@ -127,7 +129,11 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                     );
                 }
             }
-            AppState::Game => (),
+            AppState::Game => {
+                if let Some(game_state) = app.game_state.as_ref() {
+                    GameView.view(&game_state.game, offset, depth, grid);
+                }
+            }
         }
     }
 }
@@ -217,15 +223,15 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     let mut escape = false;
                     for input in inputs {
                         match input {
-                            ProtottyInput::Up => game_state.all_inputs.push(cherenkov::Input::Up),
+                            ProtottyInput::Up => game_state.all_inputs.push(cherenkov::input::UP),
                             ProtottyInput::Down => {
-                                game_state.all_inputs.push(cherenkov::Input::Down)
+                                game_state.all_inputs.push(cherenkov::input::DOWN)
                             }
                             ProtottyInput::Left => {
-                                game_state.all_inputs.push(cherenkov::Input::Left)
+                                game_state.all_inputs.push(cherenkov::input::LEFT)
                             }
                             ProtottyInput::Right => {
-                                game_state.all_inputs.push(cherenkov::Input::Right)
+                                game_state.all_inputs.push(cherenkov::input::RIGHT)
                             }
                             prototty_inputs::ESCAPE => escape = true,
                             prototty_inputs::ETX => return Some(Tick::Quit),
