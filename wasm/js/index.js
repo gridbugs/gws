@@ -5,8 +5,6 @@ const wasm = import('../wasm_out/app');
 
 document.oncontextmenu = () => false;
 
-const STORAGE_KEY = "cherenkov";
-
 wasm.then(async wasm => {
     let config = {
         WasmInputBufferType: wasm.InputBuffer,
@@ -18,7 +16,9 @@ wasm.then(async wasm => {
         cell_width_px: 17,
         cell_height_px: 17,
     };
-    let context = await new Context(config).with_storage(STORAGE_KEY);
+    let storage_key = window.location.pathname + window.location.hash;
+    console.log("Using storage key: ", storage_key);
+    let context = await new Context(config).with_storage(storage_key);
     let app = new wasm.WebApp(context.grid(), context.storage());
     context.run_animation((input_buffer, period) => app.tick(input_buffer, period));
 });
