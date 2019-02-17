@@ -1,13 +1,16 @@
+extern crate cherenkov_native;
 extern crate cherenkov_prototty;
 extern crate prototty_glutin;
 
+use cherenkov_native::*;
 use cherenkov_prototty::*;
 use prototty_glutin::*;
 use std::time::Instant;
 
-const USER_DIR: &'static str = "user";
-
 fn main() {
+    let args = CommonArgs::arg()
+        .with_help_default()
+        .parse_env_default_or_exit();
     let size = Size::new(960, 720);
     let mut context = ContextBuilder::new_with_font(include_bytes!("fonts/PxPlus_IBM_CGAthin.ttf"))
         .with_bold_font(include_bytes!("fonts/PxPlus_IBM_CGA.ttf"))
@@ -20,8 +23,8 @@ fn main() {
         .with_max_grid_size(Size::new(80, 40))
         .build()
         .unwrap();
-    let storage = FileStorage::next_to_exe(USER_DIR, true).expect("Failed to find user dir");
-    let (mut app, init_status) = App::new(frontend::Glutin, storage, FirstRngSeed::Random);
+    let storage = FileStorage::next_to_exe(args.save_dir(), true).expect("Failed to find user dir");
+    let (mut app, init_status) = App::new(frontend::Glutin, storage, args.first_rng_seed());
     let mut input_buffer = Vec::with_capacity(64);
     let mut app_view = AppView::new();
     let mut last_frame = Instant::now();

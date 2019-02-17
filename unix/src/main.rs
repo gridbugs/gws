@@ -1,19 +1,23 @@
+extern crate cherenkov_native;
 extern crate cherenkov_prototty;
 extern crate prototty_unix;
 
+use cherenkov_native::*;
 use cherenkov_prototty::*;
 use prototty_unix::*;
 use std::thread;
 use std::time::{Duration, Instant};
 
-const USER_DIR: &'static str = "user";
 const TARGET_FPS: f64 = 60.;
 const TICK_PERIOD: Duration = Duration::from_micros((1_000_000. / TARGET_FPS) as u64);
 
 fn main() {
+    let args = CommonArgs::arg()
+        .with_help_default()
+        .parse_env_default_or_exit();
     let mut context = Context::new().unwrap();
-    let storage = FileStorage::next_to_exe(USER_DIR, true).expect("Failed to find user dir");
-    let (mut app, _init_status) = App::new(frontend::Unix, storage, FirstRngSeed::Random);
+    let storage = FileStorage::next_to_exe(args.save_dir(), true).expect("Failed to find user dir");
+    let (mut app, _init_status) = App::new(frontend::Unix, storage, args.first_rng_seed());
     let mut app_view = AppView::new();
     let mut last_frame = Instant::now();
     loop {

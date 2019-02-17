@@ -2,6 +2,7 @@
 members = [
     "cherenkov",
     "prototty",
+    "native",
     "glutin",
     "unix",
     "wasm",

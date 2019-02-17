@@ -68,6 +68,7 @@ enum AppState {
     Menu,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum FirstRngSeed {
     Seed(u64),
     Random,

@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 prototty_unix = { version = "0.23", features = ["storage"] }
 cherenkov_prototty = { path = "../prototty" }
+cherenkov_native = { path = "../native" }
