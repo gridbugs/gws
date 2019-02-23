@@ -13,6 +13,7 @@ use rand::Rng;
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Cell {
     Floor,
+    Wall,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Input {
@@ -36,8 +37,24 @@ pub struct Cherenkov {
 impl Cherenkov {
     pub fn new<R: Rng>(rng: &mut R) -> Self {
         let _ = rng;
-        let grid = Grid::new_clone(Size::new(20, 20), Cell::Floor);
-        let player = Coord::new(13, 7);
+        let terrain_vecs = include_str!("terrain_strings.txt")
+            .split("\n")
+            .filter(|s| !s.is_empty())
+            .map(|s| s.chars().collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+        let size = Size::new(terrain_vecs[0].len() as u32, terrain_vecs.len() as u32);
+        let mut player = Coord::new(0, 0);
+        let grid = Grid::new_fn(size, |coord| {
+            match terrain_vecs[coord.y as usize][coord.x as usize] {
+                '.' => Cell::Floor,
+                '#' => Cell::Wall,
+                '@' => {
+                    player = coord;
+                    Cell::Floor
+                }
+                _ => panic!(),
+            }
+        });
         Self { grid, player }
     }
     pub fn tick<I: IntoIterator<Item = Input>, R: Rng>(&mut self, inputs: I, rng: &mut R) {

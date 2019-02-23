@@ -13,8 +13,8 @@ wasm.then(async wasm => {
         grid_height: 40,
         font_family: "PxPlus_IBM_CGA",
         font_size: "16px",
-        cell_width_px: 17,
-        cell_height_px: 17,
+        cell_width_px: 16,
+        cell_height_px: 16,
     };
     let storage_key = window.location.pathname + window.location.hash;
     console.log("Using storage key: ", storage_key);
