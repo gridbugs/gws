@@ -4,11 +4,13 @@ extern crate grid_2d;
 extern crate rand;
 #[macro_use]
 extern crate serde;
+extern crate shadowcast;
 
 use coord_2d::{Coord, Size};
 use direction::CardinalDirection;
 use grid_2d::Grid;
 use rand::Rng;
+use shadowcast::*;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Cell {
@@ -57,6 +59,7 @@ impl Cherenkov {
         });
         Self { grid, player }
     }
+
     pub fn tick<I: IntoIterator<Item = Input>, R: Rng>(&mut self, inputs: I, rng: &mut R) {
         let _ = rng;
         for i in inputs {
@@ -65,9 +68,11 @@ impl Cherenkov {
             }
         }
     }
+
     pub fn player(&self) -> Coord {
         self.player
     }
+
     pub fn grid(&self) -> &Grid<Cell> {
         &self.grid
     }
