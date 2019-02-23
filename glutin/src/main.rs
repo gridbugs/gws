@@ -27,15 +27,14 @@ fn main() {
     let (mut app, init_status) = App::new(frontend::Glutin, storage, args.first_rng_seed());
     let mut input_buffer = Vec::with_capacity(64);
     let mut app_view = AppView::new();
-    let mut last_frame = Instant::now();
+    let mut frame_instant = Instant::now();
     match init_status {
         InitStatus::NoSaveFound => eprintln!("No save game found"),
         InitStatus::LoadedSaveWithSeed(seed) => eprintln!("Loaded game with seed: {}", seed),
     }
     loop {
-        let frame_start = Instant::now();
-        let period = frame_start - last_frame;
-        last_frame = frame_start;
+        let period = frame_instant.elapsed();
+        frame_instant = Instant::now();
         context.buffer_input(&mut input_buffer);
         if let Some(tick) = app.tick(input_buffer.drain(..), period, &app_view) {
             match tick {
