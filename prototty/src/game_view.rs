@@ -3,10 +3,10 @@ use prototty::*;
 
 pub struct GameView;
 
-const FLOOR_BACKGROUND: Rgb24 = Rgb24::new(0, 0, 127);
-const FLOOR_FOREGROUND: Rgb24 = Rgb24::new(255, 255, 255);
-const WALL_TOP_COLOUR: Rgb24 = Rgb24::new(200, 128, 0);
-const WALL_FRONT_COLOUR: Rgb24 = Rgb24::new(200, 50, 0);
+const FLOOR_BACKGROUND: Rgb24 = rgb24(0, 0, 127);
+const FLOOR_FOREGROUND: Rgb24 = rgb24(255, 255, 255);
+const WALL_TOP_COLOUR: Rgb24 = rgb24(200, 128, 0);
+const WALL_FRONT_COLOUR: Rgb24 = rgb24(200, 50, 0);
 
 const FLOOR: ViewCell = ViewCell::new()
     .with_character('.')
@@ -34,12 +34,12 @@ fn mult_channel(c: u8, by: Rational) -> u8 {
     ((c as u32 * by.num) / by.denom) as u8
 }
 
-fn mult_rgb24(Rgb24 { red, green, blue }: Rgb24, by: Rational) -> Rgb24 {
-    Rgb24 {
-        red: mult_channel(red, by),
-        green: mult_channel(green, by),
-        blue: mult_channel(blue, by),
-    }
+fn mult_rgb24(Rgb24 { r, g, b }: Rgb24, by: Rational) -> Rgb24 {
+    rgb24(
+        mult_channel(r, by),
+        mult_channel(g, by),
+        mult_channel(b, by),
+    )
 }
 
 fn mult_cell_info(cell_info: &mut ViewCell, by: Rational) {
