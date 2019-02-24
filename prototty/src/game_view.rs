@@ -8,6 +8,7 @@ const WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
     .with_character('▀')
     .with_background(Rgb24::new(127, 127, 127));
 const WALL_ABOVE_WALL: ViewCell = ViewCell::new().with_character('█');
+const PLAYER: ViewCell = ViewCell::new().with_character('@');
 
 impl View<Cherenkov> for GameView {
     fn view<G: ViewGrid>(&mut self, game: &Cherenkov, offset: Coord, depth: i32, grid: &mut G) {
@@ -27,7 +28,6 @@ impl View<Cherenkov> for GameView {
             };
             grid.set_cell(offset + coord, depth, cell_info);
         }
-        let player_cell_info = ViewCell::new().with_character('@');
-        grid.set_cell(offset + game.player(), depth, player_cell_info);
+        grid.set_cell(offset + game.player_coord(), depth, PLAYER);
     }
 }
