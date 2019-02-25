@@ -50,7 +50,7 @@ fn main() {
     let font_size = match args.font_size {
         FontSize::Specified(font_size) => font_size,
         FontSize::Auto => {
-            let monitor_info = MonitorInfo::get_primary();
+            let monitor_info = MonitorInfo::get_current();
             let font_size = (monitor_info.logical_width() / grid_size.width() as f64)
                 .min(monitor_info.logical_height() / grid_size.height() as f64);
             font_size as u32

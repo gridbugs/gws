@@ -129,7 +129,7 @@ version = "0.1.0"
 dependencies = [
  "cherenkov_native 0.1.0",
  "cherenkov_prototty 0.1.0",
- "prototty_glutin 0.24.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_glutin 0.24.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "simon 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -690,7 +690,7 @@ dependencies = [
 
 [[package]]
 name = "prototty_glutin"
-version = "0.24.1"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gfx 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1391,7 +1391,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum prototty 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)" = "edbd24b803e6ab3c45045ad3e294e8dfcba90c905accf61b7643a387fac5b098"
 "checksum prototty_common 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0525c15ce4de052667a7094d2312b637e39350b50c52c354ea30ab36b083670a"
 "checksum prototty_file_storage 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7a142b4402b8dc9bf979b049204ea7395cc844cd0fdf1a2251d8e439f90ac8d2"
-"checksum prototty_glutin 0.24.1 (registry+https://github.com/rust-lang/crates.io-index)" = "65a4d88153bedf8a02444bf363170ae9be9d4d139b3cf165f9a78fb97c32a699"
+"checksum prototty_glutin 0.24.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7fcc5c2ee1040b8ebef94b3d9b164006f64eb6944f443da3814ef84002087483"
 "checksum prototty_grid 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3483f6ca28c60588a1ea834c68c87c8b2d3b2077d06ec41c279bb618c9c3df8f"
 "checksum prototty_input 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)" = "38f143bc7eb6fe92a3e450951b6949b566aff6bdba778b45160a2074fae50916"
 "checksum prototty_monolithic_storage 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)" = "27d94053c16d471cb4336472973dbc3e51953f8f7d722ef03683c4529ad52cf8"
