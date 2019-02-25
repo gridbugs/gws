@@ -8,3 +8,4 @@ edition = "2018"
 prototty_glutin = { version = "0.24", features = ["storage"] }
 cherenkov_prototty = { path = "../prototty" }
 cherenkov_native = { path = "../native" }
+simon = "0.2"
