@@ -1,33 +1,42 @@
 extern crate cherenkov_native;
 extern crate cherenkov_prototty;
 extern crate prototty_glutin;
-#[macro_use]
 extern crate simon;
 
 use cherenkov_native::*;
 use cherenkov_prototty::*;
 use prototty_glutin::*;
+use simon::*;
 use std::time::Instant;
 
-const DEFAULT_FONT_SIZE: u32 = 16;
+#[derive(Clone, Copy)]
+enum FontSize {
+    Specified(u32),
+    Auto,
+}
+
+impl FontSize {
+    fn arg() -> ArgExt<impl Arg<Item = Self>> {
+        opt("s", "font-size", "font size in pixels", "INT")
+            .option_map(FontSize::Specified)
+            .either(
+                flag("a", "font-auto", "choose font size automatically").some_if(FontSize::Auto),
+            )
+            .with_default(FontSize::Auto)
+    }
+}
 
 struct Args {
     common: CommonArgs,
-    font_size: u32,
+    font_size: FontSize,
 }
 
 impl Args {
-    fn arg() -> simon::ArgExt<impl simon::Arg<Item = Self>> {
+    fn arg() -> ArgExt<impl Arg<Item = Self>> {
         args_map! {
             let {
                 common = CommonArgs::arg();
-                font_size = simon::opt_default(
-                    "s",
-                    "font-size",
-                    "font size in pixels",
-                    "INT",
-                    DEFAULT_FONT_SIZE,
-                );
+                font_size = FontSize::arg();
             } in {
                 Self { common, font_size }
             }
@@ -37,8 +46,16 @@ impl Args {
 
 fn main() {
     let args = Args::arg().with_help_default().parse_env_default_or_exit();
-    let font_size = args.font_size;
     let grid_size = Size::new(64, 48);
+    let font_size = match args.font_size {
+        FontSize::Specified(font_size) => font_size,
+        FontSize::Auto => {
+            let monitor_info = MonitorInfo::get_primary();
+            let font_size = (monitor_info.physical_width() / grid_size.width() as f64)
+                .min(monitor_info.physical_height() / grid_size.height() as f64);
+            font_size as u32
+        }
+    };
     let size = grid_size * font_size;
     let mut context = ContextBuilder::new_with_font(include_bytes!("fonts/PxPlus_IBM_CGAthin.ttf"))
         .with_bold_font(include_bytes!("fonts/PxPlus_IBM_CGA.ttf"))
