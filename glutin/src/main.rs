@@ -51,8 +51,8 @@ fn main() {
         FontSize::Specified(font_size) => font_size,
         FontSize::Auto => {
             let monitor_info = MonitorInfo::get_primary();
-            let font_size = (monitor_info.physical_width() / grid_size.width() as f64)
-                .min(monitor_info.physical_height() / grid_size.height() as f64);
+            let font_size = (monitor_info.logical_width() / grid_size.width() as f64)
+                .min(monitor_info.logical_height() / grid_size.height() as f64);
             font_size as u32
         }
     };
