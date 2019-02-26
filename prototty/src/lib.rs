@@ -69,6 +69,7 @@ enum AppState {
     Game,
     Menu,
     Map,
+    Help,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -143,9 +144,15 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                     MapView.view(&game_state.game, offset, depth, grid);
                 }
             }
+            AppState::Help => {}
         }
     }
 }
+
+const HELP_INPUT0: ProtottyInput = ProtottyInput::Char('h');
+const HELP_INPUT1: ProtottyInput = ProtottyInput::Function(1);
+const MAP_INPUT0: ProtottyInput = ProtottyInput::Char('m');
+const MAP_INPUT1: ProtottyInput = ProtottyInput::Function(2);
 
 impl<F: Frontend, S: Storage> App<F, S> {
     pub fn new(frontend: F, storage: S, first_rng_seed: FirstRngSeed) -> (Self, InitStatus) {
@@ -229,8 +236,6 @@ impl<F: Frontend, S: Storage> App<F, S> {
             AppState::Game => {
                 if let Some(game_state) = self.game_state.as_mut() {
                     let input_start_index = game_state.all_inputs.len();
-                    let mut escape = false;
-                    let mut map = false;
                     for input in inputs {
                         match input {
                             ProtottyInput::Up => game_state.all_inputs.push(cherenkov::input::UP),
@@ -243,8 +248,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             ProtottyInput::Right => {
                                 game_state.all_inputs.push(cherenkov::input::RIGHT)
                             }
-                            ProtottyInput::Char('m') => map = true,
-                            prototty_inputs::ESCAPE => escape = true,
+                            MAP_INPUT0 | MAP_INPUT1 => self.app_state = AppState::Map,
+                            HELP_INPUT0 | HELP_INPUT1 => self.app_state = AppState::Help,
+                            prototty_inputs::ESCAPE => self.app_state = AppState::Menu,
                             prototty_inputs::ETX => return Some(Tick::Quit),
                             _ => (),
                         }
@@ -256,11 +262,6 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             .cloned(),
                         &mut game_state.rng_with_seed.rng,
                     );
-                    if escape {
-                        self.app_state = AppState::Menu;
-                    } else if map {
-                        self.app_state = AppState::Map;
-                    }
                 } else {
                     self.app_state = AppState::Menu;
                 }
@@ -268,8 +269,23 @@ impl<F: Frontend, S: Storage> App<F, S> {
             AppState::Map => {
                 for input in inputs {
                     match input {
-                        prototty_inputs::ESCAPE => self.app_state = AppState::Game,
-                        ProtottyInput::Char('m') => self.app_state = AppState::Game,
+                        prototty_inputs::ESCAPE | MAP_INPUT0 | MAP_INPUT1 => {
+                            self.app_state = AppState::Game
+                        }
+                        HELP_INPUT0 | HELP_INPUT1 => self.app_state = AppState::Help,
+                        prototty_inputs::ETX => return Some(Tick::Quit),
+                        _ => (),
+                    }
+                }
+            }
+            AppState::Help => {
+                for input in inputs {
+                    match input {
+                        prototty_inputs::ESCAPE | HELP_INPUT0 | HELP_INPUT1 => {
+                            self.app_state = AppState::Game
+                        }
+                        MAP_INPUT0 | MAP_INPUT1 => self.app_state = AppState::Map,
+                        prototty_inputs::ETX => return Some(Tick::Quit),
                         _ => (),
                     }
                 }
