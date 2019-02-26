@@ -17,7 +17,7 @@ wasm.then(async wasm => {
         cell_height_px: 16,
     };
     let _storage_key = window.location.pathname + window.location.hash;
-    let storage_key = "test";
+    let storage_key = "cherenkov";
     console.log("Using storage key: ", storage_key);
     let context = await new Context(config).with_storage(storage_key);
     let app = new wasm.WebApp(context.grid(), context.storage());
