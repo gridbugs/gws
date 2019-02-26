@@ -23,12 +23,14 @@ pub mod menu {
     #[derive(Clone, Copy)]
     pub enum Choice {
         NewGame,
+        Help,
         Quit,
     }
 
     pub fn create() -> MenuInstance<Choice> {
         instantiate_menu(Menu::smallest(vec![
             ("New Game", Choice::NewGame),
+            ("Help", Choice::Help),
             ("Quit", Choice::Quit),
         ]))
     }
@@ -41,6 +43,7 @@ pub mod pause_menu {
     pub enum Choice {
         Resume,
         NewGame,
+        Help,
         SaveAndQuit,
     }
 
@@ -48,6 +51,7 @@ pub mod pause_menu {
         instantiate_menu(Menu::smallest(vec![
             ("Resume", Choice::Resume),
             ("New Game", Choice::NewGame),
+            ("Help", Choice::Help),
             ("Save and Quit ", Choice::SaveAndQuit),
         ]))
     }
