@@ -6,10 +6,12 @@ extern crate rand_isaac;
 extern crate serde;
 
 pub mod frontend;
-pub mod game_view;
-pub mod menus;
+mod game_view;
+mod map_view;
+mod menus;
 
 use game_view::GameView;
+use map_view::MapView;
 use menus::*;
 use prototty::*;
 use rand::{FromEntropy, Rng, SeedableRng};
@@ -66,6 +68,7 @@ impl GameState {
 enum AppState {
     Game,
     Menu,
+    Map,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -133,6 +136,11 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
             AppState::Game => {
                 if let Some(game_state) = app.game_state.as_ref() {
                     GameView.view(&game_state.game, offset, depth, grid);
+                }
+            }
+            AppState::Map => {
+                if let Some(game_state) = app.game_state.as_ref() {
+                    MapView.view(&game_state.game, offset, depth, grid);
                 }
             }
         }
@@ -222,6 +230,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                 if let Some(game_state) = self.game_state.as_mut() {
                     let input_start_index = game_state.all_inputs.len();
                     let mut escape = false;
+                    let mut map = false;
                     for input in inputs {
                         match input {
                             ProtottyInput::Up => game_state.all_inputs.push(cherenkov::input::UP),
@@ -234,6 +243,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             ProtottyInput::Right => {
                                 game_state.all_inputs.push(cherenkov::input::RIGHT)
                             }
+                            ProtottyInput::Char('m') => map = true,
                             prototty_inputs::ESCAPE => escape = true,
                             prototty_inputs::ETX => return Some(Tick::Quit),
                             _ => (),
@@ -248,9 +258,20 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     );
                     if escape {
                         self.app_state = AppState::Menu;
+                    } else if map {
+                        self.app_state = AppState::Map;
                     }
                 } else {
                     self.app_state = AppState::Menu;
+                }
+            }
+            AppState::Map => {
+                for input in inputs {
+                    match input {
+                        prototty_inputs::ESCAPE => self.app_state = AppState::Game,
+                        ProtottyInput::Char('m') => self.app_state = AppState::Game,
+                        _ => (),
+                    }
                 }
             }
         }

@@ -105,6 +105,9 @@ impl VisibilityCell {
     pub fn is_visible(&self, state: VisibilityState) -> bool {
         self.last_seen == state.count
     }
+    pub fn is_discovered(&self) -> bool {
+        self.last_seen != 0
+    }
 }
 
 #[derive(Serialize, Deserialize)]
