@@ -68,6 +68,7 @@ fn main() {
         .with_font_scale(font_size as f32, font_size as f32)
         .with_cell_dimensions(Size::new(font_size, font_size))
         .with_max_grid_size(grid_size)
+        .with_title("CHERENKOV")
         .build()
         .unwrap();
     let storage =
