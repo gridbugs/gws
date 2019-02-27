@@ -1,0 +1,6 @@
+# Controls
+
+Move: Arrow keys
+Toggle Help: h/F1
+Toggle Map: m/F2
+Toggle Menu: ESC

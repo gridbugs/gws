@@ -22,6 +22,8 @@ use std::time::Duration;
 const TITLE: &'static str = "CHERENKOV";
 const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
 
+const APP_SIZE: Size = Size::new_u16(64, 48);
+
 pub struct AppView {
     menu_and_title_view: MenuAndTitleView,
 }
@@ -109,6 +111,7 @@ pub struct App<F: Frontend, S: Storage> {
     menu: MenuInstance<menu::Choice>,
     pause_menu: MenuInstance<pause_menu::Choice>,
     time_until_next_auto_save: Duration,
+    help_pager: Pager,
 }
 
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
@@ -144,7 +147,9 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                     MapView.view(&game_state.game, offset, depth, grid);
                 }
             }
-            AppState::Help { .. } => {}
+            AppState::Help { .. } => {
+                PagerView.view(&app.help_pager, offset, depth, grid);
+            }
         }
     }
 }
@@ -176,6 +181,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
             menu,
             pause_menu,
             time_until_next_auto_save: AUTO_SAVE_PERIOD,
+            help_pager: Pager::new(include_str!("help.txt"), APP_SIZE, Default::default()),
         };
         (app, init_status)
     }
