@@ -44,6 +44,8 @@ impl Args {
     }
 }
 
+const MONITOR_SIZE_WINDOW_RATIO: f64 = 0.75;
+
 fn main() {
     let args = Args::arg().with_help_default().parse_env_default_or_exit();
     let grid_size = Size::new(64, 48);
@@ -52,7 +54,8 @@ fn main() {
         FontSize::Auto => {
             let monitor_info = MonitorInfo::get_current();
             let font_size = (monitor_info.logical_width() / grid_size.width() as f64)
-                .min(monitor_info.logical_height() / grid_size.height() as f64);
+                .min(monitor_info.logical_height() / grid_size.height() as f64)
+                * MONITOR_SIZE_WINDOW_RATIO;
             font_size as u32
         }
     };
