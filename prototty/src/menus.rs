@@ -44,14 +44,16 @@ pub mod pause_menu {
         Resume,
         NewGame,
         Help,
+        Map,
         SaveAndQuit,
     }
 
     pub fn create() -> MenuInstance<Choice> {
         instantiate_menu(Menu::smallest(vec![
             ("Resume", Choice::Resume),
-            ("New Game", Choice::NewGame),
+            ("Map", Choice::Map),
             ("Help", Choice::Help),
+            ("New Game", Choice::NewGame),
             ("Save and Quit ", Choice::SaveAndQuit),
         ]))
     }

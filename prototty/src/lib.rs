@@ -70,7 +70,7 @@ impl GameState {
 enum AppState {
     Game,
     Menu,
-    Map,
+    Map { opened_from_game: bool },
     Help { opened_from_game: bool },
 }
 
@@ -142,7 +142,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                     GameView.view(&game_state.game, offset, depth, grid);
                 }
             }
-            AppState::Map => {
+            AppState::Map { .. } => {
                 if let Some(game_state) = app.game_state.as_ref() {
                     MapView.view(&game_state.game, offset, depth, grid);
                 }
@@ -225,6 +225,11 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     opened_from_game: false,
                                 }
                             }
+                            pause_menu::Choice::Map => {
+                                self.app_state = AppState::Map {
+                                    opened_from_game: false,
+                                }
+                            }
                         },
                     }
                 } else {
@@ -264,7 +269,11 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             ProtottyInput::Right => {
                                 game_state.all_inputs.push(cherenkov::input::RIGHT)
                             }
-                            MAP_INPUT0 | MAP_INPUT1 => self.app_state = AppState::Map,
+                            MAP_INPUT0 | MAP_INPUT1 => {
+                                self.app_state = AppState::Map {
+                                    opened_from_game: true,
+                                }
+                            }
                             HELP_INPUT0 | HELP_INPUT1 => {
                                 self.app_state = AppState::Help {
                                     opened_from_game: true,
@@ -286,16 +295,18 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     self.app_state = AppState::Menu;
                 }
             }
-            AppState::Map => {
+            AppState::Map { opened_from_game } => {
                 for input in inputs {
                     match input {
                         prototty_inputs::ESCAPE | MAP_INPUT0 | MAP_INPUT1 => {
-                            self.app_state = AppState::Game
+                            if opened_from_game {
+                                self.app_state = AppState::Game
+                            } else {
+                                self.app_state = AppState::Menu
+                            }
                         }
                         HELP_INPUT0 | HELP_INPUT1 => {
-                            self.app_state = AppState::Help {
-                                opened_from_game: true,
-                            }
+                            self.app_state = AppState::Help { opened_from_game }
                         }
                         prototty_inputs::ETX => return Some(Tick::Quit),
                         _ => (),
@@ -312,7 +323,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 self.app_state = AppState::Menu
                             }
                         }
-                        MAP_INPUT0 | MAP_INPUT1 => self.app_state = AppState::Map,
+                        MAP_INPUT0 | MAP_INPUT1 => {
+                            self.app_state = AppState::Map { opened_from_game }
+                        }
                         prototty_inputs::ETX => return Some(Tick::Quit),
                         _ => (),
                     }
