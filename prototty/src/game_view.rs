@@ -44,23 +44,32 @@ impl View<Cherenkov> for GameView {
             if !visibility.is_visible(visibility_state) {
                 continue;
             }
-            let mut view_cell = match cell.base() {
-                WorldCellBase::Floor => FLOOR,
-                WorldCellBase::Wall => {
+            let view_cell = match cell.background_tile() {
+                BackgroundTile::Floor => FLOOR,
+                BackgroundTile::Wall => {
                     if let Some(cell_below) = to_render.world.grid().get(coord + Coord::new(0, 1)) {
-                        match cell_below.base() {
-                            WorldCellBase::Floor => WALL_ABOVE_FLOOR,
-                            WorldCellBase::Wall => WALL_ABOVE_WALL,
+                        match cell_below.background_tile() {
+                            BackgroundTile::Floor => WALL_ABOVE_FLOOR,
+                            BackgroundTile::Wall => WALL_ABOVE_WALL,
                         }
                     } else {
                         WALL_ABOVE_FLOOR
                     }
                 }
             };
+            let mut view_cell = if let Some(foreground_tile) =
+                cell.foreground_tiles(to_render.world.entities()).next()
+            {
+                match foreground_tile {
+                    ForegroundTile::Player => PLAYER,
+                }
+                .coalesce(view_cell)
+            } else {
+                view_cell
+            };
             let light_colour = visibility.light_colour(visibility_state);
             light_view_cell(&mut view_cell, light_colour);
             grid.set_cell(offset + coord, depth, view_cell);
         }
-        grid.set_cell(offset + to_render.player_coord, depth, PLAYER);
     }
 }

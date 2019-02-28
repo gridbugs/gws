@@ -28,12 +28,15 @@ impl View<Cherenkov> for MapView {
             if !visibility.is_discovered() {
                 continue;
             }
-            let cell_info = match cell.base() {
-                WorldCellBase::Floor => FLOOR,
-                WorldCellBase::Wall => WALL,
+            let view_cell = match cell.background_tile() {
+                BackgroundTile::Floor => FLOOR,
+                BackgroundTile::Wall => WALL,
             };
-            grid.set_cell(offset + coord, depth, cell_info);
+            grid.set_cell(offset + coord, depth, view_cell);
         }
-        grid.set_cell(offset + to_render.player_coord, depth, PLAYER);
+        let player_view_cell = match to_render.player.foreground_tile() {
+            ForegroundTile::Player => PLAYER,
+        };
+        grid.set_cell(offset + to_render.player.coord(), depth, player_view_cell);
     }
 }

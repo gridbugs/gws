@@ -4,12 +4,14 @@ extern crate grid_2d;
 extern crate rand;
 #[macro_use]
 extern crate serde;
+extern crate hashbrown;
 extern crate rgb24;
 extern crate shadowcast;
 
 use coord_2d::{Coord, Size};
 use direction::*;
 use grid_2d::Grid;
+use hashbrown::{hash_set, HashMap, HashSet};
 use rand::Rng;
 use rgb24::*;
 use shadowcast::*;
@@ -36,14 +38,14 @@ impl InputGrid for Visibility {
         grid.size()
     }
     fn get_opacity(&self, grid: &Self::Grid, coord: Coord) -> Self::Opacity {
-        match grid.get_checked(coord).base() {
-            WorldCellBase::Floor => 0,
-            WorldCellBase::Wall => 255,
-        }
+        grid.get_checked(coord).opacity()
     }
 }
 
-const VISION_DISTANCE: vision_distance::Circle = vision_distance::Circle::new(8);
+const VISION_DISTANCE_SCALAR: u32 = 12;
+const VISION_DISTANCE: vision_distance::Circle =
+    vision_distance::Circle::new(VISION_DISTANCE_SCALAR);
+const PLAYER_LIGHT_DISTANCE_SCALAR: u32 = 6;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VisibilityCell {
@@ -64,15 +66,6 @@ pub struct VisibileArea {
     count: u64,
     #[serde(skip)]
     shadowcast: ShadowcastContext<u8>,
-}
-
-const LIGHT_DIMINISH_DAMPEN_NUM: u32 = 3;
-const LIGHT_DIMINISH_DAMPEN_DENOM: u32 = 5;
-const AMBIENT_LIGHT: Rgb24 = rgb24(15, 15, 15);
-
-fn light_square_distance(a: Coord, b: Coord) -> u32 {
-    let d = (a - b) * (LIGHT_DIMINISH_DAMPEN_NUM as i32) / (LIGHT_DIMINISH_DAMPEN_DENOM as i32);
-    d.magnitude2().max(1)
 }
 
 impl VisibileArea {
@@ -128,12 +121,11 @@ impl VisibileArea {
                     if !(direction_bitmap & cell.visible_directions).is_empty() {
                         if cell.last_lit != count {
                             cell.last_lit = count;
-                            cell.light_colour = AMBIENT_LIGHT;
+                            cell.light_colour = rgb24(0, 0, 0);
                         }
-                        let square_distance = light_square_distance(light.coord, coord);
                         cell.light_colour = cell
                             .light_colour
-                            .saturating_add(light.colour.scalar_div(square_distance));
+                            .saturating_add(light.colour_at_coord(coord));
                     }
                 },
             );
@@ -158,22 +150,67 @@ impl VisibilityCell {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum WorldCellBase {
+pub enum BackgroundTile {
     Floor,
     Wall,
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub enum ForegroundTile {
+    Player,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct WorldCell {
-    base: WorldCellBase,
+    background_tile: BackgroundTile,
+    entities: HashSet<EntityId>,
+}
+
+pub struct EntityIter<'a> {
+    iter: hash_set::Iter<'a, EntityId>,
+    entities: &'a Entities,
+}
+
+impl<'a> Iterator for EntityIter<'a> {
+    type Item = &'a Entity;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|id| self.entities.get(id).unwrap())
+    }
+}
+
+pub struct ForegroundTiles<'a>(EntityIter<'a>);
+
+impl<'a> Iterator for ForegroundTiles<'a> {
+    type Item = ForegroundTile;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|e| e.foreground_tile)
+    }
 }
 
 impl WorldCell {
-    fn new(base: WorldCellBase) -> Self {
-        Self { base }
+    fn new(background_tile: BackgroundTile) -> Self {
+        Self {
+            background_tile,
+            entities: HashSet::new(),
+        }
     }
-    pub fn base(&self) -> WorldCellBase {
-        self.base
+    pub fn background_tile(&self) -> BackgroundTile {
+        self.background_tile
+    }
+    pub fn opacity(&self) -> u8 {
+        match self.background_tile {
+            BackgroundTile::Floor => 0,
+            BackgroundTile::Wall => 255,
+        }
+    }
+    pub fn entity_iter<'a>(&'a self, entities: &'a Entities) -> EntityIter<'a> {
+        EntityIter {
+            iter: self.entities.iter(),
+            entities,
+        }
+    }
+    pub fn foreground_tiles<'a>(&'a self, entities: &'a Entities) -> ForegroundTiles<'a> {
+        ForegroundTiles(self.entity_iter(entities))
     }
 }
 
@@ -182,27 +219,82 @@ pub struct Light {
     coord: Coord,
     colour: Rgb24,
     range: vision_distance::Circle,
+    diminish_num: u32,
+    diminish_denom: u32,
 }
 
 impl Light {
-    fn new(coord: Coord, colour: Rgb24, range: u32) -> Self {
+    fn new(
+        coord: Coord,
+        colour: Rgb24,
+        range: u32,
+        diminish_num: u32,
+        diminish_denom: u32,
+    ) -> Self {
         Self {
             coord,
             colour,
             range: vision_distance::Circle::new(range),
+            diminish_num,
+            diminish_denom,
         }
     }
+    fn diminish_at_coord(&self, coord: Coord) -> u32 {
+        ((self.coord - coord).magnitude2() * self.diminish_num / self.diminish_denom).max(1)
+    }
+    fn colour_at_coord(&self, coord: Coord) -> Rgb24 {
+        self.colour.scalar_div(self.diminish_at_coord(coord))
+    }
 }
+
+pub type EntityId = u64;
+
+#[derive(Serialize, Deserialize)]
+pub struct Entity {
+    coord: Coord,
+    foreground_tile: ForegroundTile,
+    light_index: Option<usize>,
+}
+
+impl Entity {
+    pub fn coord(&self) -> Coord {
+        self.coord
+    }
+    pub fn foreground_tile(&self) -> ForegroundTile {
+        self.foreground_tile
+    }
+}
+
+pub type Entities = HashMap<EntityId, Entity>;
 
 #[derive(Serialize, Deserialize)]
 pub struct World {
     grid: Grid<WorldCell>,
     lights: Vec<Light>,
+    entities: HashMap<EntityId, Entity>,
 }
 
 impl World {
     pub fn grid(&self) -> &Grid<WorldCell> {
         &self.grid
+    }
+    pub fn entities(&self) -> &Entities {
+        &self.entities
+    }
+    pub fn move_entity_in_direction(&mut self, id: EntityId, direction: CardinalDirection) {
+        let entity = self.entities.get_mut(&id).unwrap();
+        let next_coord = entity.coord + direction.coord();
+        if let Some(current_cell) = self.grid.get_mut(entity.coord) {
+            current_cell.entities.remove(&id);
+        }
+        if let Some(next_cell) = self.grid.get_mut(next_coord) {
+            next_cell.entities.insert(id);
+        }
+        entity.coord = next_coord;
+        if let Some(light_index) = entity.light_index {
+            let light = self.lights.get_mut(light_index).unwrap();
+            light.coord = entity.coord;
+        }
     }
 }
 
@@ -210,13 +302,14 @@ impl World {
 pub struct Cherenkov {
     world: World,
     visible_area: VisibileArea,
-    player_coord: Coord,
+    player_id: EntityId,
+    next_id: EntityId,
 }
 
 pub struct ToRender<'a> {
     pub world: &'a World,
     pub visible_area: &'a VisibileArea,
-    pub player_coord: &'a Coord,
+    pub player: &'a Entity,
 }
 
 impl Cherenkov {
@@ -230,41 +323,86 @@ impl Cherenkov {
         let size = Size::new(terrain_vecs[0].len() as u32, terrain_vecs.len() as u32);
         let mut player_coord = Coord::new(0, 0);
         let mut lights = Vec::new();
+        let light_base = 10;
         let grid = Grid::new_fn(size, |coord| {
             let base = match terrain_vecs[coord.y as usize][coord.x as usize] {
-                '.' => WorldCellBase::Floor,
-                '#' => WorldCellBase::Wall,
+                '.' => BackgroundTile::Floor,
+                '#' => BackgroundTile::Wall,
                 '@' => {
                     player_coord = coord;
-                    WorldCellBase::Floor
+                    BackgroundTile::Floor
                 }
                 '1' => {
-                    lights.push(Light::new(coord, rgb24(255, 0, 0), 10));
-                    WorldCellBase::Floor
+                    lights.push(Light::new(
+                        coord,
+                        rgb24(255, light_base, light_base),
+                        10,
+                        2,
+                        5,
+                    ));
+                    BackgroundTile::Floor
                 }
                 '2' => {
-                    lights.push(Light::new(coord, rgb24(0, 255, 0), 10));
-                    WorldCellBase::Floor
+                    lights.push(Light::new(
+                        coord,
+                        rgb24(light_base, 255, light_base),
+                        10,
+                        3,
+                        5,
+                    ));
+                    BackgroundTile::Floor
                 }
                 '3' => {
-                    lights.push(Light::new(coord, rgb24(0, 0, 255), 10));
-                    WorldCellBase::Floor
+                    lights.push(Light::new(
+                        coord,
+                        rgb24(light_base, light_base, 255),
+                        10,
+                        2,
+                        5,
+                    ));
+                    BackgroundTile::Floor
                 }
                 '4' => {
-                    lights.push(Light::new(coord, rgb24(255, 255, 0), 10));
-                    WorldCellBase::Floor
+                    lights.push(Light::new(coord, rgb24(255, 255, light_base), 10, 3, 5));
+                    BackgroundTile::Floor
                 }
                 _ => panic!(),
             };
             WorldCell::new(base)
         });
-        let world = World { grid, lights };
+        let mut world = World {
+            grid,
+            lights,
+            entities: HashMap::new(),
+        };
         let mut visible_area = VisibileArea::new(size);
         visible_area.update(player_coord, &world);
+        let player_light = Light::new(
+            player_coord,
+            rgb24(128, 128, 128),
+            PLAYER_LIGHT_DISTANCE_SCALAR,
+            4,
+            5,
+        );
+        let player = Entity {
+            coord: player_coord,
+            foreground_tile: ForegroundTile::Player,
+            light_index: Some(world.lights.len()),
+        };
+        world.lights.push(player_light);
+        let player_id = 0;
+        let next_id = 1;
+        world
+            .grid
+            .get_checked_mut(player_coord)
+            .entities
+            .insert(player_id);
+        world.entities.insert(player_id, player);
         Self {
             world,
             visible_area,
-            player_coord,
+            player_id,
+            next_id,
         }
     }
 
@@ -272,17 +410,22 @@ impl Cherenkov {
         let _ = rng;
         for i in inputs {
             match i {
-                Input::Move(direction) => self.player_coord += direction.coord(),
+                Input::Move(direction) => self
+                    .world
+                    .move_entity_in_direction(self.player_id, direction),
             }
         }
-        self.visible_area.update(self.player_coord, &self.world);
+        self.visible_area.update(
+            self.world.entities.get(&self.player_id).unwrap().coord,
+            &self.world,
+        );
     }
 
     pub fn to_render(&self) -> ToRender {
         ToRender {
             world: &self.world,
             visible_area: &self.visible_area,
-            player_coord: &self.player_coord,
+            player: &self.world.entities.get(&self.player_id).unwrap(),
         }
     }
 }

@@ -12,3 +12,4 @@ coord_2d = { version = "0.2", features = ["serialize"] }
 direction = { version = "0.17", features = ["serialize"] }
 shadowcast = { version = "0.5", features = ["serialize"] }
 rgb24 = { version = "0.1", features = ["serialize"] }
+hashbrown = { version = "0.1", features = ["serde"] }
