@@ -17,7 +17,13 @@ const PLAYER: ViewCell = ViewCell::new()
     .with_background(colours::BLACK);
 
 impl View<Cherenkov> for MapView {
-    fn view<G: ViewGrid>(&mut self, game: &Cherenkov, offset: Coord, depth: i32, grid: &mut G) {
+    fn view<G: ViewGrid>(
+        &mut self,
+        game: &Cherenkov,
+        offset: Coord,
+        depth: i32,
+        grid: &mut G,
+    ) {
         let to_render = game.to_render();
         for ((coord, cell), visibility) in to_render
             .world

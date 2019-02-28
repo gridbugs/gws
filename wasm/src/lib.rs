@@ -34,7 +34,9 @@ impl WebApp {
         let app_view = AppView::new();
         match init_status {
             InitStatus::NoSaveFound => console_log!("No save game found"),
-            InitStatus::LoadedSaveWithSeed(seed) => console_log!("Loaded game with seed: {}", seed),
+            InitStatus::LoadedSaveWithSeed(seed) => {
+                console_log!("Loaded game with seed: {}", seed)
+            }
         }
         Self {
             app_view,

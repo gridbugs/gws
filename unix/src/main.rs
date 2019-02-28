@@ -16,8 +16,10 @@ fn main() {
         .with_help_default()
         .parse_env_default_or_exit();
     let mut context = Context::new().unwrap();
-    let storage = FileStorage::next_to_exe(args.save_dir(), true).expect("Failed to find user dir");
-    let (mut app, _init_status) = App::new(frontend::Unix, storage, args.first_rng_seed());
+    let storage =
+        FileStorage::next_to_exe(args.save_dir(), true).expect("Failed to find user dir");
+    let (mut app, _init_status) =
+        App::new(frontend::Unix, storage, args.first_rng_seed());
     let mut app_view = AppView::new();
     let mut frame_instant = Instant::now();
     loop {
@@ -31,7 +33,9 @@ fn main() {
         }
         app_view.set_size(context.size().unwrap());
         context.render(&mut app_view, &app).unwrap();
-        if let Some(time_until_next_frame) = TICK_PERIOD.checked_sub(frame_instant.elapsed()) {
+        if let Some(time_until_next_frame) =
+            TICK_PERIOD.checked_sub(frame_instant.elapsed())
+        {
             thread::sleep(time_until_next_frame);
         }
     }

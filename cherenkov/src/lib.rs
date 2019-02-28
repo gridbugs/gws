@@ -240,7 +240,8 @@ impl Light {
         }
     }
     fn diminish_at_coord(&self, coord: Coord) -> u32 {
-        ((self.coord - coord).magnitude2() * self.diminish_num / self.diminish_denom).max(1)
+        ((self.coord - coord).magnitude2() * self.diminish_num / self.diminish_denom)
+            .max(1)
     }
     fn colour_at_coord(&self, coord: Coord) -> Rgb24 {
         self.colour.scalar_div(self.diminish_at_coord(coord))
@@ -281,7 +282,11 @@ impl World {
     pub fn entities(&self) -> &Entities {
         &self.entities
     }
-    pub fn move_entity_in_direction(&mut self, id: EntityId, direction: CardinalDirection) {
+    pub fn move_entity_in_direction(
+        &mut self,
+        id: EntityId,
+        direction: CardinalDirection,
+    ) {
         let entity = self.entities.get_mut(&id).unwrap();
         let next_coord = entity.coord + direction.coord();
         if let Some(current_cell) = self.grid.get_mut(entity.coord) {
@@ -406,7 +411,11 @@ impl Cherenkov {
         }
     }
 
-    pub fn tick<I: IntoIterator<Item = Input>, R: Rng>(&mut self, inputs: I, rng: &mut R) {
+    pub fn tick<I: IntoIterator<Item = Input>, R: Rng>(
+        &mut self,
+        inputs: I,
+        rng: &mut R,
+    ) {
         let _ = rng;
         for i in inputs {
             match i {

@@ -32,7 +32,13 @@ fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
 }
 
 impl View<Cherenkov> for GameView {
-    fn view<G: ViewGrid>(&mut self, game: &Cherenkov, offset: Coord, depth: i32, grid: &mut G) {
+    fn view<G: ViewGrid>(
+        &mut self,
+        game: &Cherenkov,
+        offset: Coord,
+        depth: i32,
+        grid: &mut G,
+    ) {
         let to_render = game.to_render();
         let visibility_state = to_render.visible_area.state();
         for ((coord, cell), visibility) in to_render
@@ -47,7 +53,9 @@ impl View<Cherenkov> for GameView {
             let view_cell = match cell.background_tile() {
                 BackgroundTile::Floor => FLOOR,
                 BackgroundTile::Wall => {
-                    if let Some(cell_below) = to_render.world.grid().get(coord + Coord::new(0, 1)) {
+                    if let Some(cell_below) =
+                        to_render.world.grid().get(coord + Coord::new(0, 1))
+                    {
                         match cell_below.background_tile() {
                             BackgroundTile::Floor => WALL_ABOVE_FLOOR,
                             BackgroundTile::Wall => WALL_ABOVE_WALL,

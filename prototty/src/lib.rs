@@ -160,7 +160,11 @@ const MAP_INPUT0: ProtottyInput = ProtottyInput::Char('m');
 const MAP_INPUT1: ProtottyInput = ProtottyInput::Function(2);
 
 impl<F: Frontend, S: Storage> App<F, S> {
-    pub fn new(frontend: F, storage: S, first_rng_seed: FirstRngSeed) -> (Self, InitStatus) {
+    pub fn new(
+        frontend: F,
+        storage: S,
+        first_rng_seed: FirstRngSeed,
+    ) -> (Self, InitStatus) {
         let _ = frontend;
         let (init_status, game_state) = match storage.load::<_, GameState>(SAVE_KEY) {
             Ok(game_state) => (
@@ -181,7 +185,11 @@ impl<F: Frontend, S: Storage> App<F, S> {
             menu,
             pause_menu,
             time_until_next_auto_save: AUTO_SAVE_PERIOD,
-            help_pager: Pager::new(include_str!("help.txt"), APP_SIZE, Default::default()),
+            help_pager: Pager::new(
+                include_str!("help.txt"),
+                APP_SIZE,
+                Default::default(),
+            ),
         };
         (app, init_status)
     }
@@ -217,7 +225,8 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 return Some(Tick::Quit);
                             }
                             pause_menu::Choice::NewGame => {
-                                self.game_state = Some(GameState::new(self.rng_source.next()));
+                                self.game_state =
+                                    Some(GameState::new(self.rng_source.next()));
                                 self.app_state = AppState::Game;
                             }
                             pause_menu::Choice::Help => {
@@ -242,7 +251,8 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         Some(MenuOutput::Finalise(selection)) => match selection {
                             menu::Choice::Quit => return Some(Tick::Quit),
                             menu::Choice::NewGame => {
-                                self.game_state = Some(GameState::new(self.rng_source.next()));
+                                self.game_state =
+                                    Some(GameState::new(self.rng_source.next()));
                                 self.app_state = AppState::Game;
                             }
                             menu::Choice::Help => {
@@ -259,7 +269,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     let input_start_index = game_state.all_inputs.len();
                     for input in inputs {
                         match input {
-                            ProtottyInput::Up => game_state.all_inputs.push(cherenkov::input::UP),
+                            ProtottyInput::Up => {
+                                game_state.all_inputs.push(cherenkov::input::UP)
+                            }
                             ProtottyInput::Down => {
                                 game_state.all_inputs.push(cherenkov::input::DOWN)
                             }
@@ -332,7 +344,8 @@ impl<F: Frontend, S: Storage> App<F, S> {
                 }
             }
         }
-        if let Some(time_until_next_auto_save) = self.time_until_next_auto_save.checked_sub(period)
+        if let Some(time_until_next_auto_save) =
+            self.time_until_next_auto_save.checked_sub(period)
         {
             self.time_until_next_auto_save = time_until_next_auto_save;
             None

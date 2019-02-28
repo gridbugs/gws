@@ -20,7 +20,8 @@ impl FontSize {
         opt("s", "font-size", "font size in pixels", "INT")
             .option_map(FontSize::Specified)
             .either(
-                flag("a", "font-auto", "choose font size automatically").some_if(FontSize::Auto),
+                flag("a", "font-auto", "choose font size automatically")
+                    .some_if(FontSize::Auto),
             )
             .with_default(FontSize::Auto)
     }
@@ -60,26 +61,30 @@ fn main() {
         }
     };
     let size = grid_size * font_size;
-    let mut context = ContextBuilder::new_with_font(include_bytes!("fonts/PxPlus_IBM_CGAthin.ttf"))
-        .with_bold_font(include_bytes!("fonts/PxPlus_IBM_CGA.ttf"))
-        .with_window_dimensions(size)
-        .with_min_window_dimensions(size)
-        .with_max_window_dimensions(size)
-        .with_font_scale(font_size as f32, font_size as f32)
-        .with_cell_dimensions(Size::new(font_size, font_size))
-        .with_max_grid_size(grid_size)
-        .with_title("CHERENKOV")
-        .build()
-        .unwrap();
-    let storage =
-        FileStorage::next_to_exe(args.common.save_dir(), true).expect("Failed to find user dir");
-    let (mut app, init_status) = App::new(frontend::Glutin, storage, args.common.first_rng_seed());
+    let mut context =
+        ContextBuilder::new_with_font(include_bytes!("fonts/PxPlus_IBM_CGAthin.ttf"))
+            .with_bold_font(include_bytes!("fonts/PxPlus_IBM_CGA.ttf"))
+            .with_window_dimensions(size)
+            .with_min_window_dimensions(size)
+            .with_max_window_dimensions(size)
+            .with_font_scale(font_size as f32, font_size as f32)
+            .with_cell_dimensions(Size::new(font_size, font_size))
+            .with_max_grid_size(grid_size)
+            .with_title("CHERENKOV")
+            .build()
+            .unwrap();
+    let storage = FileStorage::next_to_exe(args.common.save_dir(), true)
+        .expect("Failed to find user dir");
+    let (mut app, init_status) =
+        App::new(frontend::Glutin, storage, args.common.first_rng_seed());
     let mut input_buffer = Vec::with_capacity(64);
     let mut app_view = AppView::new();
     let mut frame_instant = Instant::now();
     match init_status {
         InitStatus::NoSaveFound => eprintln!("No save game found"),
-        InitStatus::LoadedSaveWithSeed(seed) => eprintln!("Loaded game with seed: {}", seed),
+        InitStatus::LoadedSaveWithSeed(seed) => {
+            eprintln!("Loaded game with seed: {}", seed)
+        }
     }
     loop {
         let period = frame_instant.elapsed();
