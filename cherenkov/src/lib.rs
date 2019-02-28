@@ -13,12 +13,6 @@ use rand::Rng;
 use shadowcast::*;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum Cell {
-    Floor,
-    Wall,
-}
-
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Input {
     Move(CardinalDirection),
 }
@@ -34,15 +28,15 @@ pub mod input {
 struct Visibility;
 
 impl InputGrid for Visibility {
-    type Grid = Grid<Cell>;
+    type Grid = Grid<WorldCell>;
     type Opacity = u8;
     fn size(&self, grid: &Self::Grid) -> Size {
         grid.size()
     }
     fn get_opacity(&self, grid: &Self::Grid, coord: Coord) -> Self::Opacity {
-        match *grid.get_checked(coord) {
-            Cell::Floor => 0,
-            Cell::Wall => 255,
+        match grid.get_checked(coord).base() {
+            WorldCellBase::Floor => 0,
+            WorldCellBase::Wall => 255,
         }
     }
 }
@@ -84,7 +78,7 @@ impl VisibileArea {
     pub fn iter(&self) -> impl Iterator<Item = &VisibilityCell> {
         self.grid.iter()
     }
-    pub fn update(&mut self, player_coord: Coord, world: &Grid<Cell>) {
+    pub fn update(&mut self, player_coord: Coord, world: &Grid<WorldCell>) {
         self.count += 1;
         let count = self.count;
         let grid = &mut self.grid;
@@ -110,15 +104,46 @@ impl VisibilityCell {
     }
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub enum WorldCellBase {
+    Floor,
+    Wall,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct WorldCell {
+    base: WorldCellBase,
+}
+
+impl WorldCell {
+    fn new(base: WorldCellBase) -> Self {
+        Self { base }
+    }
+    pub fn base(&self) -> WorldCellBase {
+        self.base
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct World {
+    grid: Grid<WorldCell>,
+}
+
+impl World {
+    pub fn grid(&self) -> &Grid<WorldCell> {
+        &self.grid
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Cherenkov {
-    grid: Grid<Cell>,
+    world: World,
     visible_area: VisibileArea,
     player_coord: Coord,
 }
 
 pub struct ToRender<'a> {
-    pub grid: &'a Grid<Cell>,
+    pub world: &'a World,
     pub visible_area: &'a VisibileArea,
     pub player_coord: &'a Coord,
 }
@@ -134,20 +159,22 @@ impl Cherenkov {
         let size = Size::new(terrain_vecs[0].len() as u32, terrain_vecs.len() as u32);
         let mut player_coord = Coord::new(0, 0);
         let grid = Grid::new_fn(size, |coord| {
-            match terrain_vecs[coord.y as usize][coord.x as usize] {
-                '.' => Cell::Floor,
-                '#' => Cell::Wall,
+            let base = match terrain_vecs[coord.y as usize][coord.x as usize] {
+                '.' => WorldCellBase::Floor,
+                '#' => WorldCellBase::Wall,
                 '@' => {
                     player_coord = coord;
-                    Cell::Floor
+                    WorldCellBase::Floor
                 }
                 _ => panic!(),
-            }
+            };
+            WorldCell::new(base)
         });
+        let world = World { grid };
         let mut visible_area = VisibileArea::new(size);
-        visible_area.update(player_coord, &grid);
+        visible_area.update(player_coord, world.grid());
         Self {
-            grid,
+            world,
             visible_area,
             player_coord,
         }
@@ -160,12 +187,13 @@ impl Cherenkov {
                 Input::Move(direction) => self.player_coord += direction.coord(),
             }
         }
-        self.visible_area.update(self.player_coord, &self.grid);
+        self.visible_area
+            .update(self.player_coord, &self.world.grid());
     }
 
     pub fn to_render(&self) -> ToRender {
         ToRender {
-            grid: &self.grid,
+            world: &self.world,
             visible_area: &self.visible_area,
             player_coord: &self.player_coord,
         }

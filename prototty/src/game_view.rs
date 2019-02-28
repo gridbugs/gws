@@ -55,21 +55,22 @@ impl View<Cherenkov> for GameView {
     fn view<G: ViewGrid>(&mut self, game: &Cherenkov, offset: Coord, depth: i32, grid: &mut G) {
         let to_render = game.to_render();
         let visibility_state = to_render.visible_area.state();
-        for ((coord, &cell), visibility) in to_render
-            .grid
+        for ((coord, cell), visibility) in to_render
+            .world
+            .grid()
             .enumerate()
             .zip(to_render.visible_area.iter())
         {
             if !visibility.is_visible(visibility_state) {
                 continue;
             }
-            let mut cell_info = match cell {
-                Cell::Floor => FLOOR,
-                Cell::Wall => {
-                    if let Some(cell_below) = to_render.grid.get(coord + Coord::new(0, 1)) {
-                        match cell_below {
-                            Cell::Floor => WALL_ABOVE_FLOOR,
-                            Cell::Wall => WALL_ABOVE_WALL,
+            let mut cell_info = match cell.base() {
+                WorldCellBase::Floor => FLOOR,
+                WorldCellBase::Wall => {
+                    if let Some(cell_below) = to_render.world.grid().get(coord + Coord::new(0, 1)) {
+                        match cell_below.base() {
+                            WorldCellBase::Floor => WALL_ABOVE_FLOOR,
+                            WorldCellBase::Wall => WALL_ABOVE_WALL,
                         }
                     } else {
                         WALL_ABOVE_FLOOR

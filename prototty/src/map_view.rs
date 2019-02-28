@@ -19,17 +19,18 @@ const PLAYER: ViewCell = ViewCell::new()
 impl View<Cherenkov> for MapView {
     fn view<G: ViewGrid>(&mut self, game: &Cherenkov, offset: Coord, depth: i32, grid: &mut G) {
         let to_render = game.to_render();
-        for ((coord, &cell), visibility) in to_render
-            .grid
+        for ((coord, cell), visibility) in to_render
+            .world
+            .grid()
             .enumerate()
             .zip(to_render.visible_area.iter())
         {
             if !visibility.is_discovered() {
                 continue;
             }
-            let cell_info = match cell {
-                Cell::Floor => FLOOR,
-                Cell::Wall => WALL,
+            let cell_info = match cell.base() {
+                WorldCellBase::Floor => FLOOR,
+                WorldCellBase::Wall => WALL,
             };
             grid.set_cell(offset + coord, depth, cell_info);
         }
