@@ -5,8 +5,8 @@ pub struct GameView;
 
 const FLOOR_BACKGROUND: Rgb24 = rgb24(0, 0, 127);
 const FLOOR_FOREGROUND: Rgb24 = rgb24(255, 255, 255);
-const WALL_TOP_COLOUR: Rgb24 = rgb24(200, 128, 0);
-const WALL_FRONT_COLOUR: Rgb24 = rgb24(200, 50, 0);
+const WALL_TOP_COLOUR: Rgb24 = rgb24(255, 255, 0);
+const WALL_FRONT_COLOUR: Rgb24 = rgb24(255, 50, 0);
 
 const FLOOR: ViewCell = ViewCell::new()
     .with_character('.')
@@ -22,32 +22,14 @@ const WALL_ABOVE_WALL: ViewCell = ViewCell::new()
     .with_background(WALL_FRONT_COLOUR);
 const PLAYER: ViewCell = ViewCell::new().with_character('@');
 
-const LIGHT_DIMINISH_DAMPEN: u32 = 4;
+const LIGHT_DIMINISH_DAMPEN: u32 = 2;
 
-#[derive(Clone, Copy)]
-struct Rational {
-    num: u32,
-    denom: u32,
-}
-
-fn mult_channel(c: u8, by: Rational) -> u8 {
-    ((c as u32 * by.num) / by.denom) as u8
-}
-
-fn mult_rgb24(Rgb24 { r, g, b }: Rgb24, by: Rational) -> Rgb24 {
-    rgb24(
-        mult_channel(r, by),
-        mult_channel(g, by),
-        mult_channel(b, by),
-    )
-}
-
-fn mult_cell_info(cell_info: &mut ViewCell, by: Rational) {
+fn div_cell_info(cell_info: &mut ViewCell, by: u32) {
     if let Some(foreground) = cell_info.foreground.as_mut() {
-        *foreground = mult_rgb24(*foreground, by);
+        *foreground = foreground.scalar_div(by);
     }
     if let Some(background) = cell_info.background.as_mut() {
-        *background = mult_rgb24(*background, by);
+        *background = background.scalar_div(by);
     }
 }
 
@@ -77,18 +59,12 @@ impl View<Cherenkov> for GameView {
                     }
                 }
             };
-            let square_distance = {
-                let d = to_render.player_coord - coord;
+            let square_distance = ({
+                let d = (to_render.player_coord - coord) / (LIGHT_DIMINISH_DAMPEN as i32);
                 d.x * d.x + d.y * d.y
-            } as u32;
-            let dampened_square_distance = (square_distance / LIGHT_DIMINISH_DAMPEN).max(1);
-            mult_cell_info(
-                &mut cell_info,
-                Rational {
-                    num: 1,
-                    denom: dampened_square_distance,
-                },
-            );
+            } as u32)
+                .max(1);
+            div_cell_info(&mut cell_info, square_distance);
             grid.set_cell(offset + coord, depth, cell_info);
         }
         grid.set_cell(offset + to_render.player_coord, depth, PLAYER);

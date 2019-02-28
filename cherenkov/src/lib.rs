@@ -4,12 +4,14 @@ extern crate grid_2d;
 extern crate rand;
 #[macro_use]
 extern crate serde;
+extern crate rgb24;
 extern crate shadowcast;
 
 use coord_2d::{Coord, Size};
 use direction::CardinalDirection;
 use grid_2d::Grid;
 use rand::Rng;
+use rgb24::*;
 use shadowcast::*;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -46,6 +48,8 @@ const VISION_DISTANCE: vision_distance::Circle = vision_distance::Circle::new(8)
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VisibilityCell {
     last_seen: u64,
+    last_lit: u64,
+    light_colour: Rgb24,
 }
 
 #[derive(Clone, Copy)]
@@ -63,7 +67,14 @@ pub struct VisibileArea {
 
 impl VisibileArea {
     pub fn new(size: Size) -> Self {
-        let grid = Grid::new_clone(size, VisibilityCell { last_seen: 0 });
+        let grid = Grid::new_clone(
+            size,
+            VisibilityCell {
+                last_seen: 0,
+                last_lit: 0,
+                light_colour: rgb24(0, 0, 0),
+            },
+        );
         let count = 1;
         let shadowcast = ShadowcastContext::default();
         Self {
@@ -78,20 +89,36 @@ impl VisibileArea {
     pub fn iter(&self) -> impl Iterator<Item = &VisibilityCell> {
         self.grid.iter()
     }
-    pub fn update(&mut self, player_coord: Coord, world: &Grid<WorldCell>) {
+    pub fn update(&mut self, player_coord: Coord, world: &World) {
         self.count += 1;
         let count = self.count;
         let grid = &mut self.grid;
         self.shadowcast.for_each_visible(
             player_coord,
             &Visibility,
-            &world,
+            world.grid(),
             VISION_DISTANCE,
             255,
-            |coord, direction_bitmap, visibility| {
+            |coord, _direction_bitmap, _visibility| {
                 grid.get_checked_mut(coord).last_seen = count;
             },
         );
+        for light in world.lights.iter() {
+            self.shadowcast.for_each_visible(
+                light.coord,
+                &Visibility,
+                world.grid(),
+                light.range,
+                255,
+                |coord, direction_bitmap, visibility| {
+                    let cell = grid.get_checked_mut(coord);
+                    if cell.last_lit != count {
+                        cell.last_lit = count;
+                        cell.light_colour = rgb24(0, 0, 0);
+                    }
+                },
+            );
+        }
     }
 }
 
@@ -125,8 +152,26 @@ impl WorldCell {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct Light {
+    coord: Coord,
+    colour: Rgb24,
+    range: vision_distance::Circle,
+}
+
+impl Light {
+    fn new(coord: Coord, colour: Rgb24, range: u32) -> Self {
+        Self {
+            coord,
+            colour,
+            range: vision_distance::Circle::new(range),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct World {
     grid: Grid<WorldCell>,
+    lights: Vec<Light>,
 }
 
 impl World {
@@ -158,6 +203,7 @@ impl Cherenkov {
             .collect::<Vec<_>>();
         let size = Size::new(terrain_vecs[0].len() as u32, terrain_vecs.len() as u32);
         let mut player_coord = Coord::new(0, 0);
+        let mut lights = Vec::new();
         let grid = Grid::new_fn(size, |coord| {
             let base = match terrain_vecs[coord.y as usize][coord.x as usize] {
                 '.' => WorldCellBase::Floor,
@@ -166,13 +212,20 @@ impl Cherenkov {
                     player_coord = coord;
                     WorldCellBase::Floor
                 }
+                '*' => {
+                    lights.push(Light::new(coord, rgb24(255, 0, 0), 10));
+                    WorldCellBase::Floor
+                }
                 _ => panic!(),
             };
             WorldCell::new(base)
         });
-        let world = World { grid };
+        let world = World {
+            grid,
+            lights: Vec::new(),
+        };
         let mut visible_area = VisibileArea::new(size);
-        visible_area.update(player_coord, world.grid());
+        visible_area.update(player_coord, &world);
         Self {
             world,
             visible_area,
@@ -187,8 +240,7 @@ impl Cherenkov {
                 Input::Move(direction) => self.player_coord += direction.coord(),
             }
         }
-        self.visible_area
-            .update(self.player_coord, &self.world.grid());
+        self.visible_area.update(self.player_coord, &self.world);
     }
 
     pub fn to_render(&self) -> ToRender {
