@@ -20,7 +20,7 @@ const WALL_ABOVE_WALL: ViewCell = ViewCell::new()
     .with_character('█')
     .with_foreground(WALL_TOP_COLOUR)
     .with_background(WALL_FRONT_COLOUR);
-const PLAYER: ViewCell = ViewCell::new().with_character('@');
+const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
 
 fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
     if let Some(foreground) = view_cell.foreground.as_mut() {
