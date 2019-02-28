@@ -8,7 +8,7 @@ extern crate rgb24;
 extern crate shadowcast;
 
 use coord_2d::{Coord, Size};
-use direction::CardinalDirection;
+use direction::*;
 use grid_2d::Grid;
 use rand::Rng;
 use rgb24::*;
@@ -49,6 +49,7 @@ const VISION_DISTANCE: vision_distance::Circle = vision_distance::Circle::new(8)
 pub struct VisibilityCell {
     last_seen: u64,
     last_lit: u64,
+    visible_directions: DirectionBitmap,
     light_colour: Rgb24,
 }
 
@@ -65,6 +66,15 @@ pub struct VisibileArea {
     shadowcast: ShadowcastContext<u8>,
 }
 
+const LIGHT_DIMINISH_DAMPEN_NUM: u32 = 3;
+const LIGHT_DIMINISH_DAMPEN_DENOM: u32 = 5;
+const AMBIENT_LIGHT: Rgb24 = rgb24(15, 15, 15);
+
+fn light_square_distance(a: Coord, b: Coord) -> u32 {
+    let d = (a - b) * (LIGHT_DIMINISH_DAMPEN_NUM as i32) / (LIGHT_DIMINISH_DAMPEN_DENOM as i32);
+    d.magnitude2().max(1)
+}
+
 impl VisibileArea {
     pub fn new(size: Size) -> Self {
         let grid = Grid::new_clone(
@@ -73,6 +83,7 @@ impl VisibileArea {
                 last_seen: 0,
                 last_lit: 0,
                 light_colour: rgb24(0, 0, 0),
+                visible_directions: DirectionBitmap::empty(),
             },
         );
         let count = 1;
@@ -99,8 +110,10 @@ impl VisibileArea {
             world.grid(),
             VISION_DISTANCE,
             255,
-            |coord, _direction_bitmap, _visibility| {
-                grid.get_checked_mut(coord).last_seen = count;
+            |coord, direction_bitmap, _visibility| {
+                let cell = grid.get_checked_mut(coord);
+                cell.last_seen = count;
+                cell.visible_directions = direction_bitmap;
             },
         );
         for light in world.lights.iter() {
@@ -110,11 +123,17 @@ impl VisibileArea {
                 world.grid(),
                 light.range,
                 255,
-                |coord, direction_bitmap, visibility| {
+                |coord, direction_bitmap, _visibility| {
                     let cell = grid.get_checked_mut(coord);
-                    if cell.last_lit != count {
-                        cell.last_lit = count;
-                        cell.light_colour = rgb24(0, 0, 0);
+                    if !(direction_bitmap & cell.visible_directions).is_empty() {
+                        if cell.last_lit != count {
+                            cell.last_lit = count;
+                            cell.light_colour = AMBIENT_LIGHT;
+                        }
+                        let square_distance = light_square_distance(light.coord, coord);
+                        cell.light_colour = cell
+                            .light_colour
+                            .saturating_add(light.colour.scalar_div(square_distance));
                     }
                 },
             );
@@ -128,6 +147,13 @@ impl VisibilityCell {
     }
     pub fn is_discovered(&self) -> bool {
         self.last_seen != 0
+    }
+    pub fn light_colour(&self, state: VisibilityState) -> Rgb24 {
+        if self.last_lit == state.count {
+            self.light_colour
+        } else {
+            rgb24(0, 0, 0)
+        }
     }
 }
 
@@ -151,7 +177,7 @@ impl WorldCell {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Light {
     coord: Coord,
     colour: Rgb24,
@@ -212,18 +238,27 @@ impl Cherenkov {
                     player_coord = coord;
                     WorldCellBase::Floor
                 }
-                '*' => {
+                '1' => {
                     lights.push(Light::new(coord, rgb24(255, 0, 0), 10));
+                    WorldCellBase::Floor
+                }
+                '2' => {
+                    lights.push(Light::new(coord, rgb24(0, 255, 0), 10));
+                    WorldCellBase::Floor
+                }
+                '3' => {
+                    lights.push(Light::new(coord, rgb24(0, 0, 255), 10));
+                    WorldCellBase::Floor
+                }
+                '4' => {
+                    lights.push(Light::new(coord, rgb24(255, 255, 0), 10));
                     WorldCellBase::Floor
                 }
                 _ => panic!(),
             };
             WorldCell::new(base)
         });
-        let world = World {
-            grid,
-            lights: Vec::new(),
-        };
+        let world = World { grid, lights };
         let mut visible_area = VisibileArea::new(size);
         visible_area.update(player_coord, &world);
         Self {

@@ -22,14 +22,12 @@ const WALL_ABOVE_WALL: ViewCell = ViewCell::new()
     .with_background(WALL_FRONT_COLOUR);
 const PLAYER: ViewCell = ViewCell::new().with_character('@');
 
-const LIGHT_DIMINISH_DAMPEN: u32 = 2;
-
-fn div_cell_info(cell_info: &mut ViewCell, by: u32) {
-    if let Some(foreground) = cell_info.foreground.as_mut() {
-        *foreground = foreground.scalar_div(by);
+fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
+    if let Some(foreground) = view_cell.foreground.as_mut() {
+        *foreground = foreground.normalised_mul(light_colour);
     }
-    if let Some(background) = cell_info.background.as_mut() {
-        *background = background.scalar_div(by);
+    if let Some(background) = view_cell.background.as_mut() {
+        *background = background.normalised_mul(light_colour);
     }
 }
 
@@ -46,7 +44,7 @@ impl View<Cherenkov> for GameView {
             if !visibility.is_visible(visibility_state) {
                 continue;
             }
-            let mut cell_info = match cell.base() {
+            let mut view_cell = match cell.base() {
                 WorldCellBase::Floor => FLOOR,
                 WorldCellBase::Wall => {
                     if let Some(cell_below) = to_render.world.grid().get(coord + Coord::new(0, 1)) {
@@ -59,13 +57,9 @@ impl View<Cherenkov> for GameView {
                     }
                 }
             };
-            let square_distance = ({
-                let d = (to_render.player_coord - coord) / (LIGHT_DIMINISH_DAMPEN as i32);
-                d.x * d.x + d.y * d.y
-            } as u32)
-                .max(1);
-            div_cell_info(&mut cell_info, square_distance);
-            grid.set_cell(offset + coord, depth, cell_info);
+            let light_colour = visibility.light_colour(visibility_state);
+            light_view_cell(&mut view_cell, light_colour);
+            grid.set_cell(offset + coord, depth, view_cell);
         }
         grid.set_cell(offset + to_render.player_coord, depth, PLAYER);
     }
