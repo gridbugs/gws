@@ -42,10 +42,10 @@ impl InputGrid for Visibility {
     }
 }
 
-const VISION_DISTANCE_SCALAR: u32 = 12;
+const VISION_DISTANCE_SQUARED: u32 = 60;
 const VISION_DISTANCE: vision_distance::Circle =
-    vision_distance::Circle::new(VISION_DISTANCE_SCALAR);
-const PLAYER_LIGHT_DISTANCE_SCALAR: u32 = 6;
+    vision_distance::Circle::new_squared(VISION_DISTANCE_SQUARED);
+const PLAYER_LIGHT_DISTANCE_SQUARED: u32 = 30;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VisibilityCell {
@@ -214,33 +214,37 @@ impl WorldCell {
     }
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+struct Rational {
+    num: u32,
+    denom: u32,
+}
+
+impl Rational {
+    fn new(num: u32, denom: u32) -> Self {
+        Self { num, denom }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Light {
     coord: Coord,
     colour: Rgb24,
     range: vision_distance::Circle,
-    diminish_num: u32,
-    diminish_denom: u32,
+    diminish: Rational,
 }
 
 impl Light {
-    fn new(
-        coord: Coord,
-        colour: Rgb24,
-        range: u32,
-        diminish_num: u32,
-        diminish_denom: u32,
-    ) -> Self {
+    fn new(coord: Coord, colour: Rgb24, range_squared: u32, diminish: Rational) -> Self {
         Self {
             coord,
             colour,
-            range: vision_distance::Circle::new(range),
-            diminish_num,
-            diminish_denom,
+            range: vision_distance::Circle::new_squared(range_squared),
+            diminish,
         }
     }
     fn diminish_at_coord(&self, coord: Coord) -> u32 {
-        ((self.coord - coord).magnitude2() * self.diminish_num / self.diminish_denom)
+        ((self.coord - coord).magnitude2() * self.diminish.num / self.diminish.denom)
             .max(1)
     }
     fn colour_at_coord(&self, coord: Coord) -> Rgb24 {
@@ -329,6 +333,8 @@ impl Cherenkov {
         let mut player_coord = Coord::new(0, 0);
         let mut lights = Vec::new();
         let light_base = 10;
+        let light_distance_squared = 90;
+        let light_diminish = Rational::new(1, 10);
         let grid = Grid::new_fn(size, |coord| {
             let base = match terrain_vecs[coord.y as usize][coord.x as usize] {
                 '.' => BackgroundTile::Floor,
@@ -340,35 +346,37 @@ impl Cherenkov {
                 '1' => {
                     lights.push(Light::new(
                         coord,
-                        rgb24(255, light_base, light_base),
-                        10,
-                        2,
-                        5,
+                        rgb24(255, 0, 0).floor(light_base),
+                        light_distance_squared,
+                        light_diminish,
                     ));
                     BackgroundTile::Floor
                 }
                 '2' => {
                     lights.push(Light::new(
                         coord,
-                        rgb24(light_base, 255, light_base),
-                        10,
-                        3,
-                        5,
+                        rgb24(0, 255, 0).floor(light_base),
+                        light_distance_squared,
+                        light_diminish,
                     ));
                     BackgroundTile::Floor
                 }
                 '3' => {
                     lights.push(Light::new(
                         coord,
-                        rgb24(light_base, light_base, 255),
-                        10,
-                        2,
-                        5,
+                        rgb24(0, 0, 255).floor(light_base),
+                        light_distance_squared,
+                        light_diminish,
                     ));
                     BackgroundTile::Floor
                 }
                 '4' => {
-                    lights.push(Light::new(coord, rgb24(255, 255, light_base), 10, 3, 5));
+                    lights.push(Light::new(
+                        coord,
+                        rgb24(255, 255, 0).floor(light_base),
+                        light_distance_squared,
+                        light_diminish,
+                    ));
                     BackgroundTile::Floor
                 }
                 _ => panic!(),
@@ -384,10 +392,9 @@ impl Cherenkov {
         visible_area.update(player_coord, &world);
         let player_light = Light::new(
             player_coord,
-            rgb24(128, 128, 128),
-            PLAYER_LIGHT_DISTANCE_SCALAR,
-            4,
-            5,
+            grey24(63),
+            PLAYER_LIGHT_DISTANCE_SQUARED,
+            Rational::new(1, 2),
         );
         let player = Entity {
             coord: player_coord,
