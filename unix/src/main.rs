@@ -11,11 +11,27 @@ use std::time::{Duration, Instant};
 const TARGET_FPS: f64 = 60.;
 const TICK_PERIOD: Duration = Duration::from_micros((1_000_000. / TARGET_FPS) as u64);
 
+struct CherenkovColourConfig;
+impl ColourConfig for CherenkovColourConfig {
+    fn convert_foreground_rgb24(&mut self, rgb24: Rgb24) -> AnsiColour {
+        AnsiColour::from_rgb24(rgb24.saturating_scalar_mul_div(5, 3))
+    }
+    fn convert_background_rgb24(&mut self, rgb24: Rgb24) -> AnsiColour {
+        AnsiColour::from_rgb24(rgb24.saturating_scalar_mul_div(5, 2))
+    }
+    fn default_foreground(&mut self) -> AnsiColour {
+        AnsiColour::from_rgb24(grey24(255))
+    }
+    fn default_background(&mut self) -> AnsiColour {
+        AnsiColour::from_rgb24(grey24(0))
+    }
+}
+
 fn main() {
     let args = CommonArgs::arg()
         .with_help_default()
         .parse_env_default_or_exit();
-    let mut context = Context::new().unwrap();
+    let mut context = Context::with_colour_config(CherenkovColourConfig).unwrap();
     let storage =
         FileStorage::next_to_exe(args.save_dir(), true).expect("Failed to find user dir");
     let (mut app, _init_status) =
