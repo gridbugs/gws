@@ -55,7 +55,6 @@ const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcForrest(Size::new_u16(60
 
 impl Cherenkov {
     pub fn new<R: Rng>(rng: &mut R) -> Self {
-        let _ = rng;
         let terrain::TerrainDescription {
             size,
             player_coord,
@@ -64,7 +63,9 @@ impl Cherenkov {
             TerrainChoice::StringDemo => {
                 terrain::from_str(include_str!("terrain_string.txt"))
             }
-            TerrainChoice::WfcForrest(size) => terrain::wfc_forrest(size),
+            TerrainChoice::WfcForrest(size) => {
+                terrain::wfc_from_str(size, include_str!("wfc_forrest.txt"), rng)
+            }
         };
         let player = PackedEntity::player();
         let mut world = World::new(size);

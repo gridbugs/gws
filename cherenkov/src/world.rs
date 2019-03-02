@@ -130,7 +130,7 @@ impl Default for PackedEntity {
 
 impl PackedEntity {
     pub fn player() -> Self {
-        let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 2));
+        let player_light = PackedLight::new(grey24(64), 30, Rational::new(1, 10));
         Self {
             foreground_tile: Some(ForegroundTile::Player),
             light: Some(player_light),
