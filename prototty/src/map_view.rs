@@ -45,10 +45,13 @@ impl View<Cherenkov> for MapView {
                 BackgroundTile::Wall => WALL,
             };
             for entity in cell.entity_iter(to_render.world.entities()) {
-                let foreground_view_cell = match entity.foreground_tile() {
-                    ForegroundTile::Player => Some(PLAYER),
-                    ForegroundTile::Tree => Some(TREE),
-                };
+                let foreground_view_cell =
+                    entity.foreground_tile().and_then(|foreground_tile| {
+                        match foreground_tile {
+                            ForegroundTile::Player => Some(PLAYER),
+                            ForegroundTile::Tree => Some(TREE),
+                        }
+                    });
                 if let Some(foreground_view_cell) = foreground_view_cell {
                     view_cell = foreground_view_cell.coalesce(view_cell);
                     break;
