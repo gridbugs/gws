@@ -1,10 +1,14 @@
-use crate::terrain;
 use coord_2d::*;
 use direction::*;
 use grid_2d::*;
 use hashbrown::{hash_set, HashMap, HashSet};
 use rgb24::*;
 use shadowcast::*;
+
+pub enum Instruction {
+    SetBackground(Coord, BackgroundTile),
+    AddEntity(Coord, PackedEntity),
+}
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Rational {
@@ -111,7 +115,6 @@ impl Entity {
 }
 
 pub struct PackedEntity {
-    pub is_player: bool,
     pub foreground_tile: Option<ForegroundTile>,
     pub light: Option<PackedLight>,
 }
@@ -119,7 +122,6 @@ pub struct PackedEntity {
 impl Default for PackedEntity {
     fn default() -> Self {
         Self {
-            is_player: false,
             foreground_tile: None,
             light: None,
         }
@@ -130,7 +132,6 @@ impl PackedEntity {
     pub fn player() -> Self {
         let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 2));
         Self {
-            is_player: true,
             foreground_tile: Some(ForegroundTile::Player),
             light: Some(player_light),
         }
@@ -202,7 +203,6 @@ pub struct World {
     lights: Vec<Light>,
     entities: HashMap<EntityId, Entity>,
     next_id: EntityId,
-    player_id: Option<EntityId>,
 }
 
 impl World {
@@ -212,7 +212,6 @@ impl World {
             lights: Vec::new(),
             entities: HashMap::new(),
             next_id: 0,
-            player_id: None,
         }
     }
     pub(crate) fn lights(&self) -> &[Light] {
@@ -224,9 +223,8 @@ impl World {
     pub fn entities(&self) -> &Entities {
         &self.entities
     }
-    pub(crate) fn add_entity(&mut self, coord: Coord, entity: PackedEntity) {
+    pub(crate) fn add_entity(&mut self, coord: Coord, entity: PackedEntity) -> EntityId {
         let PackedEntity {
-            is_player,
             foreground_tile,
             light,
         } = entity;
@@ -243,28 +241,24 @@ impl World {
             light_index,
         };
         self.entities.insert(id, entity);
-        if is_player {
-            self.player_id = Some(id);
-        }
         if let Some(cell) = self.grid.get_mut(coord) {
             cell.entities.insert(id);
         }
+        id
     }
-    pub(crate) fn set_background(
-        &mut self,
-        coord: Coord,
-        background_tile: BackgroundTile,
-    ) {
+    fn set_background(&mut self, coord: Coord, background_tile: BackgroundTile) {
         let cell = self.grid.get_checked_mut(coord);
         cell.background_tile = background_tile;
     }
-    pub(crate) fn interpret_instruction(&mut self, instruction: terrain::Instruction) {
-        use terrain::Instruction::*;
+    pub(crate) fn interpret_instruction(&mut self, instruction: Instruction) {
+        use Instruction::*;
         match instruction {
             SetBackground(coord, background_tile) => {
                 self.set_background(coord, background_tile)
             }
-            AddEntity(coord, packed_entity) => self.add_entity(coord, packed_entity),
+            AddEntity(coord, packed_entity) => {
+                self.add_entity(coord, packed_entity);
+            }
         }
     }
     pub(crate) fn move_entity_in_direction(
@@ -305,11 +299,5 @@ impl World {
             .max()
             .unwrap_or(0);
         background.max(foreground)
-    }
-    pub fn player_id(&self) -> EntityId {
-        self.player_id.expect("no player id")
-    }
-    pub fn player(&self) -> &Entity {
-        self.entities.get(&self.player_id()).unwrap()
     }
 }

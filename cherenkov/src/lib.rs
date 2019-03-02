@@ -35,6 +35,7 @@ pub mod input {
 pub struct Cherenkov {
     world: World,
     visible_area: VisibileArea,
+    player_id: EntityId,
 }
 
 pub struct ToRender<'a> {
@@ -46,15 +47,22 @@ pub struct ToRender<'a> {
 impl Cherenkov {
     pub fn new<R: Rng>(rng: &mut R) -> Self {
         let _ = rng;
-        let (size, instructions) = terrain::from_str(include_str!("terrain_string.txt"));
+        let terrain::TerrainDescription {
+            size,
+            player_coord,
+            instructions,
+        } = terrain::from_str(include_str!("terrain_string.txt"));
+        let player = PackedEntity::player();
         let mut world = World::new(size);
         for instruction in instructions {
             world.interpret_instruction(instruction);
         }
+        let player_id = world.add_entity(player_coord, player);
         let visible_area = VisibileArea::new(size);
         let mut s = Self {
             world,
             visible_area,
+            player_id,
         };
         s.update_visible_area();
         s
@@ -65,28 +73,29 @@ impl Cherenkov {
         inputs: I,
         rng: &mut R,
     ) {
-        let player_id = self.world.player_id();
         let _ = rng;
         for i in inputs {
             match i {
-                Input::Move(direction) => {
-                    self.world.move_entity_in_direction(player_id, direction)
-                }
+                Input::Move(direction) => self
+                    .world
+                    .move_entity_in_direction(self.player_id, direction),
             }
         }
         self.update_visible_area();
     }
 
     fn update_visible_area(&mut self) {
-        self.visible_area
-            .update(self.world.player().coord(), &self.world);
+        self.visible_area.update(
+            self.world.entities().get(&self.player_id).unwrap().coord(),
+            &self.world,
+        );
     }
 
     pub fn to_render(&self) -> ToRender {
         ToRender {
             world: &self.world,
             visible_area: &self.visible_area,
-            player: &self.world.player(),
+            player: &self.world.entities().get(&self.player_id).unwrap(),
         }
     }
 }
