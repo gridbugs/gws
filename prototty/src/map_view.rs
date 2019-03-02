@@ -13,6 +13,7 @@ const WALL: ViewCell = ViewCell::new()
     .with_background(colours::BLACK);
 const PLAYER: ViewCell = ViewCell::new()
     .with_character('@')
+    .with_bold(true)
     .with_foreground(colours::WHITE)
     .with_background(colours::BLACK);
 
