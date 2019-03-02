@@ -116,16 +116,20 @@ impl VisibileArea {
                 &world,
                 light.range,
                 255,
-                |coord, direction_bitmap, _visibility| {
+                |coord, direction_bitmap, visibility| {
                     let cell = grid.get_checked_mut(coord);
-                    if !(direction_bitmap & cell.visible_directions).is_empty() {
+                    if cell.last_seen == count
+                        && !(direction_bitmap & cell.visible_directions).is_empty()
+                    {
                         if cell.last_lit != count {
                             cell.last_lit = count;
                             cell.light_colour = rgb24(0, 0, 0);
                         }
-                        cell.light_colour = cell
-                            .light_colour
-                            .saturating_add(light.colour_at_coord(coord));
+                        cell.light_colour = cell.light_colour.saturating_add(
+                            light
+                                .colour_at_coord(coord)
+                                .normalised_scalar_mul(visibility),
+                        );
                     }
                 },
             );
@@ -411,11 +415,9 @@ impl Cherenkov {
             lights,
             entities: HashMap::new(),
         };
-        let mut visible_area = VisibileArea::new(size);
-        visible_area.update(player_coord, &world);
         let player_light = Light::new(
             player_coord,
-            grey24(63),
+            grey24(128),
             PLAYER_LIGHT_DISTANCE_SQUARED,
             Rational::new(1, 2),
         );
@@ -439,6 +441,8 @@ impl Cherenkov {
             world.grid.get_checked_mut(entity.coord).entities.insert(id);
             world.entities.insert(id, entity);
         }
+        let mut visible_area = VisibileArea::new(size);
+        visible_area.update(player_coord, &world);
         Self {
             world,
             visible_area,
