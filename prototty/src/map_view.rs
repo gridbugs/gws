@@ -16,6 +16,11 @@ const PLAYER: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(colours::WHITE)
     .with_background(colours::BLACK);
+const TREE: ViewCell = ViewCell::new()
+    .with_character('&')
+    .with_bold(true)
+    .with_foreground(colours::WHITE)
+    .with_background(colours::BLACK);
 
 impl View<Cherenkov> for MapView {
     fn view<G: ViewGrid>(
@@ -35,15 +40,21 @@ impl View<Cherenkov> for MapView {
             if !visibility.is_discovered() {
                 continue;
             }
-            let view_cell = match cell.background_tile() {
-                BackgroundTile::Floor => FLOOR,
+            let mut view_cell = match cell.background_tile() {
+                BackgroundTile::Floor | BackgroundTile::Ground => FLOOR,
                 BackgroundTile::Wall => WALL,
             };
+            for entity in cell.entity_iter(to_render.world.entities()) {
+                let foreground_view_cell = match entity.foreground_tile() {
+                    ForegroundTile::Player => Some(PLAYER),
+                    ForegroundTile::Tree => Some(TREE),
+                };
+                if let Some(foreground_view_cell) = foreground_view_cell {
+                    view_cell = foreground_view_cell.coalesce(view_cell);
+                    break;
+                }
+            }
             grid.set_cell(offset + coord, depth, view_cell);
         }
-        let player_view_cell = match to_render.player.foreground_tile() {
-            ForegroundTile::Player => PLAYER,
-        };
-        grid.set_cell(offset + to_render.player.coord(), depth, player_view_cell);
     }
 }

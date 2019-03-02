@@ -32,13 +32,13 @@ pub mod input {
 struct Visibility;
 
 impl InputGrid for Visibility {
-    type Grid = Grid<WorldCell>;
+    type Grid = World;
     type Opacity = u8;
     fn size(&self, grid: &Self::Grid) -> Size {
-        grid.size()
+        grid.grid.size()
     }
     fn get_opacity(&self, grid: &Self::Grid, coord: Coord) -> Self::Opacity {
-        grid.get_checked(coord).opacity()
+        grid.opacity(coord)
     }
 }
 
@@ -100,7 +100,7 @@ impl VisibileArea {
         self.shadowcast.for_each_visible(
             player_coord,
             &Visibility,
-            world.grid(),
+            &world,
             VISION_DISTANCE,
             255,
             |coord, direction_bitmap, _visibility| {
@@ -113,7 +113,7 @@ impl VisibileArea {
             self.shadowcast.for_each_visible(
                 light.coord,
                 &Visibility,
-                world.grid(),
+                &world,
                 light.range,
                 255,
                 |coord, direction_bitmap, _visibility| {
@@ -152,12 +152,14 @@ impl VisibilityCell {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum BackgroundTile {
     Floor,
+    Ground,
     Wall,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum ForegroundTile {
     Player,
+    Tree,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -196,12 +198,6 @@ impl WorldCell {
     }
     pub fn background_tile(&self) -> BackgroundTile {
         self.background_tile
-    }
-    pub fn opacity(&self) -> u8 {
-        match self.background_tile {
-            BackgroundTile::Floor => 0,
-            BackgroundTile::Wall => 255,
-        }
     }
     pub fn entity_iter<'a>(&'a self, entities: &'a Entities) -> EntityIter<'a> {
         EntityIter {
@@ -305,6 +301,23 @@ impl World {
             light.coord = entity.coord;
         }
     }
+    pub fn opacity(&self, coord: Coord) -> u8 {
+        let cell = self.grid.get_checked(coord);
+        let background = match cell.background_tile {
+            BackgroundTile::Floor => 0,
+            BackgroundTile::Ground => 0,
+            BackgroundTile::Wall => 255,
+        };
+        let foreground = cell
+            .entity_iter(&self.entities)
+            .map(|e| match e.foreground_tile {
+                ForegroundTile::Player => 0,
+                ForegroundTile::Tree => 128,
+            })
+            .max()
+            .unwrap_or(0);
+        background.max(foreground)
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -335,10 +348,20 @@ impl Cherenkov {
         let light_base = 10;
         let light_distance_squared = 90;
         let light_diminish = Rational::new(1, 10);
+        let mut entities = Vec::new();
         let grid = Grid::new_fn(size, |coord| {
             let base = match terrain_vecs[coord.y as usize][coord.x as usize] {
                 '.' => BackgroundTile::Floor,
+                ',' => BackgroundTile::Ground,
                 '#' => BackgroundTile::Wall,
+                '&' => {
+                    entities.push(Entity {
+                        coord,
+                        foreground_tile: ForegroundTile::Tree,
+                        light_index: None,
+                    });
+                    BackgroundTile::Ground
+                }
                 '@' => {
                     player_coord = coord;
                     BackgroundTile::Floor
@@ -403,13 +426,19 @@ impl Cherenkov {
         };
         world.lights.push(player_light);
         let player_id = 0;
-        let next_id = 1;
+        let mut next_id = 1;
         world
             .grid
             .get_checked_mut(player_coord)
             .entities
             .insert(player_id);
         world.entities.insert(player_id, player);
+        for entity in entities.drain(..) {
+            let id = next_id;
+            next_id += 1;
+            world.grid.get_checked_mut(entity.coord).entities.insert(id);
+            world.entities.insert(id, entity);
+        }
         Self {
             world,
             visible_area,

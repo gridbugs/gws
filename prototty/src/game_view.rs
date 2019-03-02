@@ -3,15 +3,22 @@ use prototty::*;
 
 pub struct GameView;
 
-const FLOOR_BACKGROUND: Rgb24 = rgb24(0, 0, 127);
+const FLOOR_BACKGROUND: Rgb24 = rgb24(30, 10, 3);
 const FLOOR_FOREGROUND: Rgb24 = rgb24(255, 255, 255);
+const GROUND_BACKGROUND: Rgb24 = rgb24(2, 20, 5);
+const GROUND_FOREGROUND: Rgb24 = rgb24(255, 255, 255);
 const WALL_TOP_COLOUR: Rgb24 = rgb24(255, 255, 0);
 const WALL_FRONT_COLOUR: Rgb24 = rgb24(255, 50, 0);
+const TREE_COLOUR: Rgb24 = rgb24(30, 200, 60);
 
 const FLOOR: ViewCell = ViewCell::new()
     .with_character('.')
     .with_foreground(FLOOR_FOREGROUND)
     .with_background(FLOOR_BACKGROUND);
+const GROUND: ViewCell = ViewCell::new()
+    .with_character('.')
+    .with_foreground(GROUND_FOREGROUND)
+    .with_background(GROUND_BACKGROUND);
 const WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
     .with_character('▀')
     .with_foreground(WALL_TOP_COLOUR)
@@ -21,6 +28,10 @@ const WALL_ABOVE_WALL: ViewCell = ViewCell::new()
     .with_foreground(WALL_TOP_COLOUR)
     .with_background(WALL_FRONT_COLOUR);
 const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
+const TREE: ViewCell = ViewCell::new()
+    .with_character('♣')
+    .with_bold(true)
+    .with_foreground(TREE_COLOUR);
 
 fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
     if let Some(foreground) = view_cell.foreground.as_mut() {
@@ -52,13 +63,14 @@ impl View<Cherenkov> for GameView {
             }
             let view_cell = match cell.background_tile() {
                 BackgroundTile::Floor => FLOOR,
+                BackgroundTile::Ground => GROUND,
                 BackgroundTile::Wall => {
                     if let Some(cell_below) =
                         to_render.world.grid().get(coord + Coord::new(0, 1))
                     {
                         match cell_below.background_tile() {
-                            BackgroundTile::Floor => WALL_ABOVE_FLOOR,
                             BackgroundTile::Wall => WALL_ABOVE_WALL,
+                            _ => WALL_ABOVE_FLOOR,
                         }
                     } else {
                         WALL_ABOVE_FLOOR
@@ -70,6 +82,7 @@ impl View<Cherenkov> for GameView {
             {
                 match foreground_tile {
                     ForegroundTile::Player => PLAYER,
+                    ForegroundTile::Tree => TREE,
                 }
                 .coalesce(view_cell)
             } else {
