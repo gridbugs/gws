@@ -7,6 +7,7 @@ extern crate serde;
 extern crate hashbrown;
 extern crate rgb24;
 extern crate shadowcast;
+extern crate wfc;
 
 use coord_2d::{Coord, Size};
 use direction::*;

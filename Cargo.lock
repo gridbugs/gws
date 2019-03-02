@@ -123,6 +123,7 @@ dependencies = [
  "rgb24 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "shadowcast 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wfc 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1230,6 +1231,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "wfc"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "direction 0.17.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grid_2d 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hashbrown 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "whoami"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1453,6 +1466,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum wayland-protocols 0.21.11 (registry+https://github.com/rust-lang/crates.io-index)" = "fd94211387fa8ff50df1e4ff7a5529b5a9aebe68ba88acc48e5b7f5fd98f6eef"
 "checksum wayland-scanner 0.21.11 (registry+https://github.com/rust-lang/crates.io-index)" = "3611f231e675e15c2feb7623103e6449edc6f10b0598cafb3e16e590a0561355"
 "checksum wayland-sys 0.21.11 (registry+https://github.com/rust-lang/crates.io-index)" = "2a69d729a1747a5bf40ae05b94c7904b64fbf2381e365c046d872ce4a34aa826"
+"checksum wfc 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "164f7020127b37691cbd10f5004e3bc89c0eea57a8bf2a07c0ab9b1adc497326"
 "checksum whoami 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1b9c210f9606a8560c558ce6fe3b1a6d10ade8549ac14f5fdee4b0bd8efb2bf4"
 "checksum winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "92c1eb33641e276cfa214a0522acad57be5c56b10cb348b3c5117db75f3ac4b0"
 "checksum winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
