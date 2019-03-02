@@ -5,6 +5,9 @@ use grid_2d::*;
 use rgb24::*;
 use shadowcast::*;
 
+const OMNISCIENT: bool = true;
+const AMBIENT_LIGHT_FLOOR: Option<u8> = Some(20);
+
 struct Visibility;
 
 impl InputGrid for Visibility {
@@ -72,18 +75,25 @@ impl VisibileArea {
         self.count += 1;
         let count = self.count;
         let grid = &mut self.grid;
-        self.shadowcast.for_each_visible(
-            player_coord,
-            &Visibility,
-            &world,
-            VISION_DISTANCE,
-            255,
-            |coord, direction_bitmap, _visibility| {
-                let cell = grid.get_checked_mut(coord);
+        if OMNISCIENT {
+            for cell in grid.iter_mut() {
                 cell.last_seen = count;
-                cell.visible_directions = direction_bitmap;
-            },
-        );
+                cell.visible_directions = DirectionBitmap::all();
+            }
+        } else {
+            self.shadowcast.for_each_visible(
+                player_coord,
+                &Visibility,
+                &world,
+                VISION_DISTANCE,
+                255,
+                |coord, direction_bitmap, _visibility| {
+                    let cell = grid.get_checked_mut(coord);
+                    cell.last_seen = count;
+                    cell.visible_directions = direction_bitmap;
+                },
+            );
+        }
         for light in world.lights().iter() {
             self.shadowcast.for_each_visible(
                 light.coord(),
@@ -108,6 +118,12 @@ impl VisibileArea {
                     }
                 },
             );
+        }
+        if let Some(ambient_light_floor) = AMBIENT_LIGHT_FLOOR {
+            for cell in grid.iter_mut() {
+                cell.last_lit = count;
+                cell.light_colour = cell.light_colour.floor(ambient_light_floor);
+            }
         }
     }
 }

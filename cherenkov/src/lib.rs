@@ -15,6 +15,7 @@ mod world;
 
 use crate::vision::*;
 pub use crate::world::*;
+use coord_2d::*;
 use direction::*;
 use rand::Rng;
 
@@ -44,6 +45,14 @@ pub struct ToRender<'a> {
     pub player: &'a Entity,
 }
 
+#[allow(dead_code)]
+enum TerrainChoice {
+    StringDemo,
+    WfcForrest(Size),
+}
+
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcForrest(Size::new_u16(60, 40));
+
 impl Cherenkov {
     pub fn new<R: Rng>(rng: &mut R) -> Self {
         let _ = rng;
@@ -51,7 +60,12 @@ impl Cherenkov {
             size,
             player_coord,
             instructions,
-        } = terrain::from_str(include_str!("terrain_string.txt"));
+        } = match TERRAIN_CHOICE {
+            TerrainChoice::StringDemo => {
+                terrain::from_str(include_str!("terrain_string.txt"))
+            }
+            TerrainChoice::WfcForrest(size) => terrain::wfc_forrest(size),
+        };
         let player = PackedEntity::player();
         let mut world = World::new(size);
         for instruction in instructions {

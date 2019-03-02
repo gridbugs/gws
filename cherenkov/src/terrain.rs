@@ -80,3 +80,9 @@ pub fn from_str(s: &str) -> TerrainDescription {
     }
     TerrainDescription::new(player_coord.unwrap(), size, instructions)
 }
+
+pub fn wfc_forrest(size: Size) -> TerrainDescription {
+    let player_coord = Coord::new(0, 0);
+    let instructions = Vec::new();
+    TerrainDescription::new(player_coord, size, instructions)
+}
