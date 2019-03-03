@@ -51,7 +51,7 @@ enum TerrainChoice {
     WfcForrest(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcForrest(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 impl Cherenkov {
     pub fn new<R: Rng>(rng: &mut R, debug_terrain_string: Option<&str>) -> Self {
