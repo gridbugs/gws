@@ -14,3 +14,4 @@ direction = { version = "0.17", features = ["serialize"] }
 shadowcast = { version = "0.5", features = ["serialize"] }
 rgb24 = { version = "0.1", features = ["serialize"] }
 hashbrown = { version = "0.1", features = ["serde"] }
+grid_search = { version = "0.15", features = ["serialize"] }

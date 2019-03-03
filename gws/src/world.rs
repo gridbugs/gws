@@ -22,7 +22,7 @@ impl Rational {
     }
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BackgroundTile {
     Floor,
     Ground,
@@ -203,6 +203,9 @@ impl WorldCell {
     pub fn foreground_tiles<'a>(&'a self, entities: &'a Entities) -> ForegroundTiles<'a> {
         ForegroundTiles(self.entity_iter(entities))
     }
+    pub fn is_solid(&self) -> bool {
+        self.background_tile == BackgroundTile::IceWall
+    }
 }
 
 impl Default for WorldCell {
@@ -281,7 +284,7 @@ impl World {
         &mut self,
         id: EntityId,
         direction: CardinalDirection,
-    ) {
+    ) -> Coord {
         let entity = self.entities.get_mut(&id).unwrap();
         let next_coord = entity.coord + direction.coord();
         if let Some(current_cell) = self.grid.get_mut(entity.coord) {
@@ -295,6 +298,7 @@ impl World {
             let light = self.lights.get_mut(light_index).unwrap();
             light.coord = entity.coord;
         }
+        next_coord
     }
     pub(crate) fn opacity(&self, coord: Coord) -> u8 {
         let cell = self.grid.get_checked(coord);

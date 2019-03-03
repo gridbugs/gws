@@ -4,15 +4,18 @@ extern crate grid_2d;
 extern crate rand;
 #[macro_use]
 extern crate serde;
+extern crate grid_search;
 extern crate hashbrown;
 extern crate rgb24;
 extern crate shadowcast;
 extern crate wfc;
 
+mod pathfinding;
 mod terrain;
 mod vision;
 mod world;
 
+use crate::pathfinding::*;
 use crate::vision::*;
 pub use crate::world::*;
 use coord_2d::*;
@@ -37,6 +40,7 @@ pub struct Gws {
     world: World,
     visible_area: VisibileArea,
     player_id: EntityId,
+    pathfinding: PathfindingContext,
 }
 
 pub struct ToRender<'a> {
@@ -88,10 +92,12 @@ impl Gws {
         }
         let player_id = world.add_entity(player_coord, player);
         let visible_area = VisibileArea::new(size);
+        let pathfinding = PathfindingContext::new(size);
         let mut s = Self {
             world,
             visible_area,
             player_id,
+            pathfinding,
         };
         s.update_visible_area();
         s
@@ -105,9 +111,12 @@ impl Gws {
         let _ = rng;
         for i in inputs {
             match i {
-                Input::Move(direction) => self
-                    .world
-                    .move_entity_in_direction(self.player_id, direction),
+                Input::Move(direction) => {
+                    let player_coord = self
+                        .world
+                        .move_entity_in_direction(self.player_id, direction);
+                    self.pathfinding.update(player_coord, &self.world);
+                }
             }
         }
         self.update_visible_area();
