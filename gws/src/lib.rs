@@ -53,8 +53,20 @@ enum TerrainChoice {
 
 const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
 
+pub struct BetweenLevels {
+    player: PackedEntity,
+}
+
+pub enum Tick {
+    ExitLevel(BetweenLevels),
+}
+
 impl Gws {
-    pub fn new<R: Rng>(rng: &mut R, debug_terrain_string: Option<&str>) -> Self {
+    pub fn new<R: Rng>(
+        between_levels: Option<BetweenLevels>,
+        rng: &mut R,
+        debug_terrain_string: Option<&str>,
+    ) -> Self {
         let terrain::TerrainDescription {
             size,
             player_coord,
@@ -65,7 +77,10 @@ impl Gws {
             ),
             TerrainChoice::WfcIceCave(size) => terrain::wfc_ice_cave(size, rng),
         };
-        let player = PackedEntity::player();
+        let player = match between_levels {
+            None => PackedEntity::player(),
+            Some(BetweenLevels { player }) => player,
+        };
         let mut world = World::new(size);
         for instruction in instructions {
             world.interpret_instruction(instruction);
@@ -85,7 +100,7 @@ impl Gws {
         &mut self,
         inputs: I,
         rng: &mut R,
-    ) {
+    ) -> Option<Tick> {
         let _ = rng;
         for i in inputs {
             match i {
@@ -95,20 +110,34 @@ impl Gws {
             }
         }
         self.update_visible_area();
+        for entity in self
+            .world
+            .grid()
+            .get_checked(self.player().coord())
+            .entity_iter(self.world.entities())
+        {
+            if entity.foreground_tile() == Some(ForegroundTile::Stairs) {
+                return Some(Tick::ExitLevel(BetweenLevels {
+                    player: self.player().pack(&self.world.lights()),
+                }));
+            }
+        }
+        None
+    }
+
+    fn player(&self) -> &Entity {
+        self.world.entities().get(&self.player_id).unwrap()
     }
 
     fn update_visible_area(&mut self) {
-        self.visible_area.update(
-            self.world.entities().get(&self.player_id).unwrap().coord(),
-            &self.world,
-        );
+        self.visible_area.update(self.player().coord(), &self.world);
     }
 
     pub fn to_render(&self) -> ToRender {
         ToRender {
             world: &self.world,
             visible_area: &self.visible_area,
-            player: &self.world.entities().get(&self.player_id).unwrap(),
+            player: self.player(),
         }
     }
 }

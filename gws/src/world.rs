@@ -29,7 +29,7 @@ pub enum BackgroundTile {
     IceWall,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ForegroundTile {
     Player,
     Tree,
@@ -95,6 +95,13 @@ impl Light {
     pub(crate) fn coord(&self) -> Coord {
         self.coord
     }
+    fn pack(&self) -> PackedLight {
+        PackedLight {
+            colour: self.colour,
+            range_squared: self.range.distance_squared(),
+            diminish: self.diminish,
+        }
+    }
 }
 
 pub type EntityId = u64;
@@ -112,6 +119,12 @@ impl Entity {
     }
     pub fn foreground_tile(&self) -> Option<ForegroundTile> {
         self.foreground_tile
+    }
+    pub(crate) fn pack(&self, lights: &[Light]) -> PackedEntity {
+        PackedEntity {
+            foreground_tile: self.foreground_tile,
+            light: self.light_index.map(|index| lights[index].pack()),
+        }
     }
 }
 

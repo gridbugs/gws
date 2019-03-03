@@ -58,7 +58,7 @@ struct GameState {
 
 impl GameState {
     fn new(mut rng_with_seed: RngWithSeed, debug_terrain_string: Option<&str>) -> Self {
-        let game = gws::Gws::new(&mut rng_with_seed.rng, debug_terrain_string);
+        let game = gws::Gws::new(None, &mut rng_with_seed.rng, debug_terrain_string);
         Self {
             rng_with_seed,
             all_inputs: Vec::new(),

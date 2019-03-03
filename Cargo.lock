@@ -481,7 +481,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb24 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
- "shadowcast 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shadowcast 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "wfc 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1206,7 +1206,7 @@ dependencies = [
 
 [[package]]
 name = "shadowcast"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1664,7 +1664,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 "checksum serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)" = "92514fb95f900c9b5126e32d020f5c6d40564c27a5ea6d1d7d9f157a96623560"
 "checksum serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)" = "bb6eabf4b5914e88e24eea240bb7c9f9a2cbc1bbbe8d961d381975ec3c6b806c"
-"checksum shadowcast 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)" = "fe7aa5217c013e050e0a7b404da2c034cf93f4aad560ef531741ad9237fb55cc"
+"checksum shadowcast 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)" = "a1ecdcabc4ac31c508315330f4a77acf709a1f820f7fdfa2fdb92c1a85493602"
 "checksum shared_library 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "5a9e7e0f2bfae24d8a5b5a66c5b257a83c7412304311512a0c054cd5e619da11"
 "checksum simon 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3c8ae638a7bba7d29efb64eb5abe903183fee407f8578f98033acd3b284a588a"
 "checksum smallvec 0.6.9 (registry+https://github.com/rust-lang/crates.io-index)" = "c4488ae950c49d403731982257768f48fada354a5203fe81f9bb6f43ca9002be"
