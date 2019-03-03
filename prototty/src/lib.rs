@@ -1,4 +1,4 @@
-extern crate cherenkov;
+extern crate gws;
 extern crate prototty;
 extern crate rand;
 extern crate rand_isaac;
@@ -19,7 +19,7 @@ use rand_isaac::IsaacRng;
 use std::marker::PhantomData;
 use std::time::Duration;
 
-const TITLE: &'static str = "CHERENKOV";
+const TITLE: &'static str = "Get Well Soon";
 const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
 
 const APP_SIZE: Size = Size::new_u16(64, 48);
@@ -52,14 +52,13 @@ struct RngWithSeed {
 #[derive(Serialize, Deserialize)]
 struct GameState {
     rng_with_seed: RngWithSeed,
-    all_inputs: Vec<cherenkov::Input>,
-    game: cherenkov::Cherenkov,
+    all_inputs: Vec<gws::Input>,
+    game: gws::Gws,
 }
 
 impl GameState {
     fn new(mut rng_with_seed: RngWithSeed, debug_terrain_string: Option<&str>) -> Self {
-        let game =
-            cherenkov::Cherenkov::new(&mut rng_with_seed.rng, debug_terrain_string);
+        let game = gws::Gws::new(&mut rng_with_seed.rng, debug_terrain_string);
         Self {
             rng_with_seed,
             all_inputs: Vec::new(),
@@ -282,16 +281,16 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     for input in inputs {
                         match input {
                             ProtottyInput::Up => {
-                                game_state.all_inputs.push(cherenkov::input::UP)
+                                game_state.all_inputs.push(gws::input::UP)
                             }
                             ProtottyInput::Down => {
-                                game_state.all_inputs.push(cherenkov::input::DOWN)
+                                game_state.all_inputs.push(gws::input::DOWN)
                             }
                             ProtottyInput::Left => {
-                                game_state.all_inputs.push(cherenkov::input::LEFT)
+                                game_state.all_inputs.push(gws::input::LEFT)
                             }
                             ProtottyInput::Right => {
-                                game_state.all_inputs.push(cherenkov::input::RIGHT)
+                                game_state.all_inputs.push(gws::input::RIGHT)
                             }
                             MAP_INPUT0 | MAP_INPUT1 => {
                                 self.app_state = AppState::Map {

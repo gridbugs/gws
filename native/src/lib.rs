@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate simon;
-extern crate cherenkov_prototty;
+extern crate gws_prototty;
 extern crate whoami;
 
-use cherenkov_prototty::FirstRngSeed;
+use gws_prototty::FirstRngSeed;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};

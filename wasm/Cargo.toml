@@ -1,6 +1,6 @@
 [package]
-name = "cherenkov_wasm"
-version = "0.1.4"
+name = "gws_wasm"
+version = "0.1.0"
 authors = ["Stephen Sherratt <sfsherratt@gmail.com>"]
 edition = "2018"
 
@@ -9,5 +9,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 prototty_wasm = { version = "0.25", features = ["storage"] }
-cherenkov_prototty = { path = "../prototty", features = ["wasm-bindgen"] }
+gws_prototty = { path = "../prototty", features = ["wasm-bindgen"] }
 wasm-bindgen = "0.2"

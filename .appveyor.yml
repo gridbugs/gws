@@ -4,10 +4,10 @@ os: Visual Studio 2017
 environment:
   matrix:
   - TARGET: x86_64-pc-windows-msvc
-    IN_NAME: cherenkov_glutin
-    OUT_NAME: cherenkov
+    IN_NAME: gws_glutin
+    OUT_NAME: get-well-soon
     BIN_PATH: target\release
-    BIN_NAME: cherenkov-windows-x86_64
+    BIN_NAME: get-well-soon-windows-x86_64
 install:
 - cmd: >-
 

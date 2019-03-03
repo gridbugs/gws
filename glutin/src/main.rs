@@ -1,10 +1,10 @@
-extern crate cherenkov_native;
-extern crate cherenkov_prototty;
+extern crate gws_native;
+extern crate gws_prototty;
 extern crate prototty_glutin;
 extern crate simon;
 
-use cherenkov_native::*;
-use cherenkov_prototty::*;
+use gws_native::*;
+use gws_prototty::*;
 use prototty_glutin::*;
 use simon::*;
 use std::time::Instant;
@@ -70,7 +70,7 @@ fn main() {
             .with_font_scale(font_size as f32, font_size as f32)
             .with_cell_dimensions(Size::new(font_size, font_size))
             .with_max_grid_size(grid_size)
-            .with_title("CHERENKOV")
+            .with_title("Get Well Soon")
             .build()
             .unwrap();
     let storage = FileStorage::next_to_exe(args.common.save_dir(), true)

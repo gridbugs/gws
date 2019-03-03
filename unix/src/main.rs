@@ -1,9 +1,9 @@
-extern crate cherenkov_native;
-extern crate cherenkov_prototty;
+extern crate gws_native;
+extern crate gws_prototty;
 extern crate prototty_unix;
 
-use cherenkov_native::*;
-use cherenkov_prototty::*;
+use gws_native::*;
+use gws_prototty::*;
 use prototty_unix::*;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -11,8 +11,8 @@ use std::time::{Duration, Instant};
 const TARGET_FPS: f64 = 60.;
 const TICK_PERIOD: Duration = Duration::from_micros((1_000_000. / TARGET_FPS) as u64);
 
-struct CherenkovColourConfig;
-impl ColourConfig for CherenkovColourConfig {
+struct GwsColourConfig;
+impl ColourConfig for GwsColourConfig {
     fn convert_foreground_rgb24(&mut self, rgb24: Rgb24) -> AnsiColour {
         AnsiColour::from_rgb24(rgb24.saturating_scalar_mul_div(5, 3))
     }
@@ -31,7 +31,7 @@ fn main() {
     let args = CommonArgs::arg()
         .with_help_default()
         .parse_env_default_or_exit();
-    let mut context = Context::with_colour_config(CherenkovColourConfig).unwrap();
+    let mut context = Context::with_colour_config(GwsColourConfig).unwrap();
     let storage =
         FileStorage::next_to_exe(args.save_dir(), true).expect("Failed to find user dir");
     let (mut app, _init_status) = App::new(

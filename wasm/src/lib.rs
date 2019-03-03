@@ -1,10 +1,10 @@
-extern crate cherenkov_prototty;
+extern crate gws_prototty;
 extern crate prototty_wasm;
 extern crate wasm_bindgen;
 
 pub use prototty_wasm::InputBuffer;
 
-use cherenkov_prototty::*;
+use gws_prototty::*;
 use prototty_wasm::*;
 use std::time::Duration;
 use wasm_bindgen::prelude::*;

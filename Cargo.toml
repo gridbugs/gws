@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "cherenkov",
+    "gws",
     "prototty",
     "native",
     "glutin",

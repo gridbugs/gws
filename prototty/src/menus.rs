@@ -1,16 +1,17 @@
 use prototty::*;
 
-const GREEN: Rgb24 = Rgb24::new(0, 180, 0);
+const NORMAL_COLOUR: Rgb24 = Rgb24::new(100, 100, 150);
+const SELECTED_COLOUR: Rgb24 = Rgb24::new(0, 120, 240);
 
 fn instantiate_menu<T: Copy>(mut menu: Menu<T>) -> MenuInstance<T> {
     menu.normal_info = TextInfo {
-        foreground_colour: Some(colours::WHITE),
+        foreground_colour: Some(NORMAL_COLOUR),
         background_colour: None,
         bold: false,
         underline: false,
     };
     menu.selected_info = TextInfo {
-        foreground_colour: Some(GREEN),
+        foreground_colour: Some(SELECTED_COLOUR),
         background_colour: None,
         bold: true,
         underline: false,
@@ -80,7 +81,7 @@ impl MenuAndTitleView {
             title_view: RichStringView::with_info(TextInfo {
                 bold: true,
                 underline: false,
-                foreground_colour: Some(GREEN),
+                foreground_colour: Some(SELECTED_COLOUR),
                 background_colour: None,
             }),
             menu_view: DefaultMenuInstanceView::new(),

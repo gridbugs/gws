@@ -33,7 +33,7 @@ pub mod input {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Cherenkov {
+pub struct Gws {
     world: World,
     visible_area: VisibileArea,
     player_id: EntityId,
@@ -53,7 +53,7 @@ enum TerrainChoice {
 
 const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
-impl Cherenkov {
+impl Gws {
     pub fn new<R: Rng>(rng: &mut R, debug_terrain_string: Option<&str>) -> Self {
         let terrain::TerrainDescription {
             size,

@@ -1,4 +1,4 @@
-use cherenkov::*;
+use gws::*;
 use prototty::*;
 
 pub struct GameView;
@@ -42,14 +42,8 @@ fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
     }
 }
 
-impl View<Cherenkov> for GameView {
-    fn view<G: ViewGrid>(
-        &mut self,
-        game: &Cherenkov,
-        offset: Coord,
-        depth: i32,
-        grid: &mut G,
-    ) {
+impl View<Gws> for GameView {
+    fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
         let to_render = game.to_render();
         let visibility_state = to_render.visible_area.state();
         for ((coord, cell), visibility) in to_render

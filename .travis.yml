@@ -11,7 +11,7 @@ DEPLOY_BINARIES: &DEPLOY_BINARIES
       acl: public_read
       on:
         all_branches: true
-        repo: stevebob/cherenkov
+        repo: stevebob/gws
       access_key_id: AKIAJTZWT26OECTU2UVQ
       secret_access_key:
         secure: YWb1lJ5DOFc3VOHMIPbfupsywMmkjGGVxrKaNYn5NbSfF2L/MG3ltop1QwaBjMe1OLIIT7fLYMgZDE/UgLOo8yr2HxHNM1B3BVatACtwtF7jXE69+FPW9Lxpm8bc0SMTebNArsv012yP7k31ZbhvvpR1fwP4GIK8v1MJuRyUP4+uQlnHU2VwWirlvCu76+ZczQKz6UftygnItNBQGl1Yzt2JVHNGjAZ2KN779nxaTGzWz4XETKvzq1J3LmqOZN8RsK4EAGLLOYn94UpwWeuU9XGBXgFd5Mu08KX85s6k5yFMViBVk7R5k+urSiHMyOtvt/K+POuogENT3MJv5W2so01f2RTY326hhKxnrNbRyzCDfr9bwLxhob/6OYGKcD0pDxyAeIXZkrKdEkGOzRW/qeWOv3Rc5uIr+Qz/JRuy6QYncawYLh4HPxI7yyV08kUjrr08YhM+GGkTGLRyLX8JuuX5Cj3kzf9dAmlR9oz8fwJXzRMNvW287E111RJuF+DWjl8q1sB8K+VkKRNB3P7GjkIbZ298XtFrlmEaWD0GZjQpg9IdlrS6FcvTEw476Tm/5utQKvTLxedRXw/vcnRgHR6weRDK16MkxTS+GkrmtkPYNlFV+57jn81Mt+8uiCdjbXscSjM+BaCl/Eh3jmZNzFGKAdnY56TbNQRgYonYTVk=
@@ -27,7 +27,7 @@ matrix:
     - sudo apt-get -y install python3 python3-pip
     - pip3 install --quiet --user sh toml
     script:
-    - scripts/build-native.sh cherenkov Cherenkov
+    - scripts/build-native.sh get-well-soon GetWellSoon
     <<: *DEPLOY_BINARIES
 
   - os: osx
@@ -37,7 +37,7 @@ matrix:
     - which python3 || brew install python3 || brew upgrade python
     - pip3 install --quiet --user sh toml
     script:
-    - scripts/build-native.sh cherenkov Cherenkov
+    - scripts/build-native.sh get-well-soon GetWellSoon
     <<: *DEPLOY_BINARIES
 
   - os: linux
@@ -53,7 +53,7 @@ matrix:
     - sudo apt-get -y install python3 python3-pip
     - pip3 install --quiet --user sh toml
     script:
-    - scripts/build-wasm.sh cherenkov
+    - scripts/build-wasm.sh gws
     deploy:
       - provider: s3
         skip_cleanup: true
@@ -63,7 +63,7 @@ matrix:
         acl: public_read
         on:
           all_branches: true
-          repo: stevebob/cherenkov
+          repo: stevebob/gws
         access_key_id: AKIAJTZWT26OECTU2UVQ
         secret_access_key:
           secure: YWb1lJ5DOFc3VOHMIPbfupsywMmkjGGVxrKaNYn5NbSfF2L/MG3ltop1QwaBjMe1OLIIT7fLYMgZDE/UgLOo8yr2HxHNM1B3BVatACtwtF7jXE69+FPW9Lxpm8bc0SMTebNArsv012yP7k31ZbhvvpR1fwP4GIK8v1MJuRyUP4+uQlnHU2VwWirlvCu76+ZczQKz6UftygnItNBQGl1Yzt2JVHNGjAZ2KN779nxaTGzWz4XETKvzq1J3LmqOZN8RsK4EAGLLOYn94UpwWeuU9XGBXgFd5Mu08KX85s6k5yFMViBVk7R5k+urSiHMyOtvt/K+POuogENT3MJv5W2so01f2RTY326hhKxnrNbRyzCDfr9bwLxhob/6OYGKcD0pDxyAeIXZkrKdEkGOzRW/qeWOv3Rc5uIr+Qz/JRuy6QYncawYLh4HPxI7yyV08kUjrr08YhM+GGkTGLRyLX8JuuX5Cj3kzf9dAmlR9oz8fwJXzRMNvW287E111RJuF+DWjl8q1sB8K+VkKRNB3P7GjkIbZ298XtFrlmEaWD0GZjQpg9IdlrS6FcvTEw476Tm/5utQKvTLxedRXw/vcnRgHR6weRDK16MkxTS+GkrmtkPYNlFV+57jn81Mt+8uiCdjbXscSjM+BaCl/Eh3jmZNzFGKAdnY56TbNQRgYonYTVk=
