@@ -1,0 +1,9 @@
+[package]
+name = "image-to-text"
+version = "0.1.0"
+authors = ["Stephen Sherratt <sfsherratt@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+image = "0.21"
+simon = "0.2"

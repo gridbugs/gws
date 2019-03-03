@@ -48,10 +48,10 @@ pub struct ToRender<'a> {
 #[allow(dead_code)]
 enum TerrainChoice {
     StringDemo,
-    WfcForrest(Size),
+    WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
 
 impl Gws {
     pub fn new<R: Rng>(rng: &mut R, debug_terrain_string: Option<&str>) -> Self {
@@ -63,11 +63,7 @@ impl Gws {
             TerrainChoice::StringDemo => terrain::from_str(
                 debug_terrain_string.unwrap_or(include_str!("terrain_string.txt")),
             ),
-            TerrainChoice::WfcForrest(size) => terrain::wfc_from_str(
-                size,
-                debug_terrain_string.unwrap_or(include_str!("wfc_forrest.txt")),
-                rng,
-            ),
+            TerrainChoice::WfcIceCave(size) => terrain::wfc_ice_cave(size, rng),
         };
         let player = PackedEntity::player();
         let mut world = World::new(size);
