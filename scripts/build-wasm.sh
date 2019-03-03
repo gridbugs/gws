@@ -28,8 +28,8 @@ if [[ ! -e $WASM2JS || $(md5sum $WASM2JS | cut -d' ' -f1) != $BINARYEN_MD5 ]]; t
 fi
 
 $PYTHON $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
-  --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME-js --wasm2js=$WASM2JS \
-  --branch=$TRAVIS_BRANCH --release
-  rm -rvf $WASM_CRATE/wasm_out
-  $PYTHON $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
-    --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME --branch=$TRAVIS_BRANCH --release
+#  --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME-js --wasm2js=$WASM2JS \
+#  --branch=$TRAVIS_BRANCH --release
+#rm -rvf $WASM_CRATE/wasm_out
+$PYTHON $BUILD_WASM --manifest-path=$WASM_CRATE/Cargo.toml --webapp-dir=$WASM_CRATE \
+  --target-dir=$TARGET --output-dir=$WEB_UPLOADS/$APP_NAME --branch=$TRAVIS_BRANCH --release
