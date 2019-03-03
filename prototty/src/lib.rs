@@ -72,6 +72,7 @@ enum AppState {
     Menu,
     Map { opened_from_game: bool },
     Help { opened_from_game: bool },
+    Generating,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -151,6 +152,9 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
             AppState::Help { .. } => {
                 PagerView.view(&app.help_pager, offset, depth, grid);
             }
+            AppState::Generating => {
+                StringView.view("Generating...", offset + Coord::new(1, 1), depth, grid);
+            }
         }
     }
 }
@@ -228,13 +232,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 return Some(Tick::Quit);
                             }
                             pause_menu::Choice::NewGame => {
-                                self.game_state = Some(GameState::new(
-                                    self.rng_source.next(),
-                                    self.debug_terrain_string
-                                        .as_ref()
-                                        .map(String::as_str),
-                                ));
-                                self.app_state = AppState::Game;
+                                self.app_state = AppState::Generating;
                             }
                             pause_menu::Choice::Help => {
                                 self.app_state = AppState::Help {
@@ -258,13 +256,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         Some(MenuOutput::Finalise(selection)) => match selection {
                             menu::Choice::Quit => return Some(Tick::Quit),
                             menu::Choice::NewGame => {
-                                self.game_state = Some(GameState::new(
-                                    self.rng_source.next(),
-                                    self.debug_terrain_string
-                                        .as_ref()
-                                        .map(String::as_str),
-                                ));
-                                self.app_state = AppState::Game;
+                                self.app_state = AppState::Generating;
                             }
                             menu::Choice::Help => {
                                 self.app_state = AppState::Help {
@@ -353,6 +345,13 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         _ => (),
                     }
                 }
+            }
+            AppState::Generating => {
+                self.game_state = Some(GameState::new(
+                    self.rng_source.next(),
+                    self.debug_terrain_string.as_ref().map(String::as_str),
+                ));
+                self.app_state = AppState::Game;
             }
         }
         if let Some(time_until_next_auto_save) =
