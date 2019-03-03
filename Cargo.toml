@@ -9,5 +9,5 @@ members = [
     "image-to-text",
 ]
 
-#[profile.release]
-#lto = true
+[profile.release]
+lto = true

@@ -26,13 +26,14 @@ impl Rational {
 pub enum BackgroundTile {
     Floor,
     Ground,
-    Wall,
+    IceWall,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum ForegroundTile {
     Player,
     Tree,
+    Stairs,
 }
 
 pub struct EntityIter<'a> {
@@ -130,7 +131,7 @@ impl Default for PackedEntity {
 
 impl PackedEntity {
     pub fn player() -> Self {
-        let player_light = PackedLight::new(grey24(64), 30, Rational::new(1, 10));
+        let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 10));
         Self {
             foreground_tile: Some(ForegroundTile::Player),
             light: Some(player_light),
@@ -285,7 +286,7 @@ impl World {
         let background = match cell.background_tile {
             BackgroundTile::Floor => 0,
             BackgroundTile::Ground => 0,
-            BackgroundTile::Wall => 255,
+            BackgroundTile::IceWall => 128,
         };
         let foreground = cell
             .entity_iter(&self.entities)
@@ -293,6 +294,7 @@ impl World {
                 e.foreground_tile()
                     .map(|foreground_tile| match foreground_tile {
                         ForegroundTile::Player => 0,
+                        ForegroundTile::Stairs => 0,
                         ForegroundTile::Tree => 128,
                     })
             })

@@ -1,16 +1,13 @@
 use super::*;
 use crate::world::*;
 use coord_2d::*;
-use grid_2d::coord_system::XThenYIter;
-use grid_2d::*;
+use grid_2d::{coord_system::XThenYIter, *};
 use hashbrown::HashSet;
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 use rgb24::*;
 use std::collections::VecDeque;
 use std::num::NonZeroU32;
-use wfc::overlapping::*;
-use wfc::retry::*;
-use wfc::*;
+use wfc::{overlapping::*, retry::*, *};
 
 pub struct TerrainDescription {
     pub player_coord: Coord,
@@ -43,13 +40,14 @@ enum Base {
     Floor,
     Ground,
     Tree,
-    Wall,
+    IceWall,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Contents {
     Player,
     Light(Rgb24),
+    Stairs,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -86,6 +84,15 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
                 Contents::Player => {
                     player_coord = Some(coord);
                 }
+                Contents::Stairs => {
+                    instructions.push(AddEntity(
+                        coord,
+                        PackedEntity {
+                            foreground_tile: Some(ForegroundTile::Stairs),
+                            light: Some(basic_light(Rgb24::new(128, 0, 0))),
+                        },
+                    ));
+                }
                 Contents::Light(colour) => instructions.push(AddEntity(
                     coord,
                     PackedEntity {
@@ -100,7 +107,9 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
             Base::Ground => {
                 instructions.push(SetBackground(coord, BackgroundTile::Ground))
             }
-            Base::Wall => instructions.push(SetBackground(coord, BackgroundTile::Wall)),
+            Base::IceWall => {
+                instructions.push(SetBackground(coord, BackgroundTile::IceWall))
+            }
             Base::Tree => {
                 instructions.push(SetBackground(coord, BackgroundTile::Ground));
                 instructions.push(AddEntity(
@@ -120,7 +129,7 @@ fn char_to_base(ch: char) -> Option<Base> {
     match ch {
         '.' => Some(Base::Floor),
         ',' => Some(Base::Ground),
-        '#' | '$' | '?' => Some(Base::Wall),
+        '#' | '$' | '?' => Some(Base::IceWall),
         '&' | '%' => Some(Base::Tree),
         _ => None,
     }
@@ -170,14 +179,19 @@ pub fn from_str(s: &str) -> TerrainDescription {
     char_grid_to_terrain_description(&string_to_char_grid(s))
 }
 
-fn binary_distance_map<T, F>(grid: &Grid<T>, mut zero: F) -> Grid<usize>
+fn binary_distance_map<T, Z, C>(
+    grid: &Grid<T>,
+    mut zero: Z,
+    mut can_enter: C,
+) -> Grid<Option<usize>>
 where
-    F: FnMut(&T) -> bool,
+    Z: FnMut(Coord, &T) -> bool,
+    C: FnMut(Coord, &T) -> bool,
 {
     let mut queue = VecDeque::new();
     let mut output = Grid::new_clone(grid.size(), None);
     for (coord, cell) in grid.enumerate() {
-        if zero(cell) {
+        if zero(coord, cell) {
             queue.push_back(coord);
             *output.get_checked_mut(coord) = Some(0);
         }
@@ -187,14 +201,14 @@ where
         for direction in CardinalDirections {
             let next_coord = coord + direction.coord();
             if let Some(cell) = output.get_mut(next_coord) {
-                if cell.is_none() {
+                if can_enter(next_coord, grid.get_checked(next_coord)) && cell.is_none() {
                     *cell = Some(next_count);
-                    queue.push_back(coord);
+                    queue.push_back(next_coord);
                 }
             }
         }
     }
-    Grid::new_grid_map(output, |cell| cell.unwrap())
+    output
 }
 
 fn fill<T, F>(grid: &Grid<T>, start: Coord, mut can_enter: F) -> HashSet<Coord>
@@ -240,11 +254,15 @@ where
 
 struct BadLevel;
 const MIN_ACCESSIBLE_CELLS: usize = 500;
+const NUM_STAIRS_CANDIDATES: usize = 100;
 
-fn populate_base_grid(base_grid: &Grid<Base>) -> Result<Grid<Cell>, BadLevel> {
+fn populate_base_grid<R: Rng>(
+    base_grid: &Grid<Base>,
+    rng: &mut R,
+) -> Result<Grid<Cell>, BadLevel> {
     let mut areas = classify(base_grid, |&base| match base {
         Base::Floor | Base::Ground => true,
-        Base::Wall | Base::Tree => false,
+        Base::IceWall | Base::Tree => false,
     });
     let (to_keep, to_fill) = if let Some(last) = areas.pop() {
         (last, areas)
@@ -256,8 +274,62 @@ fn populate_base_grid(base_grid: &Grid<Base>) -> Result<Grid<Cell>, BadLevel> {
     }
     let mut cell_grid = base_grid_to_default_cell_grid(base_grid);
     for &coord in to_fill.iter().flat_map(|a| a.iter()) {
-        cell_grid.get_checked_mut(coord).base = Base::Wall;
+        cell_grid.get_checked_mut(coord).base = Base::IceWall;
     }
+    let distance_map = binary_distance_map(
+        &cell_grid,
+        |_coord, cell| match cell.base {
+            Base::IceWall | Base::Tree => true,
+            Base::Floor | Base::Ground => false,
+        },
+        |_, _| true,
+    );
+    let item_candidates = distance_map
+        .enumerate()
+        .filter_map(|(coord, &distance)| {
+            if distance.unwrap() > 1 {
+                Some(coord)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    if item_candidates.is_empty() {
+        return Err(BadLevel);
+    }
+    let player_coord = *item_candidates.choose(rng).unwrap();
+    cell_grid.get_checked_mut(player_coord).contents = Some(Contents::Player);
+    let player_distance_map = binary_distance_map(
+        &cell_grid,
+        |_coord, cell| cell.contents == Some(Contents::Player),
+        |_coord, cell| match cell.base {
+            Base::IceWall | Base::Tree => false,
+            Base::Floor | Base::Ground => true,
+        },
+    );
+    let mut stairs_candidates = player_distance_map
+        .enumerate()
+        .filter_map(|(coord, &distance)| {
+            if cell_grid.get_checked(coord).contents.is_none()
+                && distance_map.get_checked(coord).unwrap() > 1
+            {
+                distance.map(|d| (coord, d))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    stairs_candidates.sort_by(|a, b| b.1.cmp(&a.1));
+    let stairs_candidates = stairs_candidates
+        .iter()
+        .cloned()
+        .take(NUM_STAIRS_CANDIDATES)
+        .collect::<Vec<_>>();
+    if stairs_candidates.is_empty() {
+        return Err(BadLevel);
+    }
+    let (stairs_coord, _distance) = *stairs_candidates.choose(rng).unwrap();
+    cell_grid.get_checked_mut(stairs_coord).contents = Some(Contents::Stairs);
     Ok(cell_grid)
 }
 
@@ -350,7 +422,7 @@ fn wfc_ice_cave_base_grid<R: Rng>(output_size: Size, rng: &mut R) -> Grid<Base> 
     let mut run =
         RunBorrow::new_forbid(&mut context, &mut wave, &global_stats, forbid, rng);
     run.collapse_retrying(NumTimes(10), rng).unwrap();
-    let mut output_grid = Grid::new_fn(output_size, |coord| {
+    let output_grid = Grid::new_fn(output_size, |coord| {
         let pattern_id = wave.grid().get_checked(coord).chosen_pattern_id().unwrap();
         *overlapping_patterns.pattern_top_left_value(pattern_id)
     });
@@ -358,12 +430,11 @@ fn wfc_ice_cave_base_grid<R: Rng>(output_size: Size, rng: &mut R) -> Grid<Base> 
 }
 
 pub fn wfc_ice_cave<R: Rng>(output_size: Size, rng: &mut R) -> TerrainDescription {
-    let mut cell_grid = loop {
+    let cell_grid = loop {
         let base_grid = wfc_ice_cave_base_grid(output_size, rng);
-        if let Ok(cell_grid) = populate_base_grid(&base_grid) {
+        if let Ok(cell_grid) = populate_base_grid(&base_grid, rng) {
             break cell_grid;
         }
     };
-    cell_grid.get_checked_mut(Coord::new(0, 0)).contents = Some(Contents::Player);
     cell_grid_to_terrain_description(&cell_grid)
 }

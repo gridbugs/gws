@@ -21,6 +21,11 @@ const TREE: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(colours::WHITE)
     .with_background(colours::BLACK);
+const STAIRS: ViewCell = ViewCell::new()
+    .with_character('>')
+    .with_bold(true)
+    .with_foreground(colours::WHITE)
+    .with_background(colours::BLACK);
 
 impl View<Gws> for MapView {
     fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
@@ -36,7 +41,7 @@ impl View<Gws> for MapView {
             }
             let mut view_cell = match cell.background_tile() {
                 BackgroundTile::Floor | BackgroundTile::Ground => FLOOR,
-                BackgroundTile::Wall => WALL,
+                BackgroundTile::IceWall => WALL,
             };
             for entity in cell.entity_iter(to_render.world.entities()) {
                 let foreground_view_cell =
@@ -44,6 +49,7 @@ impl View<Gws> for MapView {
                         match foreground_tile {
                             ForegroundTile::Player => Some(PLAYER),
                             ForegroundTile::Tree => Some(TREE),
+                            ForegroundTile::Stairs => Some(STAIRS),
                         }
                     });
                 if let Some(foreground_view_cell) = foreground_view_cell {

@@ -13,11 +13,19 @@ const TICK_PERIOD: Duration = Duration::from_micros((1_000_000. / TARGET_FPS) as
 
 struct GwsColourConfig;
 impl ColourConfig for GwsColourConfig {
-    fn convert_foreground_rgb24(&mut self, rgb24: Rgb24) -> AnsiColour {
+    fn convert_foreground_rgb24(&mut self, mut rgb24: Rgb24) -> AnsiColour {
+        let max_channel = rgb24.r.max(rgb24.g).max(rgb24.b);
+        if max_channel > 0 {
+            rgb24 = rgb24.saturating_add(Rgb24::new(20, 20, 20));
+        }
         AnsiColour::from_rgb24(rgb24.saturating_scalar_mul_div(5, 3))
     }
-    fn convert_background_rgb24(&mut self, rgb24: Rgb24) -> AnsiColour {
-        AnsiColour::from_rgb24(rgb24.saturating_scalar_mul_div(5, 2))
+    fn convert_background_rgb24(&mut self, mut rgb24: Rgb24) -> AnsiColour {
+        let max_channel = rgb24.r.max(rgb24.g).max(rgb24.b);
+        if max_channel > 0 {
+            rgb24 = rgb24.saturating_add(Rgb24::new(20, 20, 20));
+        }
+        AnsiColour::from_rgb24(rgb24.saturating_scalar_mul_div(5, 3))
     }
     fn default_foreground(&mut self) -> AnsiColour {
         AnsiColour::from_rgb24(grey24(255))

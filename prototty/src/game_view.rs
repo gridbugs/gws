@@ -3,13 +3,14 @@ use prototty::*;
 
 pub struct GameView;
 
-const FLOOR_BACKGROUND: Rgb24 = rgb24(30, 10, 3);
-const FLOOR_FOREGROUND: Rgb24 = rgb24(255, 255, 255);
+const FLOOR_BACKGROUND: Rgb24 = rgb24(0, 10, 30);
+const FLOOR_FOREGROUND: Rgb24 = rgb24(120, 150, 240);
 const GROUND_BACKGROUND: Rgb24 = rgb24(2, 20, 5);
 const GROUND_FOREGROUND: Rgb24 = rgb24(255, 255, 255);
-const WALL_TOP_COLOUR: Rgb24 = rgb24(255, 255, 0);
-const WALL_FRONT_COLOUR: Rgb24 = rgb24(255, 50, 0);
+const ICE_WALL_TOP_COLOUR: Rgb24 = rgb24(60, 80, 120);
+const ICE_WALL_FRONT_COLOUR: Rgb24 = FLOOR_FOREGROUND;
 const TREE_COLOUR: Rgb24 = rgb24(30, 200, 60);
+const STAIRS_COLOUR: Rgb24 = rgb24(220, 100, 50);
 
 const FLOOR: ViewCell = ViewCell::new()
     .with_character('.')
@@ -19,19 +20,23 @@ const GROUND: ViewCell = ViewCell::new()
     .with_character('.')
     .with_foreground(GROUND_FOREGROUND)
     .with_background(GROUND_BACKGROUND);
-const WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
+const ICE_WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
     .with_character('▀')
-    .with_foreground(WALL_TOP_COLOUR)
-    .with_background(WALL_FRONT_COLOUR);
-const WALL_ABOVE_WALL: ViewCell = ViewCell::new()
+    .with_foreground(ICE_WALL_TOP_COLOUR)
+    .with_background(ICE_WALL_FRONT_COLOUR);
+const ICE_WALL_ABOVE_WALL: ViewCell = ViewCell::new()
     .with_character('█')
-    .with_foreground(WALL_TOP_COLOUR)
-    .with_background(WALL_FRONT_COLOUR);
+    .with_foreground(ICE_WALL_TOP_COLOUR)
+    .with_background(ICE_WALL_FRONT_COLOUR);
 const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
 const TREE: ViewCell = ViewCell::new()
     .with_character('♣')
     .with_bold(true)
     .with_foreground(TREE_COLOUR);
+const STAIRS: ViewCell = ViewCell::new()
+    .with_character('>')
+    .with_bold(true)
+    .with_foreground(STAIRS_COLOUR);
 
 fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
     if let Some(foreground) = view_cell.foreground.as_mut() {
@@ -58,16 +63,16 @@ impl View<Gws> for GameView {
             let view_cell = match cell.background_tile() {
                 BackgroundTile::Floor => FLOOR,
                 BackgroundTile::Ground => GROUND,
-                BackgroundTile::Wall => {
+                BackgroundTile::IceWall => {
                     if let Some(cell_below) =
                         to_render.world.grid().get(coord + Coord::new(0, 1))
                     {
                         match cell_below.background_tile() {
-                            BackgroundTile::Wall => WALL_ABOVE_WALL,
-                            _ => WALL_ABOVE_FLOOR,
+                            BackgroundTile::IceWall => ICE_WALL_ABOVE_WALL,
+                            _ => ICE_WALL_ABOVE_FLOOR,
                         }
                     } else {
-                        WALL_ABOVE_FLOOR
+                        ICE_WALL_ABOVE_FLOOR
                     }
                 }
             };
@@ -77,6 +82,7 @@ impl View<Gws> for GameView {
                 match foreground_tile {
                     ForegroundTile::Player => PLAYER,
                     ForegroundTile::Tree => TREE,
+                    ForegroundTile::Stairs => STAIRS,
                 }
                 .coalesce(view_cell)
             } else {
