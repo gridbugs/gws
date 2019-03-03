@@ -109,13 +109,22 @@ impl Gws {
         rng: &mut R,
     ) -> Option<Tick> {
         let _ = rng;
-        for i in inputs {
-            match i {
+        if let Some(input) = inputs.into_iter().next() {
+            match input {
                 Input::Move(direction) => {
                     let player_coord = self
                         .world
                         .move_entity_in_direction(self.player_id, direction);
                     self.pathfinding.update(player_coord, &self.world);
+                }
+            }
+            for id in self.world.npc_ids() {
+                let coord = self.world.entities().get(&id).unwrap().coord();
+                if let Some(direction) = self
+                    .pathfinding
+                    .direction_towards_player(coord, &self.world)
+                {
+                    self.world.move_entity_in_direction(id, direction);
                 }
             }
         }
@@ -128,7 +137,7 @@ impl Gws {
         {
             if entity.foreground_tile() == Some(ForegroundTile::Stairs) {
                 return Some(Tick::ExitLevel(BetweenLevels {
-                    player: self.player().pack(&self.world.lights()),
+                    player: self.world.pack_entity(self.player_id),
                 }));
             }
         }

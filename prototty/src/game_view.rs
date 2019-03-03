@@ -28,7 +28,6 @@ const ICE_WALL_ABOVE_WALL: ViewCell = ViewCell::new()
     .with_character('█')
     .with_foreground(ICE_WALL_TOP_COLOUR)
     .with_background(ICE_WALL_FRONT_COLOUR);
-const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
 const TREE: ViewCell = ViewCell::new()
     .with_character('♣')
     .with_bold(true)
@@ -37,6 +36,11 @@ const STAIRS: ViewCell = ViewCell::new()
     .with_character('>')
     .with_bold(true)
     .with_foreground(STAIRS_COLOUR);
+const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
+const DEMON: ViewCell = ViewCell::new()
+    .with_character('d')
+    .with_bold(true)
+    .with_foreground(rgb24(30, 200, 80));
 
 fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
     if let Some(foreground) = view_cell.foreground.as_mut() {
@@ -81,6 +85,7 @@ impl View<Gws> for GameView {
             {
                 match foreground_tile {
                     ForegroundTile::Player => PLAYER,
+                    ForegroundTile::Demon => DEMON,
                     ForegroundTile::Tree => TREE,
                     ForegroundTile::Stairs => STAIRS,
                 }

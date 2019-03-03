@@ -47,6 +47,7 @@ impl View<Gws> for MapView {
                 let foreground_view_cell =
                     entity.foreground_tile().and_then(|foreground_tile| {
                         match foreground_tile {
+                            ForegroundTile::Demon => None,
                             ForegroundTile::Player => Some(PLAYER),
                             ForegroundTile::Tree => Some(TREE),
                             ForegroundTile::Stairs => Some(STAIRS),

@@ -46,6 +46,7 @@ enum Base {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Contents {
     Player,
+    Demon,
     Light(Rgb24),
     Stairs,
 }
@@ -84,12 +85,16 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
                 Contents::Player => {
                     player_coord = Some(coord);
                 }
+                Contents::Demon => {
+                    instructions.push(AddEntity(coord, PackedEntity::demon()));
+                }
                 Contents::Stairs => {
                     instructions.push(AddEntity(
                         coord,
                         PackedEntity {
                             foreground_tile: Some(ForegroundTile::Stairs),
                             light: Some(basic_light(Rgb24::new(128, 0, 0))),
+                            ..Default::default()
                         },
                     ));
                 }
@@ -98,6 +103,7 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
                     PackedEntity {
                         foreground_tile: None,
                         light: Some(basic_light(colour)),
+                        ..Default::default()
                     },
                 )),
             }
@@ -141,6 +147,7 @@ fn char_to_cell(ch: char) -> Option<Cell> {
     } else {
         match ch {
             '@' => Some(Cell::new(Base::Floor).with_contents(Contents::Player)),
+            'd' => Some(Cell::new(Base::Floor).with_contents(Contents::Demon)),
             '1' => Some(
                 Cell::new(Base::Floor).with_contents(Contents::Light(rgb24(255, 0, 0))),
             ),
@@ -255,6 +262,7 @@ where
 struct BadLevel;
 const MIN_ACCESSIBLE_CELLS: usize = 500;
 const NUM_STAIRS_CANDIDATES: usize = 100;
+const NUM_NPCS: usize = 10;
 
 fn populate_base_grid<R: Rng>(
     base_grid: &Grid<Base>,
@@ -330,6 +338,15 @@ fn populate_base_grid<R: Rng>(
     }
     let (stairs_coord, _distance) = *stairs_candidates.choose(rng).unwrap();
     cell_grid.get_checked_mut(stairs_coord).contents = Some(Contents::Stairs);
+    let mut npc_candidates = item_candidates
+        .iter()
+        .cloned()
+        .filter(|&coord| cell_grid.get_checked(coord).contents.is_none())
+        .collect::<Vec<_>>();
+    npc_candidates.shuffle(rng);
+    for &coord in npc_candidates.iter().take(NUM_NPCS) {
+        cell_grid.get_checked_mut(coord).contents = Some(Contents::Demon);
+    }
     Ok(cell_grid)
 }
 

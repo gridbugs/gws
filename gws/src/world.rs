@@ -34,6 +34,7 @@ pub enum ForegroundTile {
     Player,
     Tree,
     Stairs,
+    Demon,
 }
 
 pub struct EntityIter<'a> {
@@ -120,18 +121,13 @@ impl Entity {
     pub fn foreground_tile(&self) -> Option<ForegroundTile> {
         self.foreground_tile
     }
-    pub(crate) fn pack(&self, lights: &[Light]) -> PackedEntity {
-        PackedEntity {
-            foreground_tile: self.foreground_tile,
-            light: self.light_index.map(|index| lights[index].pack()),
-        }
-    }
 }
 
 #[derive(Clone)]
 pub struct PackedEntity {
-    pub foreground_tile: Option<ForegroundTile>,
-    pub light: Option<PackedLight>,
+    pub(crate) foreground_tile: Option<ForegroundTile>,
+    pub(crate) light: Option<PackedLight>,
+    pub(crate) npc: bool,
 }
 
 impl Default for PackedEntity {
@@ -139,16 +135,25 @@ impl Default for PackedEntity {
         Self {
             foreground_tile: None,
             light: None,
+            npc: false,
         }
     }
 }
 
 impl PackedEntity {
-    pub fn player() -> Self {
+    pub(crate) fn player() -> Self {
         let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 10));
         Self {
             foreground_tile: Some(ForegroundTile::Player),
             light: Some(player_light),
+            npc: false,
+        }
+    }
+    pub(crate) fn demon() -> Self {
+        Self {
+            foreground_tile: Some(ForegroundTile::Demon),
+            light: None,
+            npc: true,
         }
     }
 }
@@ -222,6 +227,7 @@ pub struct World {
     lights: Vec<Light>,
     entities: HashMap<EntityId, Entity>,
     next_id: EntityId,
+    npc_ids: HashSet<EntityId>,
 }
 
 impl World {
@@ -231,6 +237,15 @@ impl World {
             lights: Vec::new(),
             entities: HashMap::new(),
             next_id: 0,
+            npc_ids: HashSet::new(),
+        }
+    }
+    pub(crate) fn pack_entity(&self, id: EntityId) -> PackedEntity {
+        let entity = self.entities.get(&id).unwrap();
+        PackedEntity {
+            foreground_tile: entity.foreground_tile,
+            light: entity.light_index.map(|index| self.lights[index].pack()),
+            npc: self.npc_ids.contains(&id),
         }
     }
     pub(crate) fn lights(&self) -> &[Light] {
@@ -246,6 +261,7 @@ impl World {
         let PackedEntity {
             foreground_tile,
             light,
+            npc,
         } = entity;
         let id = self.next_id;
         self.next_id += 1;
@@ -263,6 +279,9 @@ impl World {
         if let Some(cell) = self.grid.get_mut(coord) {
             cell.entities.insert(id);
         }
+        if npc {
+            self.npc_ids.insert(id);
+        }
         id
     }
     fn set_background(&mut self, coord: Coord, background_tile: BackgroundTile) {
@@ -279,6 +298,10 @@ impl World {
                 self.add_entity(coord, packed_entity);
             }
         }
+    }
+    pub(crate) fn npc_ids(&self) -> Vec<EntityId> {
+        // this is a sign that this type should be split up
+        self.npc_ids.iter().cloned().collect()
     }
     pub(crate) fn move_entity_in_direction(
         &mut self,
@@ -314,6 +337,7 @@ impl World {
                     .map(|foreground_tile| match foreground_tile {
                         ForegroundTile::Player => 0,
                         ForegroundTile::Stairs => 0,
+                        ForegroundTile::Demon => 0,
                         ForegroundTile::Tree => 128,
                     })
             })
