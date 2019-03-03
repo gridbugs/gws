@@ -4,6 +4,8 @@ extern crate cherenkov_prototty;
 extern crate whoami;
 
 use cherenkov_prototty::FirstRngSeed;
+use std::fs::File;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 const SAVE_BASE: &'static str = "user";
@@ -11,6 +13,7 @@ const SAVE_BASE: &'static str = "user";
 pub struct CommonArgs {
     rng_seed: FirstRngSeed,
     name: String,
+    debug_terrain_file: Option<String>,
 }
 
 impl CommonArgs {
@@ -27,8 +30,12 @@ impl CommonArgs {
                 .with_default(FirstRngSeed::Random);
                 name = simon::opt("n", "name", "name to use for save game", "NAME")
                     .map(|n| n.unwrap_or_else(|| whoami::username()));
+                debug_terrain_file = simon::opt("t", "debug-terain-file",
+                                                "text file to influence terrain generation",
+                                                "FILE");
+
             } in {
-                Self { rng_seed, name }
+                Self { rng_seed, name, debug_terrain_file }
             }
         }
     }
@@ -37,5 +44,13 @@ impl CommonArgs {
     }
     pub fn first_rng_seed(&self) -> FirstRngSeed {
         self.rng_seed
+    }
+    pub fn debug_terrain_string(&self) -> Option<String> {
+        self.debug_terrain_file.as_ref().map(|filename| {
+            let mut f = File::open(filename).unwrap();
+            let mut buffer = String::new();
+            f.read_to_string(&mut buffer).unwrap();
+            buffer
+        })
     }
 }

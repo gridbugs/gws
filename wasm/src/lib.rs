@@ -30,7 +30,8 @@ impl WebApp {
     #[wasm_bindgen(constructor)]
     pub fn new(js_grid: JsGrid, js_byte_storage: JsByteStorage) -> Self {
         let storage = WasmStorage::new(js_byte_storage);
-        let (app, init_status) = App::new(frontend::Wasm, storage, FirstRngSeed::Random);
+        let (app, init_status) =
+            App::new(frontend::Wasm, storage, FirstRngSeed::Random, None);
         let app_view = AppView::new();
         match init_status {
             InitStatus::NoSaveFound => console_log!("No save game found"),

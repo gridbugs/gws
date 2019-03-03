@@ -54,18 +54,20 @@ enum TerrainChoice {
 const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcForrest(Size::new_u16(60, 40));
 
 impl Cherenkov {
-    pub fn new<R: Rng>(rng: &mut R) -> Self {
+    pub fn new<R: Rng>(rng: &mut R, debug_terrain_string: Option<&str>) -> Self {
         let terrain::TerrainDescription {
             size,
             player_coord,
             instructions,
         } = match TERRAIN_CHOICE {
-            TerrainChoice::StringDemo => {
-                terrain::from_str(include_str!("terrain_string.txt"))
-            }
-            TerrainChoice::WfcForrest(size) => {
-                terrain::wfc_from_str(size, include_str!("wfc_forrest.txt"), rng)
-            }
+            TerrainChoice::StringDemo => terrain::from_str(
+                debug_terrain_string.unwrap_or(include_str!("terrain_string.txt")),
+            ),
+            TerrainChoice::WfcForrest(size) => terrain::wfc_from_str(
+                size,
+                debug_terrain_string.unwrap_or(include_str!("wfc_forrest.txt")),
+                rng,
+            ),
         };
         let player = PackedEntity::player();
         let mut world = World::new(size);

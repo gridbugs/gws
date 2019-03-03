@@ -57,8 +57,9 @@ struct GameState {
 }
 
 impl GameState {
-    fn new(mut rng_with_seed: RngWithSeed) -> Self {
-        let game = cherenkov::Cherenkov::new(&mut rng_with_seed.rng);
+    fn new(mut rng_with_seed: RngWithSeed, debug_terrain_string: Option<&str>) -> Self {
+        let game =
+            cherenkov::Cherenkov::new(&mut rng_with_seed.rng, debug_terrain_string);
         Self {
             rng_with_seed,
             all_inputs: Vec::new(),
@@ -112,6 +113,7 @@ pub struct App<F: Frontend, S: Storage> {
     pause_menu: MenuInstance<pause_menu::Choice>,
     time_until_next_auto_save: Duration,
     help_pager: Pager,
+    debug_terrain_string: Option<String>,
 }
 
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
@@ -164,6 +166,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
         frontend: F,
         storage: S,
         first_rng_seed: FirstRngSeed,
+        debug_terrain_string: Option<String>,
     ) -> (Self, InitStatus) {
         let _ = frontend;
         let (init_status, game_state) = match storage.load::<_, GameState>(SAVE_KEY) {
@@ -190,6 +193,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                 APP_SIZE,
                 Default::default(),
             ),
+            debug_terrain_string,
         };
         (app, init_status)
     }
@@ -225,8 +229,12 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 return Some(Tick::Quit);
                             }
                             pause_menu::Choice::NewGame => {
-                                self.game_state =
-                                    Some(GameState::new(self.rng_source.next()));
+                                self.game_state = Some(GameState::new(
+                                    self.rng_source.next(),
+                                    self.debug_terrain_string
+                                        .as_ref()
+                                        .map(String::as_str),
+                                ));
                                 self.app_state = AppState::Game;
                             }
                             pause_menu::Choice::Help => {
@@ -251,8 +259,12 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         Some(MenuOutput::Finalise(selection)) => match selection {
                             menu::Choice::Quit => return Some(Tick::Quit),
                             menu::Choice::NewGame => {
-                                self.game_state =
-                                    Some(GameState::new(self.rng_source.next()));
+                                self.game_state = Some(GameState::new(
+                                    self.rng_source.next(),
+                                    self.debug_terrain_string
+                                        .as_ref()
+                                        .map(String::as_str),
+                                ));
                                 self.app_state = AppState::Game;
                             }
                             menu::Choice::Help => {

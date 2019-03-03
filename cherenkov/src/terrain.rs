@@ -47,7 +47,7 @@ fn from_char_grid(grid: Grid<char>) -> TerrainDescription {
         match ch {
             '.' => instructions.push(SetBackground(coord, BackgroundTile::Floor)),
             ',' => instructions.push(SetBackground(coord, BackgroundTile::Ground)),
-            '#' => instructions.push(SetBackground(coord, BackgroundTile::Wall)),
+            '#' | '$' => instructions.push(SetBackground(coord, BackgroundTile::Wall)),
             '&' | '%' => {
                 instructions.push(SetBackground(coord, BackgroundTile::Ground));
                 instructions.push(AddEntity(
@@ -159,19 +159,9 @@ pub fn wfc_from_str<R: Rng>(
         .get_checked(right_coord)
         .get(Orientation::Original)
         .unwrap();
-    /*
-    let coords_to_ban = [Coord::new(0, 0), bottom_right_coord];
-    for &coord in &coords_to_ban {
-        let id = *id_grid
-            .get_checked(coord)
-            .get(Orientation::Original)
-            .unwrap();
-        overlapping_patterns.pattern_mut(id).clear_count();
-    } */
     for &id in &[bottom_right_id, bottom_id, right_id] {
         overlapping_patterns.pattern_mut(id).clear_count();
     }
-
     let global_stats = overlapping_patterns.global_stats();
     let mut wave = Wave::new(output_size);
     let mut wfc_context = Context::new();

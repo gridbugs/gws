@@ -75,8 +75,12 @@ fn main() {
             .unwrap();
     let storage = FileStorage::next_to_exe(args.common.save_dir(), true)
         .expect("Failed to find user dir");
-    let (mut app, init_status) =
-        App::new(frontend::Glutin, storage, args.common.first_rng_seed());
+    let (mut app, init_status) = App::new(
+        frontend::Glutin,
+        storage,
+        args.common.first_rng_seed(),
+        args.common.debug_terrain_string(),
+    );
     let mut input_buffer = Vec::with_capacity(64);
     let mut app_view = AppView::new();
     let mut frame_instant = Instant::now();

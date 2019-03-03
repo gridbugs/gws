@@ -34,8 +34,12 @@ fn main() {
     let mut context = Context::with_colour_config(CherenkovColourConfig).unwrap();
     let storage =
         FileStorage::next_to_exe(args.save_dir(), true).expect("Failed to find user dir");
-    let (mut app, _init_status) =
-        App::new(frontend::Unix, storage, args.first_rng_seed());
+    let (mut app, _init_status) = App::new(
+        frontend::Unix,
+        storage,
+        args.first_rng_seed(),
+        args.debug_terrain_string(),
+    );
     let mut app_view = AppView::new();
     let mut frame_instant = Instant::now();
     loop {
