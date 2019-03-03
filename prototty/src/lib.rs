@@ -57,8 +57,13 @@ struct GameState {
 }
 
 impl GameState {
-    fn new(mut rng_with_seed: RngWithSeed, debug_terrain_string: Option<&str>) -> Self {
-        let game = gws::Gws::new(None, &mut rng_with_seed.rng, debug_terrain_string);
+    fn new(
+        between_levels: Option<gws::BetweenLevels>,
+        mut rng_with_seed: RngWithSeed,
+        debug_terrain_string: Option<&str>,
+    ) -> Self {
+        let game =
+            gws::Gws::new(between_levels, &mut rng_with_seed.rng, debug_terrain_string);
         Self {
             rng_with_seed,
             all_inputs: Vec::new(),
@@ -72,7 +77,7 @@ enum AppState {
     Menu,
     Map { opened_from_game: bool },
     Help { opened_from_game: bool },
-    Generating,
+    BetweenLevels(Option<gws::BetweenLevels>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -152,8 +157,13 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
             AppState::Help { .. } => {
                 PagerView.view(&app.help_pager, offset, depth, grid);
             }
-            AppState::Generating => {
-                StringView.view("Generating...", offset + Coord::new(1, 1), depth, grid);
+            AppState::BetweenLevels(_) => {
+                StringView.view(
+                    "Generating level...",
+                    offset + Coord::new(1, 1),
+                    depth,
+                    grid,
+                );
             }
         }
     }
@@ -232,7 +242,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 return Some(Tick::Quit);
                             }
                             pause_menu::Choice::NewGame => {
-                                self.app_state = AppState::Generating;
+                                self.app_state = AppState::BetweenLevels(None);
                             }
                             pause_menu::Choice::Help => {
                                 self.app_state = AppState::Help {
@@ -256,7 +266,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         Some(MenuOutput::Finalise(selection)) => match selection {
                             menu::Choice::Quit => return Some(Tick::Quit),
                             menu::Choice::NewGame => {
-                                self.app_state = AppState::Generating;
+                                self.app_state = AppState::BetweenLevels(None);
                             }
                             menu::Choice::Help => {
                                 self.app_state = AppState::Help {
@@ -300,12 +310,20 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         }
                     }
                     let input_end_index = game_state.all_inputs.len();
-                    game_state.game.tick(
+                    let tick = game_state.game.tick(
                         game_state.all_inputs[input_start_index..input_end_index]
                             .into_iter()
                             .cloned(),
                         &mut game_state.rng_with_seed.rng,
                     );
+                    if let Some(tick) = tick {
+                        match tick {
+                            gws::Tick::ExitLevel(between_levels) => {
+                                self.app_state =
+                                    AppState::BetweenLevels(Some(between_levels));
+                            }
+                        }
+                    }
                 } else {
                     self.app_state = AppState::Menu;
                 }
@@ -346,8 +364,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     }
                 }
             }
-            AppState::Generating => {
+            AppState::BetweenLevels(ref between_levels) => {
                 self.game_state = Some(GameState::new(
+                    between_levels.clone(),
                     self.rng_source.next(),
                     self.debug_terrain_string.as_ref().map(String::as_str),
                 ));

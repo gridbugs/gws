@@ -53,6 +53,7 @@ enum TerrainChoice {
 
 const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
 
+#[derive(Clone)]
 pub struct BetweenLevels {
     player: PackedEntity,
 }

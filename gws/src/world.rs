@@ -128,6 +128,7 @@ impl Entity {
     }
 }
 
+#[derive(Clone)]
 pub struct PackedEntity {
     pub foreground_tile: Option<ForegroundTile>,
     pub light: Option<PackedLight>,
@@ -152,6 +153,7 @@ impl PackedEntity {
     }
 }
 
+#[derive(Clone)]
 pub struct PackedLight {
     pub colour: Rgb24,
     pub range_squared: u32,
