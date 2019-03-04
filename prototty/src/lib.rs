@@ -311,15 +311,16 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         }
                     }
                     let input_end_index = game_state.all_inputs.len();
-                    let tick = game_state.game.tick(
+                    let end = game_state.game.tick(
                         game_state.all_inputs[input_start_index..input_end_index]
                             .into_iter()
                             .cloned(),
+                        period,
                         &mut game_state.rng_with_seed.rng,
                     );
-                    if let Some(tick) = tick {
-                        match tick {
-                            gws::Tick::ExitLevel(between_levels) => {
+                    if let Some(end) = end {
+                        match end {
+                            gws::End::ExitLevel(between_levels) => {
                                 self.app_state =
                                     AppState::BetweenLevels(Some(between_levels));
                             }

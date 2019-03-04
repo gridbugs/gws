@@ -84,16 +84,25 @@ impl View<Gws> for GameView {
                     }
                 }
             };
-            let mut view_cell = if let Some(foreground_tile) =
-                cell.foreground_tiles(to_render.world.entities()).next()
+            let mut view_cell = if let Some(entity) =
+                cell.entity_iter(to_render.world.entities()).next()
             {
-                match foreground_tile {
-                    ForegroundTile::Player => PLAYER,
-                    ForegroundTile::Demon => DEMON,
-                    ForegroundTile::Tree => TREE,
-                    ForegroundTile::Stairs => STAIRS,
+                if let Some(direction) = entity.taking_damage_in_direction() {
+                    ViewCell::new()
+                        .with_character(ARROW_CHARS[direction])
+                        .with_foreground(rgb24(255, 0, 0))
+                        .coalesce(view_cell)
+                } else if let Some(foreground_tile) = entity.foreground_tile() {
+                    match foreground_tile {
+                        ForegroundTile::Player => PLAYER,
+                        ForegroundTile::Demon => DEMON,
+                        ForegroundTile::Tree => TREE,
+                        ForegroundTile::Stairs => STAIRS,
+                    }
+                    .coalesce(view_cell)
+                } else {
+                    view_cell
                 }
-                .coalesce(view_cell)
             } else {
                 if let Some(direction) =
                     to_render.commitment_grid.get_direction_checked(coord)

@@ -149,7 +149,9 @@ impl PathfindingContext {
         let coord = world.entities().get(&id).unwrap().coord();
         if let Some(direction) = self.direction_towards_player(coord, world) {
             let next_coord = coord + direction.coord();
-            self.commitment_grid.commit(next_coord, direction);
+            if next_coord != self.player_coord {
+                self.commitment_grid.commit(next_coord, direction);
+            }
             self.committed_movements.push((id, direction));
         }
     }

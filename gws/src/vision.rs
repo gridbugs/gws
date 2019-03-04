@@ -5,8 +5,8 @@ use grid_2d::*;
 use rgb24::*;
 use shadowcast::*;
 
-const OMNISCIENT: bool = true;
-const AMBIENT_LIGHT_FLOOR: Option<u8> = Some(20);
+const OMNISCIENT: bool = false; //true;
+const AMBIENT_LIGHT_FLOOR: Option<u8> = None; //Some(20);
 
 struct Visibility;
 

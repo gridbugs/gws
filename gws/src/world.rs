@@ -1,7 +1,9 @@
+use super::Animation;
 use coord_2d::*;
 use direction::*;
 use grid_2d::*;
 use hashbrown::{hash_set, HashMap, HashSet};
+use line_2d::*;
 use rgb24::*;
 use shadowcast::*;
 
@@ -109,10 +111,13 @@ pub type EntityId = u64;
 
 #[derive(Serialize, Deserialize)]
 pub struct Entity {
+    id: EntityId,
     coord: Coord,
     foreground_tile: Option<ForegroundTile>,
     light_index: Option<usize>,
     npc: bool,
+    player: bool,
+    taking_damage_in_direction: Option<CardinalDirection>,
 }
 
 impl Entity {
@@ -122,6 +127,9 @@ impl Entity {
     pub fn foreground_tile(&self) -> Option<ForegroundTile> {
         self.foreground_tile
     }
+    pub fn taking_damage_in_direction(&self) -> Option<CardinalDirection> {
+        self.taking_damage_in_direction
+    }
 }
 
 #[derive(Clone)]
@@ -129,6 +137,7 @@ pub struct PackedEntity {
     pub(crate) foreground_tile: Option<ForegroundTile>,
     pub(crate) light: Option<PackedLight>,
     pub(crate) npc: bool,
+    pub(crate) player: bool,
 }
 
 impl Default for PackedEntity {
@@ -137,6 +146,7 @@ impl Default for PackedEntity {
             foreground_tile: None,
             light: None,
             npc: false,
+            player: false,
         }
     }
 }
@@ -148,6 +158,7 @@ impl PackedEntity {
             foreground_tile: Some(ForegroundTile::Player),
             light: Some(player_light),
             npc: false,
+            player: true,
         }
     }
     pub(crate) fn demon() -> Self {
@@ -155,6 +166,7 @@ impl PackedEntity {
             foreground_tile: Some(ForegroundTile::Demon),
             light: None,
             npc: true,
+            player: false,
         }
     }
 }
@@ -184,11 +196,12 @@ impl PackedLight {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WorldCell {
     background_tile: BackgroundTile,
     entities: HashSet<EntityId>,
     npc_count: usize,
+    player_count: usize,
 }
 
 impl WorldCell {
@@ -197,6 +210,7 @@ impl WorldCell {
             background_tile,
             entities: HashSet::new(),
             npc_count: 0,
+            player_count: 0,
         }
     }
     pub fn background_tile(&self) -> BackgroundTile {
@@ -217,6 +231,9 @@ impl WorldCell {
     pub fn contains_npc(&self) -> bool {
         self.npc_count > 0
     }
+    pub fn contains_player(&self) -> bool {
+        self.player_count > 0
+    }
 }
 
 impl Default for WorldCell {
@@ -236,6 +253,49 @@ pub struct World {
     npc_ids: HashSet<EntityId>,
 }
 
+#[derive(Debug)]
+pub enum CancelAction {
+    MoveIntoSolidCell,
+    NpcMoveIntoNpc,
+    MoveOutOfBounds,
+}
+
+pub(crate) enum ApplyAction {
+    Done,
+    Animation(Animation),
+}
+
+fn move_entity_to_coord(
+    coord: Coord,
+    entity: &mut Entity,
+    grid: &mut Grid<WorldCell>,
+    lights: &mut Vec<Light>,
+) {
+    if let Some(current_cell) = grid.get_mut(entity.coord) {
+        current_cell.entities.remove(&entity.id);
+        if entity.npc {
+            current_cell.npc_count -= 1;
+        }
+        if entity.player {
+            current_cell.player_count -= 1;
+        }
+    }
+    if let Some(next_cell) = grid.get_mut(coord) {
+        next_cell.entities.insert(entity.id);
+        if entity.npc {
+            next_cell.npc_count += 1;
+        }
+        if entity.player {
+            next_cell.player_count += 1;
+        }
+    }
+    entity.coord = coord;
+    if let Some(light_index) = entity.light_index {
+        let light = lights.get_mut(light_index).unwrap();
+        light.coord = entity.coord;
+    }
+}
+
 impl World {
     pub(crate) fn new(size: Size) -> Self {
         Self {
@@ -251,7 +311,8 @@ impl World {
         PackedEntity {
             foreground_tile: entity.foreground_tile,
             light: entity.light_index.map(|index| self.lights[index].pack()),
-            npc: self.npc_ids.contains(&id),
+            npc: entity.npc,
+            player: entity.player,
         }
     }
     pub(crate) fn lights(&self) -> &[Light] {
@@ -268,6 +329,7 @@ impl World {
             foreground_tile,
             light,
             npc,
+            player,
         } = entity;
         let id = self.next_id;
         self.next_id += 1;
@@ -277,16 +339,22 @@ impl World {
             light_index
         });
         let entity = Entity {
+            id,
             coord,
             foreground_tile,
             light_index,
             npc,
+            player,
+            taking_damage_in_direction: None,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {
             cell.entities.insert(id);
             if npc {
                 cell.npc_count += 1;
+            }
+            if player {
+                cell.player_count += 1;
             }
         }
         if npc {
@@ -316,27 +384,33 @@ impl World {
         &mut self,
         id: EntityId,
         direction: CardinalDirection,
-    ) -> Coord {
+    ) -> Result<ApplyAction, CancelAction> {
         let entity = self.entities.get_mut(&id).unwrap();
-        let next_coord = entity.coord + direction.coord();
-        if let Some(current_cell) = self.grid.get_mut(entity.coord) {
-            current_cell.entities.remove(&id);
-            if entity.npc {
-                current_cell.npc_count -= 1;
+        let coord = entity.coord + direction.coord();
+        if let Some(cell) = self.grid.get(coord) {
+            if cell.is_solid() {
+                Err(CancelAction::MoveIntoSolidCell)
+            } else if entity.npc && cell.contains_npc() {
+                Err(CancelAction::NpcMoveIntoNpc)
+            } else if entity.npc && cell.contains_player() {
+                let id = cell
+                    .entity_iter(&self.entities)
+                    .find_map(|e| if e.player { Some(e.id) } else { None })
+                    .unwrap();
+                Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+            } else if entity.player && cell.contains_npc() {
+                let id = cell
+                    .entity_iter(&self.entities)
+                    .find_map(|e| if e.npc { Some(e.id) } else { None })
+                    .unwrap();
+                Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+            } else {
+                move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
+                Ok(ApplyAction::Done)
             }
+        } else {
+            Err(CancelAction::MoveOutOfBounds)
         }
-        if let Some(next_cell) = self.grid.get_mut(next_coord) {
-            next_cell.entities.insert(id);
-            if entity.npc {
-                next_cell.npc_count += 1;
-            }
-        }
-        entity.coord = next_coord;
-        if let Some(light_index) = entity.light_index {
-            let light = self.lights.get_mut(light_index).unwrap();
-            light.coord = entity.coord;
-        }
-        next_coord
     }
     pub(crate) fn opacity(&self, coord: Coord) -> u8 {
         let cell = self.grid.get_checked(coord);
@@ -359,5 +433,26 @@ impl World {
             .max()
             .unwrap_or(0);
         background.max(foreground)
+    }
+    pub(crate) fn can_see(&self, a: Coord, b: Coord, max_distance: usize) -> bool {
+        let mut visibility = 255u8;
+        let line_segment = LineSegment::new(a, b);
+        if line_segment.num_steps() > max_distance {
+            return false;
+        }
+        for coord in line_segment {
+            visibility = visibility.saturating_sub(self.opacity(coord));
+        }
+        visibility > 0
+    }
+    pub(crate) fn set_taking_damage_in_direction(
+        &mut self,
+        id: EntityId,
+        value: Option<CardinalDirection>,
+    ) {
+        self.entities
+            .get_mut(&id)
+            .unwrap()
+            .taking_damage_in_direction = value;
     }
 }
