@@ -10,3 +10,4 @@
  - [Linux](https://files.gridbugs.org/get-well-soon-linux-x86_64-master.zip)
  - [MacOS (app)](https://files.gridbugs.org/GetWellSoon-master.dmg)
  - [MacOS (binaries)](https://files.gridbugs.org/get-well-soon-macos-x86_64-master.zip)
+ - [Web](https://games.gridbugs.org/get-well-soon/master/)
