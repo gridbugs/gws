@@ -299,9 +299,8 @@ impl World {
             }
         }
     }
-    pub(crate) fn npc_ids(&self) -> Vec<EntityId> {
-        // this is a sign that this type should be split up
-        self.npc_ids.iter().cloned().collect()
+    pub(crate) fn npc_ids(&self) -> impl Iterator<Item = &EntityId> {
+        self.npc_ids.iter()
     }
     pub(crate) fn move_entity_in_direction(
         &mut self,

@@ -39,8 +39,9 @@ pub mod input {
 pub struct Gws {
     world: World,
     visible_area: VisibileArea,
-    player_id: EntityId,
     pathfinding: PathfindingContext,
+    player_id: EntityId,
+    npc_ids: Vec<EntityId>,
 }
 
 pub struct ToRender<'a> {
@@ -55,7 +56,7 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo; //TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -93,11 +94,13 @@ impl Gws {
         let player_id = world.add_entity(player_coord, player);
         let visible_area = VisibileArea::new(size);
         let pathfinding = PathfindingContext::new(size);
+        let npc_ids = Vec::new();
         let mut s = Self {
             world,
             visible_area,
             player_id,
             pathfinding,
+            npc_ids,
         };
         s.update_visible_area();
         s
@@ -109,6 +112,7 @@ impl Gws {
         rng: &mut R,
     ) -> Option<Tick> {
         let _ = rng;
+        self.npc_ids.clear();
         if let Some(input) = inputs.into_iter().next() {
             match input {
                 Input::Move(direction) => {
@@ -118,16 +122,20 @@ impl Gws {
                     self.pathfinding.update(player_coord, &self.world);
                 }
             }
-            for id in self.world.npc_ids() {
-                let coord = self.world.entities().get(&id).unwrap().coord();
-                if let Some(direction) = self
-                    .pathfinding
-                    .direction_towards_player(coord, &self.world)
-                {
-                    self.world.move_entity_in_direction(id, direction);
-                }
+            for &id in self.world.npc_ids() {
+                self.npc_ids.push(id);
             }
         }
+        for id in self.npc_ids.drain(..) {
+            let coord = self.world.entities().get(&id).unwrap().coord();
+            if let Some(direction) = self
+                .pathfinding
+                .direction_towards_player(coord, &self.world)
+            {
+                self.world.move_entity_in_direction(id, direction);
+            }
+        }
+
         self.update_visible_area();
         if let Some(cell) = self.world.grid().get(self.player().coord()) {
             for entity in cell.entity_iter(self.world.entities()) {
