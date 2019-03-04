@@ -55,7 +55,7 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo; //TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -129,16 +129,13 @@ impl Gws {
             }
         }
         self.update_visible_area();
-        for entity in self
-            .world
-            .grid()
-            .get_checked(self.player().coord())
-            .entity_iter(self.world.entities())
-        {
-            if entity.foreground_tile() == Some(ForegroundTile::Stairs) {
-                return Some(Tick::ExitLevel(BetweenLevels {
-                    player: self.world.pack_entity(self.player_id),
-                }));
+        if let Some(cell) = self.world.grid().get(self.player().coord()) {
+            for entity in cell.entity_iter(self.world.entities()) {
+                if entity.foreground_tile() == Some(ForegroundTile::Stairs) {
+                    return Some(Tick::ExitLevel(BetweenLevels {
+                        player: self.world.pack_entity(self.player_id),
+                    }));
+                }
             }
         }
         None

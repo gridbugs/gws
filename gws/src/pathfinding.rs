@@ -41,14 +41,16 @@ impl PathfindingContext {
         }
     }
     pub fn update(&mut self, player_coord: Coord, world: &World) {
-        self.bfs
-            .populate_uniform_distance_map(
-                &Solid(world),
-                player_coord,
-                Default::default(),
-                &mut self.distance_to_player,
-            )
-            .expect("Failed to update distance to player");
+        if player_coord.is_valid(world.grid().size()) {
+            self.bfs
+                .populate_uniform_distance_map(
+                    &Solid(world),
+                    player_coord,
+                    Default::default(),
+                    &mut self.distance_to_player,
+                )
+                .expect("Failed to update distance to player");
+        }
     }
     pub fn direction_towards_player(
         &mut self,
