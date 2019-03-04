@@ -529,6 +529,7 @@ dependencies = [
 name = "gws_prototty"
 version = "0.1.0"
 dependencies = [
+ "direction 0.17.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "gws 0.1.0",
  "prototty 0.25.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",

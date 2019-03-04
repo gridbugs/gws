@@ -1,3 +1,4 @@
+extern crate direction;
 extern crate gws;
 extern crate prototty;
 extern crate rand;

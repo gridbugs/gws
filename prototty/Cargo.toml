@@ -13,3 +13,4 @@ gws = { path = "../gws" }
 prototty = { version = "0.25", features = ["serialize", "storage"] }
 rand = { version = "0.6" }
 rand_isaac = { version = "0.1", features = ["serde1"] }
+direction = "0.17"

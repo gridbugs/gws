@@ -48,6 +48,7 @@ pub struct ToRender<'a> {
     pub world: &'a World,
     pub visible_area: &'a VisibileArea,
     pub player: &'a Entity,
+    pub commitment_grid: &'a CommitmentGrid,
 }
 
 #[allow(dead_code)]
@@ -93,8 +94,12 @@ impl Gws {
         }
         let player_id = world.add_entity(player_coord, player);
         let visible_area = VisibileArea::new(size);
-        let pathfinding = PathfindingContext::new(size);
+        let mut pathfinding = PathfindingContext::new(size);
         let npc_ids = Vec::new();
+        pathfinding.update_player_coord(player_coord, &world);
+        for &id in world.npc_ids() {
+            pathfinding.commit_to_moving_towards_player(id, &world);
+        }
         let mut s = Self {
             world,
             visible_area,
@@ -112,30 +117,29 @@ impl Gws {
         rng: &mut R,
     ) -> Option<Tick> {
         let _ = rng;
-        self.npc_ids.clear();
         if let Some(input) = inputs.into_iter().next() {
             match input {
                 Input::Move(direction) => {
-                    let player_coord = self
-                        .world
+                    self.world
                         .move_entity_in_direction(self.player_id, direction);
-                    self.pathfinding.update(player_coord, &self.world);
                 }
             }
-            for &id in self.world.npc_ids() {
-                self.npc_ids.push(id);
-            }
+        } else {
+            return None;
         }
+        self.npc_ids.clear();
+        for &id in self.world.npc_ids() {
+            self.npc_ids.push(id);
+        }
+        for &(id, direction) in self.pathfinding.committed_movements().iter() {
+            self.world.move_entity_in_direction(id, direction);
+        }
+        self.pathfinding
+            .update_player_coord(self.player().coord(), &self.world);
         for id in self.npc_ids.drain(..) {
-            let coord = self.world.entities().get(&id).unwrap().coord();
-            if let Some(direction) = self
-                .pathfinding
-                .direction_towards_player(coord, &self.world)
-            {
-                self.world.move_entity_in_direction(id, direction);
-            }
+            self.pathfinding
+                .commit_to_moving_towards_player(id, &self.world);
         }
-
         self.update_visible_area();
         if let Some(cell) = self.world.grid().get(self.player().coord()) {
             for entity in cell.entity_iter(self.world.entities()) {
@@ -162,6 +166,7 @@ impl Gws {
             world: &self.world,
             visible_area: &self.visible_area,
             player: self.player(),
+            commitment_grid: self.pathfinding.commitment_grid(),
         }
     }
 }

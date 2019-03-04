@@ -112,6 +112,7 @@ pub struct Entity {
     coord: Coord,
     foreground_tile: Option<ForegroundTile>,
     light_index: Option<usize>,
+    npc: bool,
 }
 
 impl Entity {
@@ -187,6 +188,7 @@ impl PackedLight {
 pub struct WorldCell {
     background_tile: BackgroundTile,
     entities: HashSet<EntityId>,
+    npc_count: usize,
 }
 
 impl WorldCell {
@@ -194,6 +196,7 @@ impl WorldCell {
         Self {
             background_tile,
             entities: HashSet::new(),
+            npc_count: 0,
         }
     }
     pub fn background_tile(&self) -> BackgroundTile {
@@ -210,6 +213,9 @@ impl WorldCell {
     }
     pub fn is_solid(&self) -> bool {
         self.background_tile == BackgroundTile::IceWall
+    }
+    pub fn contains_npc(&self) -> bool {
+        self.npc_count > 0
     }
 }
 
@@ -274,10 +280,14 @@ impl World {
             coord,
             foreground_tile,
             light_index,
+            npc,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {
             cell.entities.insert(id);
+            if npc {
+                cell.npc_count += 1;
+            }
         }
         if npc {
             self.npc_ids.insert(id);
@@ -311,9 +321,15 @@ impl World {
         let next_coord = entity.coord + direction.coord();
         if let Some(current_cell) = self.grid.get_mut(entity.coord) {
             current_cell.entities.remove(&id);
+            if entity.npc {
+                current_cell.npc_count -= 1;
+            }
         }
         if let Some(next_cell) = self.grid.get_mut(next_coord) {
             next_cell.entities.insert(id);
+            if entity.npc {
+                next_cell.npc_count += 1;
+            }
         }
         entity.coord = next_coord;
         if let Some(light_index) = entity.light_index {

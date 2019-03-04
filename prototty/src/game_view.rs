@@ -1,3 +1,4 @@
+use direction::*;
 use gws::*;
 use prototty::*;
 
@@ -41,6 +42,9 @@ const DEMON: ViewCell = ViewCell::new()
     .with_character('d')
     .with_bold(true)
     .with_foreground(rgb24(30, 200, 80));
+
+const ARROW_CHARS: CardinalDirectionTable<char> =
+    CardinalDirectionTable::new_array(['↑', '→', '↓', '←']);
 
 fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
     if let Some(foreground) = view_cell.foreground.as_mut() {
@@ -91,7 +95,15 @@ impl View<Gws> for GameView {
                 }
                 .coalesce(view_cell)
             } else {
-                view_cell
+                if let Some(direction) =
+                    to_render.commitment_grid.get_direction_checked(coord)
+                {
+                    ViewCell::new()
+                        .with_character(ARROW_CHARS[direction])
+                        .coalesce(view_cell)
+                } else {
+                    view_cell
+                }
             };
             let light_colour = visibility.light_colour(visibility_state);
             light_view_cell(&mut view_cell, light_colour);
