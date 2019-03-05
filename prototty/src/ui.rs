@@ -5,12 +5,18 @@ use prototty::*;
 
 pub struct UiView<V: View<Gws>>(pub V);
 
-const GAME_OFFSET: Coord = Coord::new(1, 1);
+const STATUS_SIZE_X: i32 = 11;
 
-const TOP_TEXT_OFFSET: Coord = Coord::new(1, 1);
+const STATUS_OFFSET: Coord = Coord::new(1, 1);
+const GAME_OFFSET: Coord = Coord {
+    x: STATUS_OFFSET.x + STATUS_SIZE_X + 1,
+    y: STATUS_OFFSET.y,
+};
+
+const TOP_TEXT_OFFSET: Coord = GAME_OFFSET;
 const GAME_SIZE: Coord = Coord::new(60, 40);
 const CARDS_OFFSET: Coord = Coord {
-    x: GAME_OFFSET.x,
+    x: STATUS_OFFSET.x,
     y: GAME_OFFSET.y + GAME_SIZE.y + 1,
 };
 const CARD_SIZE: Coord = Coord::new(8, 10);
@@ -41,9 +47,34 @@ fn test_cards() -> Vec<Option<Card>> {
     ]
 }
 
+struct StatusView;
+
+impl View<Gws> for StatusView {
+    fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
+        let to_render = game.to_render();
+        let player_hit_points = to_render.player.hit_points().unwrap();
+        let health_colour = if player_hit_points.current <= 1 {
+            rgb24(255, 0, 0)
+        } else {
+            grey24(255)
+        };
+        StringView.view("Health:", offset, depth, grid);
+        RichStringView::with_info(
+            TextInfo::default().bold().foreground_colour(health_colour),
+        )
+        .view(
+            &format!("{}/{}", player_hit_points.current, player_hit_points.max),
+            offset + Coord::new(0, 1),
+            depth,
+            grid,
+        );
+    }
+}
+
 impl<V: View<Gws>> View<Gws> for UiView<V> {
     fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
         self.0.view(game, offset + GAME_OFFSET, depth, grid);
+        StatusView.view(game, offset + STATUS_OFFSET, depth, grid);
         CardAreaView.view(&test_cards(), offset + CARDS_OFFSET, depth, grid);
     }
 }
@@ -203,14 +234,14 @@ impl View<Gws> for DeathView {
                     "YOU DIED",
                     TextInfo::default()
                         .bold()
-                        .foreground_colour(rgb24(128, 0, 0))
+                        .foreground_colour(rgb24(255, 0, 0))
                         .background_colour(grey24(0)),
                 ),
                 (
                     " (press any key)",
                     TextInfo::default()
                         .bold()
-                        .foreground_colour(grey24(128))
+                        .foreground_colour(grey24(255))
                         .background_colour(grey24(0)),
                 ),
             ]),
@@ -218,6 +249,7 @@ impl View<Gws> for DeathView {
             depth + 1,
             grid,
         );
+        StatusView.view(game, offset + STATUS_OFFSET, depth, grid);
         CardAreaView.view(&test_cards(), offset + CARDS_OFFSET, depth, grid);
     }
 }

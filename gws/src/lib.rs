@@ -248,7 +248,7 @@ impl Gws {
                 }
             }
         }
-        if player.hit_points().unwrap().num == 0 {
+        if player.hit_points().unwrap().current == 0 {
             return Some(End::PlayerDied);
         }
         None

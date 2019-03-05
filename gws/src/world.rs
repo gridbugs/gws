@@ -18,6 +18,18 @@ pub struct Rational {
     pub denom: u32,
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct HitPoints {
+    pub current: u32,
+    pub max: u32,
+}
+
+impl HitPoints {
+    fn new(current: u32, max: u32) -> Self {
+        Self { current, max }
+    }
+}
+
 impl Rational {
     pub fn new(num: u32, denom: u32) -> Self {
         Self { num, denom }
@@ -118,7 +130,7 @@ pub struct Entity {
     npc: bool,
     player: bool,
     taking_damage_in_direction: Option<CardinalDirection>,
-    hit_points: Option<Rational>,
+    hit_points: Option<HitPoints>,
 }
 
 impl Entity {
@@ -131,7 +143,7 @@ impl Entity {
     pub fn taking_damage_in_direction(&self) -> Option<CardinalDirection> {
         self.taking_damage_in_direction
     }
-    pub fn hit_points(&self) -> Option<Rational> {
+    pub fn hit_points(&self) -> Option<HitPoints> {
         self.hit_points
     }
     pub fn is_npc(&self) -> bool {
@@ -145,7 +157,7 @@ pub struct PackedEntity {
     pub(crate) light: Option<PackedLight>,
     pub(crate) npc: bool,
     pub(crate) player: bool,
-    pub(crate) hit_points: Option<Rational>,
+    pub(crate) hit_points: Option<HitPoints>,
 }
 
 impl Default for PackedEntity {
@@ -168,7 +180,7 @@ impl PackedEntity {
             light: Some(player_light),
             npc: false,
             player: true,
-            hit_points: Some(Rational::new(1, 4)),
+            hit_points: Some(HitPoints::new(2, 4)),
         }
     }
     pub(crate) fn demon() -> Self {
@@ -177,7 +189,7 @@ impl PackedEntity {
             light: None,
             npc: true,
             player: false,
-            hit_points: Some(Rational::new(2, 2)),
+            hit_points: Some(HitPoints::new(2, 2)),
         }
     }
 }
@@ -476,8 +488,8 @@ impl World {
     pub(crate) fn deal_damage(&mut self, id: EntityId, damage: u32) {
         if let Some(entity) = self.entities.get_mut(&id) {
             if let Some(hit_points) = entity.hit_points.as_mut() {
-                hit_points.num = hit_points.num.saturating_sub(damage);
-                if hit_points.num == 0 {
+                hit_points.current = hit_points.current.saturating_sub(damage);
+                if hit_points.current == 0 {
                     self.remove_entity(id);
                 }
             }

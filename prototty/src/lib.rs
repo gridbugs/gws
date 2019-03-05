@@ -402,12 +402,18 @@ impl<F: Frontend, S: Storage> App<F, S> {
                 }
             }
             AppState::BetweenLevels(ref between_levels) => {
+                let rng_with_seed = self.rng_source.next();
+                let seed = rng_with_seed.seed;
+                let first_level = between_levels.is_none();
                 self.game_state = Some(GameState::new(
                     between_levels.clone(),
-                    self.rng_source.next(),
+                    rng_with_seed,
                     self.debug_terrain_string.as_ref().map(String::as_str),
                 ));
                 self.app_state = AppState::Game;
+                if first_level {
+                    return Some(Tick::GameInitialisedWithSeed(seed));
+                }
             }
         }
         if let Some(time_until_next_auto_save) =

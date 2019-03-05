@@ -52,7 +52,7 @@ fn npc_view_cell(entity: &Entity) -> ViewCell {
         ForegroundTile::Demon => (DEMON_CHAR, DEMON_VIEW_CELL),
         _ => panic!("not npc"),
     };
-    match entity.hit_points().expect("missing hit points").num {
+    match entity.hit_points().expect("missing hit points").current {
         1 => view_cell.with_character(ch),
         2 => view_cell.with_character(ch.to_uppercase().next().unwrap()),
         3 => view_cell
