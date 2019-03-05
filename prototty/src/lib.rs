@@ -79,6 +79,7 @@ enum AppState {
     Map { opened_from_game: bool },
     Help { opened_from_game: bool },
     BetweenLevels(Option<gws::BetweenLevels>),
+    Death,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -166,6 +167,26 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                     grid,
                 );
             }
+            AppState::Death => {
+                TextInfoStringView.view(
+                    &(
+                        TextInfo::default().bold().foreground_colour(colours::RED),
+                        "YOU DIED",
+                    ),
+                    offset + Coord::new(1, 1),
+                    depth,
+                    grid,
+                );
+                TextInfoStringView.view(
+                    &(
+                        TextInfo::default().bold().foreground_colour(colours::WHITE),
+                        "Press any key...",
+                    ),
+                    offset + Coord::new(1, 2),
+                    depth,
+                    grid,
+                );
+            }
         }
     }
 }
@@ -216,6 +237,15 @@ impl<F: Frontend, S: Storage> App<F, S> {
             self.storage
                 .store(SAVE_KEY, &game_state)
                 .expect("Failed to save game");
+        } else {
+            self.delete_save();
+        }
+    }
+    pub fn delete_save(&mut self) {
+        if self.storage.exists(SAVE_KEY) {
+            self.storage
+                .remove_raw(SAVE_KEY)
+                .expect("Failed to clear save state");
         }
     }
     pub fn tick<I>(&mut self, inputs: I, period: Duration, view: &AppView) -> Option<Tick>
@@ -223,6 +253,14 @@ impl<F: Frontend, S: Storage> App<F, S> {
         I: IntoIterator<Item = ProtottyInput>,
     {
         match self.app_state {
+            AppState::Death => {
+                for input in inputs {
+                    match input {
+                        Input::MouseMove { .. } => (),
+                        _other => self.app_state = AppState::Menu,
+                    }
+                }
+            }
             AppState::Menu => {
                 if self.game_state.is_some() {
                     match self
@@ -323,6 +361,11 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             gws::End::ExitLevel(between_levels) => {
                                 self.app_state =
                                     AppState::BetweenLevels(Some(between_levels));
+                            }
+                            gws::End::PlayerDied => {
+                                self.game_state = None;
+                                self.delete_save();
+                                self.app_state = AppState::Death;
                             }
                         }
                     }

@@ -38,13 +38,29 @@ const STAIRS: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(STAIRS_COLOUR);
 const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
-const DEMON: ViewCell = ViewCell::new()
-    .with_character('d')
+
+const DEMON_CHAR: char = 'd';
+const DEMON_VIEW_CELL: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(rgb24(30, 200, 80));
 
 const ARROW_CHARS: CardinalDirectionTable<char> =
     CardinalDirectionTable::new_array(['↑', '→', '↓', '←']);
+
+fn npc_view_cell(entity: &Entity) -> ViewCell {
+    let (ch, view_cell) = match entity.foreground_tile().unwrap() {
+        ForegroundTile::Demon => (DEMON_CHAR, DEMON_VIEW_CELL),
+        _ => panic!("not npc"),
+    };
+    match entity.hit_points().expect("missing hit points").num {
+        1 => view_cell.with_character(ch),
+        2 => view_cell.with_character(ch.to_uppercase().next().unwrap()),
+        3 => view_cell
+            .with_character(ch.to_uppercase().next().unwrap())
+            .with_underline(true),
+        _ => panic!("unexpected npc health"),
+    }
+}
 
 fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
     if let Some(foreground) = view_cell.foreground.as_mut() {
@@ -92,12 +108,14 @@ impl View<Gws> for GameView {
                         .with_character(ARROW_CHARS[direction])
                         .with_foreground(rgb24(255, 0, 0))
                         .coalesce(view_cell)
+                } else if entity.is_npc() {
+                    npc_view_cell(entity).coalesce(view_cell)
                 } else if let Some(foreground_tile) = entity.foreground_tile() {
                     match foreground_tile {
                         ForegroundTile::Player => PLAYER,
-                        ForegroundTile::Demon => DEMON,
                         ForegroundTile::Tree => TREE,
                         ForegroundTile::Stairs => STAIRS,
+                        _ => panic!(),
                     }
                     .coalesce(view_cell)
                 } else {

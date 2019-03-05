@@ -118,6 +118,7 @@ pub struct Entity {
     npc: bool,
     player: bool,
     taking_damage_in_direction: Option<CardinalDirection>,
+    hit_points: Option<Rational>,
 }
 
 impl Entity {
@@ -130,6 +131,12 @@ impl Entity {
     pub fn taking_damage_in_direction(&self) -> Option<CardinalDirection> {
         self.taking_damage_in_direction
     }
+    pub fn hit_points(&self) -> Option<Rational> {
+        self.hit_points
+    }
+    pub fn is_npc(&self) -> bool {
+        self.npc
+    }
 }
 
 #[derive(Clone)]
@@ -138,6 +145,7 @@ pub struct PackedEntity {
     pub(crate) light: Option<PackedLight>,
     pub(crate) npc: bool,
     pub(crate) player: bool,
+    pub(crate) hit_points: Option<Rational>,
 }
 
 impl Default for PackedEntity {
@@ -147,6 +155,7 @@ impl Default for PackedEntity {
             light: None,
             npc: false,
             player: false,
+            hit_points: None,
         }
     }
 }
@@ -159,6 +168,7 @@ impl PackedEntity {
             light: Some(player_light),
             npc: false,
             player: true,
+            hit_points: Some(Rational::new(4, 4)),
         }
     }
     pub(crate) fn demon() -> Self {
@@ -167,6 +177,7 @@ impl PackedEntity {
             light: None,
             npc: true,
             player: false,
+            hit_points: Some(Rational::new(2, 2)),
         }
     }
 }
@@ -258,6 +269,7 @@ pub enum CancelAction {
     MoveIntoSolidCell,
     NpcMoveIntoNpc,
     MoveOutOfBounds,
+    NoEntity,
 }
 
 pub(crate) enum ApplyAction {
@@ -313,6 +325,7 @@ impl World {
             light: entity.light_index.map(|index| self.lights[index].pack()),
             npc: entity.npc,
             player: entity.player,
+            hit_points: entity.hit_points,
         }
     }
     pub(crate) fn lights(&self) -> &[Light] {
@@ -330,6 +343,7 @@ impl World {
             light,
             npc,
             player,
+            hit_points,
         } = entity;
         let id = self.next_id;
         self.next_id += 1;
@@ -346,6 +360,7 @@ impl World {
             npc,
             player,
             taking_damage_in_direction: None,
+            hit_points,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {
@@ -385,31 +400,34 @@ impl World {
         id: EntityId,
         direction: CardinalDirection,
     ) -> Result<ApplyAction, CancelAction> {
-        let entity = self.entities.get_mut(&id).unwrap();
-        let coord = entity.coord + direction.coord();
-        if let Some(cell) = self.grid.get(coord) {
-            if cell.is_solid() {
-                Err(CancelAction::MoveIntoSolidCell)
-            } else if entity.npc && cell.contains_npc() {
-                Err(CancelAction::NpcMoveIntoNpc)
-            } else if entity.npc && cell.contains_player() {
-                let id = cell
-                    .entity_iter(&self.entities)
-                    .find_map(|e| if e.player { Some(e.id) } else { None })
-                    .unwrap();
-                Ok(ApplyAction::Animation(Animation::damage(id, direction)))
-            } else if entity.player && cell.contains_npc() {
-                let id = cell
-                    .entity_iter(&self.entities)
-                    .find_map(|e| if e.npc { Some(e.id) } else { None })
-                    .unwrap();
-                Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+        if let Some(entity) = self.entities.get_mut(&id) {
+            let coord = entity.coord + direction.coord();
+            if let Some(cell) = self.grid.get(coord) {
+                if cell.is_solid() {
+                    Err(CancelAction::MoveIntoSolidCell)
+                } else if entity.npc && cell.contains_npc() {
+                    Err(CancelAction::NpcMoveIntoNpc)
+                } else if entity.npc && cell.contains_player() {
+                    let id = cell
+                        .entity_iter(&self.entities)
+                        .find_map(|e| if e.player { Some(e.id) } else { None })
+                        .unwrap();
+                    Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+                } else if entity.player && cell.contains_npc() {
+                    let id = cell
+                        .entity_iter(&self.entities)
+                        .find_map(|e| if e.npc { Some(e.id) } else { None })
+                        .unwrap();
+                    Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+                } else {
+                    move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
+                    Ok(ApplyAction::Done)
+                }
             } else {
-                move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
-                Ok(ApplyAction::Done)
+                Err(CancelAction::MoveOutOfBounds)
             }
         } else {
-            Err(CancelAction::MoveOutOfBounds)
+            Err(CancelAction::NoEntity)
         }
     }
     pub(crate) fn opacity(&self, coord: Coord) -> u8 {
@@ -454,5 +472,33 @@ impl World {
             .get_mut(&id)
             .unwrap()
             .taking_damage_in_direction = value;
+    }
+    pub(crate) fn deal_damage(&mut self, id: EntityId, damage: u32) {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            if let Some(hit_points) = entity.hit_points.as_mut() {
+                hit_points.num = hit_points.num.saturating_sub(damage);
+                if hit_points.num == 0 {
+                    self.remove_entity(id);
+                }
+            }
+        }
+    }
+    pub(crate) fn remove_entity(&mut self, id: EntityId) {
+        if let Some(entity) = self.entities.get(&id) {
+            if entity.player {
+                return;
+            }
+        }
+        if let Some(entity) = self.entities.remove(&id) {
+            if entity.npc {
+                self.npc_ids.remove(&id);
+            }
+            if let Some(cell) = self.grid.get_mut(entity.coord) {
+                cell.entities.remove(&id);
+                if entity.npc {
+                    cell.npc_count -= 1;
+                }
+            }
+        }
     }
 }

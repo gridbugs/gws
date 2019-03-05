@@ -71,6 +71,7 @@ pub struct BetweenLevels {
 
 pub enum End {
     ExitLevel(BetweenLevels),
+    PlayerDied,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -98,6 +99,7 @@ impl AnimationState {
             }
             AnimationState::DamageEnd { id } => {
                 world.set_taking_damage_in_direction(id, None);
+                world.deal_damage(id, 1);
                 None
             }
         }
@@ -235,8 +237,8 @@ impl Gws {
     }
 
     fn check_end(&self) -> Option<End> {
-        let player_coord = self.player().coord();
-        if let Some(cell) = self.world.grid().get(player_coord) {
+        let player = self.player();
+        if let Some(cell) = self.world.grid().get(player.coord()) {
             for entity in cell.entity_iter(self.world.entities()) {
                 if entity.foreground_tile() == Some(ForegroundTile::Stairs) {
                     return Some(End::ExitLevel(BetweenLevels {
@@ -244,6 +246,9 @@ impl Gws {
                     }));
                 }
             }
+        }
+        if player.hit_points().unwrap().num == 0 {
+            return Some(End::PlayerDied);
         }
         None
     }
