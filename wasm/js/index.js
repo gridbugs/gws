@@ -9,8 +9,8 @@ wasm.then(async wasm => {
     let config = {
         WasmInputBufferType: wasm.InputBuffer,
         node: app_node,
-        grid_width: 80,
-        grid_height: 40,
+        grid_width: 74,
+        grid_height: 56,
         font_family: "PxPlus_IBM_CGA",
         font_size: "16px",
         cell_width_px: 16,

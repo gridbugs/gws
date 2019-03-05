@@ -1,4 +1,5 @@
 extern crate direction;
+extern crate grid_2d;
 extern crate gws;
 extern crate prototty;
 extern crate rand;
@@ -25,7 +26,7 @@ use ui::*;
 const TITLE: &'static str = "Get Well Soon";
 const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
 
-const APP_SIZE: Size = Size::new_u16(64, 48);
+pub const APP_SIZE: Size = Size::new_u16(74, 56);
 
 pub struct AppView {
     menu_and_title_view: MenuAndTitleView,

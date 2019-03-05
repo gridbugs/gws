@@ -45,11 +45,11 @@ impl Args {
     }
 }
 
-const MONITOR_SIZE_WINDOW_RATIO: f64 = 0.75;
+const MONITOR_SIZE_WINDOW_RATIO: f64 = 0.8;
 
 fn main() {
     let args = Args::arg().with_help_default().parse_env_default_or_exit();
-    let grid_size = Size::new(64, 48);
+    let grid_size = gws_prototty::APP_SIZE;
     let font_size = match args.font_size {
         FontSize::Specified(font_size) => font_size,
         FontSize::Auto => {
@@ -70,6 +70,8 @@ fn main() {
             .with_font_scale(font_size as f32, font_size as f32)
             .with_cell_dimensions(Size::new(font_size, font_size))
             .with_max_grid_size(grid_size)
+            .with_underline_width(2)
+            .with_underline_position(font_size - 2)
             .with_title("Get Well Soon")
             .build()
             .unwrap();
