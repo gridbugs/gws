@@ -16,48 +16,28 @@ const CARDS_OFFSET: Coord = Coord {
 const CARD_SIZE: Coord = Coord::new(8, 10);
 const CARD_PADDING_X: i32 = 1;
 
-fn test_cards() -> Vec<Card> {
+const MAX_NUM_CARDS: usize = 8;
+
+fn test_cards() -> Vec<Option<Card>> {
     vec![
-        Card {
+        Some(Card {
             title: "Bump".to_string(),
             description: "Attack adjacent square for 1 damage".to_string(),
             background: rgb24(20, 0, 0),
-        },
-        Card {
+        }),
+        Some(Card {
             title: "Blink".to_string(),
             description: "Teleport to selected square".to_string(),
             background: rgb24(0, 20, 0),
-        },
-        Card {
-            title: "Bump".to_string(),
-            description: "Attack adjacent square for 1 damage".to_string(),
-            background: rgb24(20, 0, 0),
-        },
-        Card {
+        }),
+        None,
+        None,
+        Some(Card {
             title: "Blink".to_string(),
             description: "Teleport to selected square".to_string(),
             background: rgb24(0, 20, 0),
-        },
-        Card {
-            title: "Blink".to_string(),
-            description: "Teleport to selected square".to_string(),
-            background: rgb24(0, 20, 0),
-        },
-        Card {
-            title: "Blink".to_string(),
-            description: "Teleport to selected square".to_string(),
-            background: rgb24(0, 20, 0),
-        },
-        Card {
-            title: "Blink".to_string(),
-            description: "Teleport to selected square".to_string(),
-            background: rgb24(0, 20, 0),
-        },
-        Card {
-            title: "Blink".to_string(),
-            description: "Teleport to selected square".to_string(),
-            background: rgb24(0, 20, 0),
-        },
+        }),
+        None,
     ]
 }
 
@@ -77,15 +57,15 @@ struct Card {
 struct CardView;
 struct CardAreaView;
 
-impl View<[Card]> for CardAreaView {
+impl View<[Option<Card>]> for CardAreaView {
     fn view<G: ViewGrid>(
         &mut self,
-        cards: &[Card],
+        cards: &[Option<Card>],
         offset: Coord,
         depth: i32,
         grid: &mut G,
     ) {
-        for (i, card) in cards.iter().enumerate() {
+        for i in 0..MAX_NUM_CARDS {
             let offset_x = i as i32 * (CARD_SIZE.x + CARD_PADDING_X);
             StringView.view(
                 &format!("{}.", i + 1),
@@ -93,8 +73,59 @@ impl View<[Card]> for CardAreaView {
                 depth,
                 grid,
             );
-            CardView.view(card, offset + Coord::new(offset_x, 1), depth, grid);
+            let coord = offset + Coord::new(offset_x, 1);
+
+            if let Some(maybe_card) = cards.get(i) {
+                if let Some(card) = maybe_card.as_ref() {
+                    CardView.view(card, coord, depth, grid);
+                } else {
+                    empty_card_view(coord, depth, grid);
+                }
+            } else {
+                locked_card_view(coord, depth, grid);
+            }
         }
+    }
+}
+
+struct LockedView;
+impl View<Size> for LockedView {
+    fn view<G: ViewGrid>(
+        &mut self,
+        _size: &Size,
+        offset: Coord,
+        depth: i32,
+        grid: &mut G,
+    ) {
+        RichStringView::with_info(TextInfo::default().foreground_colour(grey24(128)))
+            .view("Locked", offset + Coord::new(0, 4), depth, grid);
+    }
+}
+impl ViewSize<Size> for LockedView {
+    fn size(&mut self, size: &Size) -> Size {
+        *size
+    }
+}
+
+fn locked_card_view<G: ViewGrid>(offset: Coord, depth: i32, grid: &mut G) {
+    let border = Border {
+        foreground_colour: grey24(128),
+        ..Border::new()
+    };
+    Decorated::new(LockedView, border).view(
+        &(CARD_SIZE - Coord::new(1, 1)).to_size().unwrap(),
+        offset,
+        depth,
+        grid,
+    );
+}
+
+fn empty_card_view<G: ViewGrid>(offset: Coord, depth: i32, grid: &mut G) {
+    let view_cell = ViewCell::new()
+        .with_character('░')
+        .with_foreground(grey24(20));
+    for coord in XThenYIter::new(CARD_SIZE.to_size().unwrap()) {
+        grid.set_cell(offset + coord + Coord::new(1, 1), depth, view_cell);
     }
 }
 
