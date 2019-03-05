@@ -168,7 +168,7 @@ impl PackedEntity {
             light: Some(player_light),
             npc: false,
             player: true,
-            hit_points: Some(Rational::new(4, 4)),
+            hit_points: Some(Rational::new(1, 4)),
         }
     }
     pub(crate) fn demon() -> Self {

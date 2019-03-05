@@ -10,6 +10,7 @@ pub mod frontend;
 mod game_view;
 mod map_view;
 mod menus;
+mod ui;
 
 use game_view::GameView;
 use map_view::MapView;
@@ -19,6 +20,7 @@ use rand::{FromEntropy, Rng, SeedableRng};
 use rand_isaac::IsaacRng;
 use std::marker::PhantomData;
 use std::time::Duration;
+use ui::*;
 
 const TITLE: &'static str = "Get Well Soon";
 const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
@@ -148,12 +150,12 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
             }
             AppState::Game => {
                 if let Some(game_state) = app.game_state.as_ref() {
-                    GameView.view(&game_state.game, offset, depth, grid);
+                    UiView(GameView).view(&game_state.game, offset, depth, grid);
                 }
             }
             AppState::Map { .. } => {
                 if let Some(game_state) = app.game_state.as_ref() {
-                    MapView.view(&game_state.game, offset, depth, grid);
+                    UiView(MapView).view(&game_state.game, offset, depth, grid);
                 }
             }
             AppState::Help { .. } => {
@@ -168,24 +170,9 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                 );
             }
             AppState::Death => {
-                TextInfoStringView.view(
-                    &(
-                        TextInfo::default().bold().foreground_colour(colours::RED),
-                        "YOU DIED",
-                    ),
-                    offset + Coord::new(1, 1),
-                    depth,
-                    grid,
-                );
-                TextInfoStringView.view(
-                    &(
-                        TextInfo::default().bold().foreground_colour(colours::WHITE),
-                        "Press any key...",
-                    ),
-                    offset + Coord::new(1, 2),
-                    depth,
-                    grid,
-                );
+                if let Some(game_state) = app.game_state.as_ref() {
+                    DeathView.view(&game_state.game, offset, depth, grid);
+                }
             }
         }
     }
@@ -257,7 +244,12 @@ impl<F: Frontend, S: Storage> App<F, S> {
                 for input in inputs {
                     match input {
                         Input::MouseMove { .. } => (),
-                        _other => self.app_state = AppState::Menu,
+                        prototty_inputs::ETX => return Some(Tick::Quit),
+                        _other => {
+                            self.app_state = AppState::Menu;
+                            self.game_state = None;
+                            self.delete_save();
+                        }
                     }
                 }
             }
@@ -363,8 +355,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     AppState::BetweenLevels(Some(between_levels));
                             }
                             gws::End::PlayerDied => {
-                                self.game_state = None;
-                                self.delete_save();
+                                self.save();
                                 self.app_state = AppState::Death;
                             }
                         }
