@@ -302,7 +302,6 @@ pub enum CancelAction {
     NothingToAttack,
     AlreadyFullHitPoints,
     InvalidCard,
-    NoInput,
 }
 
 pub(crate) enum ApplyAction {
