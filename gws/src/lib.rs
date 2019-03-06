@@ -29,6 +29,7 @@ const NPC_VISION_RANGE: usize = 16;
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Input {
     Move(CardinalDirection),
+    PlayCard { slot: usize, param: CardParam },
 }
 
 pub mod input {
@@ -37,6 +38,9 @@ pub mod input {
     pub const DOWN: Input = Input::Move(CardinalDirection::South);
     pub const LEFT: Input = Input::Move(CardinalDirection::West);
     pub const RIGHT: Input = Input::Move(CardinalDirection::East);
+    pub fn play_card(slot: usize, param: CardParam) -> Input {
+        Input::PlayCard { slot, param }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -91,6 +95,14 @@ enum AnimationState {
 pub enum Card {
     Bump,
     Blink,
+    Heal,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum CardParam {
+    Coord(Coord),
+    CardinalDirection(CardinalDirection),
+    Confirm,
 }
 
 const DAMAGE_ANIMATION_PERIOD: Duration = Duration::from_millis(250);
@@ -205,6 +217,7 @@ impl Gws {
                 Some(Card::Bump),
                 Some(Card::Bump),
                 Some(Card::Blink),
+                Some(Card::Heal),
                 None,
             ],
         };
@@ -226,6 +239,7 @@ impl Gws {
                     Err(_) => PlayerTurn::Cancelled,
                 }
             }
+            Input::PlayCard { slot, param } => PlayerTurn::Cancelled,
         }
     }
 

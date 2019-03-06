@@ -1,4 +1,5 @@
 use crate::game_view::*;
+use crate::*;
 use grid_2d::coord_system::XThenYIter;
 use gws::*;
 use prototty::*;
@@ -37,6 +38,7 @@ pub struct UiData<'a> {
     pub game: &'a Gws,
     pub message: Option<&'a str>,
     pub card_table: &'a CardTable,
+    pub card_selection: Option<&'a CardInSlot>,
 }
 
 impl<'a> View<UiData<'a>> for StatusView {
@@ -76,9 +78,25 @@ impl<'a, V: View<Gws>> View<UiData<'a>> for UiView<V> {
         grid: &mut G,
     ) {
         self.0.view(ui_data.game, offset + GAME_OFFSET, depth, grid);
+        if let Some(card_selection) = ui_data.card_selection {
+            match card_selection.choice {
+                CardParamChoice::Confirm | CardParamChoice::Direction => (),
+                CardParamChoice::Coord(coord) => {
+                    grid.set_cell(
+                        offset + GAME_OFFSET + coord,
+                        depth + 1,
+                        ViewCell::new().with_background(rgb24(0, 255, 255)),
+                    );
+                }
+            }
+        }
         StatusView.view(ui_data, offset + STATUS_OFFSET, depth, grid);
         CardAreaView.view(
-            &(ui_data.game.hand(), ui_data.card_table),
+            &(
+                ui_data.game.hand(),
+                ui_data.card_table,
+                ui_data.card_selection.map(|cs| cs.slot),
+            ),
             offset + CARDS_OFFSET,
             depth,
             grid,
@@ -116,6 +134,7 @@ impl CardInfo {
 pub struct CardTable {
     bump: CardInfo,
     blink: CardInfo,
+    heal: CardInfo,
 }
 
 impl CardTable {
@@ -133,20 +152,31 @@ impl CardTable {
                 "Teleport to selected square".to_string(),
                 rgb24(0, 20, 0),
             ),
+            heal: CardInfo::new(
+                Card::Heal,
+                "Heal".to_string(),
+                "Recover 1 hit point".to_string(),
+                rgb24(0, 20, 0),
+            ),
         }
     }
     fn get(&self, card: Card) -> &CardInfo {
         match card {
             Card::Bump => &self.bump,
             Card::Blink => &self.blink,
+            Card::Heal => &self.heal,
         }
     }
 }
 
-impl<'a> View<(&'a [Option<Card>], &'a CardTable)> for CardAreaView {
+impl<'a> View<(&'a [Option<Card>], &'a CardTable, Option<usize>)> for CardAreaView {
     fn view<G: ViewGrid>(
         &mut self,
-        data: &(&'a [Option<Card>], &'a CardTable),
+        &(cards, card_table, selected_slot): &(
+            &'a [Option<Card>],
+            &'a CardTable,
+            Option<usize>,
+        ),
         offset: Coord,
         depth: i32,
         grid: &mut G,
@@ -160,9 +190,11 @@ impl<'a> View<(&'a [Option<Card>], &'a CardTable)> for CardAreaView {
                 grid,
             );
             let coord = offset + Coord::new(offset_x, 1);
-            if let Some(maybe_card) = data.0.get(i) {
+            if let Some(maybe_card) = cards.get(i) {
                 if let Some(card) = maybe_card.as_ref() {
-                    CardView.view(&(data.1.get(*card), i == 0), coord, depth, grid);
+                    let selected =
+                        selected_slot.map(|s| s == i as usize).unwrap_or(false);
+                    CardView.view(&(card_table.get(*card), selected), coord, depth, grid);
                 } else {
                     empty_card_view(coord, depth, grid);
                 }
@@ -239,15 +271,20 @@ impl<'a> View<(&'a CardInfo, bool)> for CardView {
             depth + 1,
             grid,
         );
+        let background = if selected {
+            card_info.background.saturating_scalar_mul_div(2, 1)
+        } else {
+            card_info.background
+        };
         for coord in XThenYIter::new(CARD_SIZE.to_size().unwrap()) {
             grid.set_cell(
                 offset + selected_offset + coord,
                 depth,
-                ViewCell::new().with_background(card_info.background),
+                ViewCell::new().with_background(background),
             );
         }
         if selected {
-            let shadow_colour = card_info.background;
+            let shadow_colour = background;
             let shadow_ch = '░';
             let shadow_bottom_ch = shadow_ch;
             let shadow_right_ch = shadow_ch;
@@ -302,7 +339,7 @@ impl<'a> View<UiData<'a>> for DeathView {
             grid,
         );
         CardAreaView.view(
-            &(ui_data.game.hand(), ui_data.card_table),
+            &(ui_data.game.hand(), ui_data.card_table, None),
             offset + CARDS_OFFSET,
             depth,
             grid,

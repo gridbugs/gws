@@ -13,6 +13,7 @@ mod map_view;
 mod menus;
 mod ui;
 
+use direction::*;
 use game_view::GameView;
 use map_view::MapView;
 use menus::*;
@@ -113,6 +114,18 @@ impl RngSource {
     }
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub enum CardParamChoice {
+    Coord(Coord),
+    Direction,
+    Confirm,
+}
+
+pub struct CardInSlot {
+    slot: usize,
+    choice: CardParamChoice,
+}
+
 pub struct App<F: Frontend, S: Storage> {
     frontend: PhantomData<F>,
     storage: S,
@@ -126,6 +139,7 @@ pub struct App<F: Frontend, S: Storage> {
     debug_terrain_string: Option<String>,
     message: Option<String>,
     card_table: CardTable,
+    card_selection: Option<CardInSlot>,
 }
 
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
@@ -158,6 +172,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             game: &game_state.game,
                             message: app.message.as_ref().map(String::as_str),
                             card_table: &app.card_table,
+                            card_selection: app.card_selection.as_ref(),
                         },
                         offset,
                         depth,
@@ -172,6 +187,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             game: &game_state.game,
                             message: app.message.as_ref().map(String::as_str),
                             card_table: &app.card_table,
+                            card_selection: None,
                         },
                         offset,
                         depth,
@@ -197,6 +213,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             game: &game_state.game,
                             message: app.message.as_ref().map(String::as_str),
                             card_table: &app.card_table,
+                            card_selection: None,
                         },
                         offset,
                         depth,
@@ -248,6 +265,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
             debug_terrain_string,
             message: None,
             card_table: CardTable::new(),
+            card_selection: None,
         };
         (app, init_status)
     }
@@ -343,33 +361,159 @@ impl<F: Frontend, S: Storage> App<F, S> {
             AppState::Game => {
                 if let Some(game_state) = self.game_state.as_mut() {
                     let input_start_index = game_state.all_inputs.len();
-                    for input in inputs {
-                        match input {
-                            ProtottyInput::Up => {
-                                game_state.all_inputs.push(gws::input::UP)
-                            }
-                            ProtottyInput::Down => {
-                                game_state.all_inputs.push(gws::input::DOWN)
-                            }
-                            ProtottyInput::Left => {
-                                game_state.all_inputs.push(gws::input::LEFT)
-                            }
-                            ProtottyInput::Right => {
-                                game_state.all_inputs.push(gws::input::RIGHT)
-                            }
-                            MAP_INPUT0 | MAP_INPUT1 => {
-                                self.app_state = AppState::Map {
-                                    opened_from_game: true,
+                    if let Some(CardInSlot {
+                        slot,
+                        ref mut choice,
+                    }) = self.card_selection.as_mut()
+                    {
+                        if let Some(input) = inputs.into_iter().next() {
+                            let slot = *slot; // TODO why is this necessary
+                            let game_input = match input {
+                                Input::MouseMove { .. } => None,
+                                prototty_inputs::ESCAPE => {
+                                    self.message = None;
+                                    self.card_selection = None;
+                                    None
                                 }
-                            }
-                            HELP_INPUT0 | HELP_INPUT1 => {
-                                self.app_state = AppState::Help {
-                                    opened_from_game: true,
+                                prototty_inputs::ETX => return Some(Tick::Quit),
+                                ProtottyInput::Char(card_num @ '1'...'8') => {
+                                    let (message, card_selection) =
+                                        Self::select_card(game_state, card_num);
+                                    self.message = message;
+                                    self.card_selection = card_selection;
+                                    None
                                 }
+                                _ => match *choice {
+                                    CardParamChoice::Confirm => match input {
+                                        prototty_inputs::RETURN => {
+                                            Some(gws::input::play_card(
+                                                slot,
+                                                gws::CardParam::Confirm,
+                                            ))
+                                        }
+                                        _ => {
+                                            self.message = None;
+                                            self.card_selection = None;
+                                            None
+                                        }
+                                    },
+                                    CardParamChoice::Coord(coord) => match input {
+                                        ProtottyInput::Up => {
+                                            *choice = CardParamChoice::Coord(
+                                                coord + Coord::new(0, -1),
+                                            );
+                                            None
+                                        }
+                                        ProtottyInput::Down => {
+                                            *choice = CardParamChoice::Coord(
+                                                coord + Coord::new(0, 1),
+                                            );
+                                            None
+                                        }
+                                        ProtottyInput::Left => {
+                                            *choice = CardParamChoice::Coord(
+                                                coord + Coord::new(-1, 0),
+                                            );
+                                            None
+                                        }
+                                        ProtottyInput::Right => {
+                                            *choice = CardParamChoice::Coord(
+                                                coord + Coord::new(1, 0),
+                                            );
+                                            None
+                                        }
+                                        prototty_inputs::RETURN => {
+                                            Some(gws::input::play_card(
+                                                slot,
+                                                gws::CardParam::Coord(coord),
+                                            ))
+                                        }
+                                        _ => {
+                                            self.message = None;
+                                            self.card_selection = None;
+                                            None
+                                        }
+                                    },
+                                    CardParamChoice::Direction => match input {
+                                        ProtottyInput::Up => Some(gws::input::play_card(
+                                            slot,
+                                            gws::CardParam::CardinalDirection(
+                                                CardinalDirection::North,
+                                            ),
+                                        )),
+                                        ProtottyInput::Down => {
+                                            Some(gws::input::play_card(
+                                                slot,
+                                                gws::CardParam::CardinalDirection(
+                                                    CardinalDirection::South,
+                                                ),
+                                            ))
+                                        }
+                                        ProtottyInput::Left => {
+                                            Some(gws::input::play_card(
+                                                slot,
+                                                gws::CardParam::CardinalDirection(
+                                                    CardinalDirection::West,
+                                                ),
+                                            ))
+                                        }
+                                        ProtottyInput::Right => {
+                                            Some(gws::input::play_card(
+                                                slot,
+                                                gws::CardParam::CardinalDirection(
+                                                    CardinalDirection::East,
+                                                ),
+                                            ))
+                                        }
+                                        _ => {
+                                            self.message = None;
+                                            self.card_selection = None;
+                                            None
+                                        }
+                                    },
+                                },
+                            };
+                            if let Some(game_input) = game_input {
+                                game_state.all_inputs.push(game_input);
                             }
-                            prototty_inputs::ESCAPE => self.app_state = AppState::Menu,
-                            prototty_inputs::ETX => return Some(Tick::Quit),
-                            _ => (),
+                        }
+                    } else {
+                        for input in inputs {
+                            match input {
+                                ProtottyInput::Up => {
+                                    game_state.all_inputs.push(gws::input::UP)
+                                }
+                                ProtottyInput::Down => {
+                                    game_state.all_inputs.push(gws::input::DOWN)
+                                }
+                                ProtottyInput::Left => {
+                                    game_state.all_inputs.push(gws::input::LEFT)
+                                }
+                                ProtottyInput::Right => {
+                                    game_state.all_inputs.push(gws::input::RIGHT)
+                                }
+                                MAP_INPUT0 | MAP_INPUT1 => {
+                                    self.app_state = AppState::Map {
+                                        opened_from_game: true,
+                                    }
+                                }
+                                HELP_INPUT0 | HELP_INPUT1 => {
+                                    self.app_state = AppState::Help {
+                                        opened_from_game: true,
+                                    }
+                                }
+                                ProtottyInput::Char(card_num @ '1'...'8') => {
+                                    let (message, card_selection) =
+                                        Self::select_card(game_state, card_num);
+                                    self.message = message;
+                                    self.card_selection = card_selection;
+                                }
+                                prototty_inputs::ESCAPE => {
+                                    self.app_state = AppState::Menu
+                                }
+                                prototty_inputs::ETX => return Some(Tick::Quit),
+                                _ => (),
+                            }
                         }
                     }
                     let input_end_index = game_state.all_inputs.len();
@@ -457,6 +601,44 @@ impl<F: Frontend, S: Storage> App<F, S> {
             self.save();
             Some(Tick::AutoSave)
         }
+    }
+    fn select_card(
+        game_state: &GameState,
+        card_num: char,
+    ) -> (Option<String>, Option<CardInSlot>) {
+        let card_index = card_num.to_digit(10).unwrap() as usize - 1;
+        let hand = game_state.game.hand();
+        let message;
+        let card_selection;
+        if let Some(&maybe_card) = hand.get(card_index) {
+            if let Some(card) = maybe_card {
+                let choice = match card {
+                    gws::Card::Bump => {
+                        message = Some("Choose a direction.".to_string());
+                        CardParamChoice::Direction
+                    }
+                    gws::Card::Blink => {
+                        message = Some("Choose a destination.".to_string());
+                        CardParamChoice::Coord(game_state.game.to_render().player.coord())
+                    }
+                    gws::Card::Heal => {
+                        message = Some("Confirm selection.".to_string());
+                        CardParamChoice::Confirm
+                    }
+                };
+                card_selection = Some(CardInSlot {
+                    slot: card_index,
+                    choice,
+                });
+            } else {
+                message = Some(format!("No card in slot {}.", card_num));
+                card_selection = None;
+            }
+        } else {
+            message = Some(format!("Card slot {} is locked.", card_num));
+            card_selection = None;
+        }
+        (message, card_selection)
     }
 }
 
