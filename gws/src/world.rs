@@ -543,7 +543,7 @@ impl World {
             if let Some(cell) = self.grid.get(coord) {
                 if cell.is_solid() {
                     Err(CancelAction::MoveIntoSolidCell)
-                } else if entity.npc && cell.contains_npc() {
+                } else if cell.contains_npc() {
                     Err(CancelAction::MoveIntoNpc)
                 } else if entity.npc && cell.contains_player() {
                     let id = cell
