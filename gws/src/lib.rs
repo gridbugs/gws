@@ -22,6 +22,7 @@ pub use crate::world::*;
 use coord_2d::*;
 use direction::*;
 use rand::Rng;
+use rgb24::*;
 use std::time::Duration;
 
 const NPC_VISION_RANGE: usize = 16;
@@ -67,8 +68,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -80,6 +81,11 @@ pub enum End {
     PlayerDied,
 }
 
+pub enum Tick {
+    End(End),
+    CancelAction(CancelAction),
+}
+
 #[derive(Clone, Copy, Serialize, Deserialize)]
 enum AnimationState {
     DamageStart {
@@ -88,6 +94,13 @@ enum AnimationState {
     },
     DamageEnd {
         id: EntityId,
+    },
+    BlinkStart {
+        coord: Coord,
+    },
+    Blink {
+        id: EntityId,
+        stage: u8,
     },
 }
 
@@ -106,6 +119,7 @@ pub enum CardParam {
 }
 
 const DAMAGE_ANIMATION_PERIOD: Duration = Duration::from_millis(250);
+const BLINK_ANIMATION_PERIOD: Duration = Duration::from_millis(50);
 
 impl AnimationState {
     fn update(self, world: &mut World) -> Option<Animation> {
@@ -122,6 +136,26 @@ impl AnimationState {
                 world.deal_damage(id, 1);
                 None
             }
+            AnimationState::BlinkStart { coord } => {
+                let id = world.add_entity(coord, PackedEntity::blink());
+                Some(Animation::new(
+                    BLINK_ANIMATION_PERIOD,
+                    AnimationState::Blink { id, stage: 0 },
+                ))
+            }
+            AnimationState::Blink { id, stage } => {
+                if stage == 0 {
+                    world.set_foreground(id, ForegroundTile::Blink1);
+                    world.set_light_params(id, rgb24(0, 128, 128), Rational::new(1, 5));
+                    Some(Animation::new(
+                        BLINK_ANIMATION_PERIOD,
+                        AnimationState::Blink { id, stage: 1 },
+                    ))
+                } else {
+                    world.remove_entity(id);
+                    None
+                }
+            }
         }
     }
 }
@@ -134,7 +168,7 @@ enum Turn {
 
 enum PlayerTurn {
     Done,
-    Cancelled,
+    Cancelled(CancelAction),
     Animation(Animation),
 }
 
@@ -170,6 +204,9 @@ impl Animation {
             Duration::from_secs(0),
             AnimationState::DamageStart { id, direction },
         )
+    }
+    pub fn blink(coord: Coord) -> Self {
+        Self::new(Duration::from_secs(0), AnimationState::BlinkStart { coord })
     }
 }
 
@@ -225,27 +262,73 @@ impl Gws {
         s
     }
 
+    fn handle_player_action_result(
+        result: Result<ApplyAction, CancelAction>,
+    ) -> PlayerTurn {
+        match result {
+            Ok(ApplyAction::Done) => PlayerTurn::Done,
+            Ok(ApplyAction::Animation(animation)) => PlayerTurn::Animation(animation),
+            Err(cancel) => PlayerTurn::Cancelled(cancel),
+        }
+    }
+
     fn player_turn(&mut self, input: Input) -> PlayerTurn {
         match input {
-            Input::Move(direction) => {
-                match self
-                    .world
-                    .move_entity_in_direction(self.player_id, direction)
-                {
-                    Ok(ApplyAction::Done) => PlayerTurn::Done,
-                    Ok(ApplyAction::Animation(animation)) => {
-                        PlayerTurn::Animation(animation)
+            Input::Move(direction) => Self::handle_player_action_result(
+                self.world.move_entity_in_direction_with_attack_policy(
+                    self.player_id,
+                    direction,
+                ),
+            ),
+            Input::PlayCard { slot, param } => {
+                let card = if let Some(&card) = self.hand.get(slot) {
+                    card
+                } else {
+                    return PlayerTurn::Cancelled(CancelAction::InvalidCard);
+                };
+                let card = if let Some(card) = card {
+                    card
+                } else {
+                    return PlayerTurn::Cancelled(CancelAction::InvalidCard);
+                };
+                match (card, param) {
+                    (Card::Blink, CardParam::Coord(coord)) => self.blink(coord),
+                    (Card::Bump, CardParam::CardinalDirection(direction)) => {
+                        self.bump(direction)
                     }
-                    Err(_) => PlayerTurn::Cancelled,
+                    (Card::Heal, CardParam::Confirm) => self.heal(1),
+                    _ => PlayerTurn::Cancelled(CancelAction::InvalidCard),
                 }
             }
-            Input::PlayCard { slot, param } => PlayerTurn::Cancelled,
         }
+    }
+
+    fn blink(&mut self, coord: Coord) -> PlayerTurn {
+        if self.visible_area.is_visible(coord) {
+            Self::handle_player_action_result(
+                self.world.blink_entity_to_coord(self.player_id, coord),
+            )
+        } else {
+            PlayerTurn::Cancelled(CancelAction::DestinationNotVisible)
+        }
+    }
+
+    fn bump(&mut self, direction: CardinalDirection) -> PlayerTurn {
+        Self::handle_player_action_result(
+            self.world.bump_npc_in_direction(self.player_id, direction),
+        )
+    }
+
+    fn heal(&mut self, by: u32) -> PlayerTurn {
+        Self::handle_player_action_result(self.world.heal(self.player_id, by))
     }
 
     fn engine_turn(&mut self) {
         for &(id, direction) in self.pathfinding.committed_movements().iter() {
-            match self.world.move_entity_in_direction(id, direction) {
+            match self
+                .world
+                .move_entity_in_direction_with_attack_policy(id, direction)
+            {
                 Ok(ApplyAction::Done) => (),
                 Ok(ApplyAction::Animation(animation)) => self.animation.push(animation),
                 Err(_) => (),
@@ -296,7 +379,7 @@ impl Gws {
         inputs: I,
         period: Duration,
         rng: &mut R,
-    ) -> Option<End> {
+    ) -> Option<Tick> {
         let _ = rng;
         self.animate(period);
         if self.animation.is_empty() {
@@ -304,10 +387,12 @@ impl Gws {
                 let player_turn = if let Some(input) = inputs.into_iter().next() {
                     self.player_turn(input)
                 } else {
-                    PlayerTurn::Cancelled
+                    PlayerTurn::Cancelled(CancelAction::NoInput)
                 };
                 match player_turn {
-                    PlayerTurn::Cancelled => (),
+                    PlayerTurn::Cancelled(cancel) => {
+                        return Some(Tick::CancelAction(cancel));
+                    }
                     PlayerTurn::Done => self.turn = Turn::Engine,
                     PlayerTurn::Animation(animation) => {
                         self.turn = Turn::Engine;
@@ -324,7 +409,7 @@ impl Gws {
         }
         self.animate(Duration::from_secs(0));
         self.update_visible_area();
-        self.check_end()
+        self.check_end().map(Tick::End)
     }
 
     fn player(&self) -> &Entity {

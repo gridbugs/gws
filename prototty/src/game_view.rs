@@ -47,6 +47,16 @@ const DEMON_VIEW_CELL: ViewCell = ViewCell::new()
 const ARROW_CHARS: CardinalDirectionTable<char> =
     CardinalDirectionTable::new_array(['↑', '→', '↓', '←']);
 
+const BLINK0: ViewCell = ViewCell::new()
+    .with_character('☼')
+    .with_bold(true)
+    .with_foreground(rgb24(0, 255, 255));
+
+const BLINK1: ViewCell = ViewCell::new()
+    .with_character('*')
+    .with_bold(false)
+    .with_foreground(rgb24(0, 255, 255));
+
 fn npc_view_cell(entity: &Entity) -> ViewCell {
     let (ch, view_cell) = match entity.foreground_tile().unwrap() {
         ForegroundTile::Demon => (DEMON_CHAR, DEMON_VIEW_CELL),
@@ -109,6 +119,8 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
                 ForegroundTile::Player => PLAYER,
                 ForegroundTile::Tree => TREE,
                 ForegroundTile::Stairs => STAIRS,
+                ForegroundTile::Blink0 => BLINK0,
+                ForegroundTile::Blink1 => BLINK1,
                 _ => panic!(),
             }
             .coalesce(view_cell)

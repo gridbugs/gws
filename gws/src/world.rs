@@ -49,6 +49,8 @@ pub enum ForegroundTile {
     Tree,
     Stairs,
     Demon,
+    Blink0,
+    Blink1,
 }
 
 pub struct EntityIter<'a> {
@@ -119,6 +121,7 @@ impl Light {
     }
 }
 
+pub type LightId = u64;
 pub type EntityId = u64;
 
 #[derive(Serialize, Deserialize)]
@@ -126,7 +129,7 @@ pub struct Entity {
     id: EntityId,
     coord: Coord,
     foreground_tile: Option<ForegroundTile>,
-    light_index: Option<usize>,
+    light_index: Option<LightId>,
     npc: bool,
     player: bool,
     taking_damage_in_direction: Option<CardinalDirection>,
@@ -173,6 +176,16 @@ impl Default for PackedEntity {
 }
 
 impl PackedEntity {
+    pub(crate) fn blink() -> Self {
+        let light = PackedLight::new(rgb24(0, 255, 255), 30, Rational::new(1, 10));
+        Self {
+            foreground_tile: Some(ForegroundTile::Blink0),
+            light: Some(light),
+            npc: false,
+            player: false,
+            hit_points: None,
+        }
+    }
     pub(crate) fn player() -> Self {
         let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 10));
         Self {
@@ -270,18 +283,26 @@ pub type Entities = HashMap<EntityId, Entity>;
 #[derive(Serialize, Deserialize)]
 pub struct World {
     grid: Grid<WorldCell>,
-    lights: Vec<Light>,
+    lights: HashMap<LightId, Light>,
     entities: HashMap<EntityId, Entity>,
     next_id: EntityId,
+    next_light_id: LightId,
     npc_ids: HashSet<EntityId>,
 }
 
 #[derive(Debug)]
 pub enum CancelAction {
     MoveIntoSolidCell,
-    NpcMoveIntoNpc,
-    MoveOutOfBounds,
+    MoveIntoNpc,
+    OutOfBounds,
+    OutOfRange,
+    DestinationNotVisible,
     NoEntity,
+    NoField,
+    NothingToAttack,
+    AlreadyFullHitPoints,
+    InvalidCard,
+    NoInput,
 }
 
 pub(crate) enum ApplyAction {
@@ -293,7 +314,7 @@ fn move_entity_to_coord(
     coord: Coord,
     entity: &mut Entity,
     grid: &mut Grid<WorldCell>,
-    lights: &mut Vec<Light>,
+    lights: &mut HashMap<LightId, Light>,
 ) {
     if let Some(current_cell) = grid.get_mut(entity.coord) {
         current_cell.entities.remove(&entity.id);
@@ -315,7 +336,7 @@ fn move_entity_to_coord(
     }
     entity.coord = coord;
     if let Some(light_index) = entity.light_index {
-        let light = lights.get_mut(light_index).unwrap();
+        let light = lights.get_mut(&light_index).unwrap();
         light.coord = entity.coord;
     }
 }
@@ -324,9 +345,10 @@ impl World {
     pub(crate) fn new(size: Size) -> Self {
         Self {
             grid: Grid::new_default(size),
-            lights: Vec::new(),
+            lights: HashMap::new(),
             entities: HashMap::new(),
             next_id: 0,
+            next_light_id: 0,
             npc_ids: HashSet::new(),
         }
     }
@@ -334,13 +356,15 @@ impl World {
         let entity = self.entities.get(&id).unwrap();
         PackedEntity {
             foreground_tile: entity.foreground_tile,
-            light: entity.light_index.map(|index| self.lights[index].pack()),
+            light: entity
+                .light_index
+                .map(|index| self.lights.get(&index).unwrap().pack()),
             npc: entity.npc,
             player: entity.player,
             hit_points: entity.hit_points,
         }
     }
-    pub(crate) fn lights(&self) -> &[Light] {
+    pub(crate) fn lights(&self) -> &HashMap<LightId, Light> {
         &self.lights
     }
     pub fn grid(&self) -> &Grid<WorldCell> {
@@ -348,6 +372,26 @@ impl World {
     }
     pub fn entities(&self) -> &Entities {
         &self.entities
+    }
+    pub(crate) fn set_foreground(&mut self, id: EntityId, foreground: ForegroundTile) {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            entity.foreground_tile = Some(foreground);
+        }
+    }
+    pub(crate) fn set_light_params(
+        &mut self,
+        id: EntityId,
+        colour: Rgb24,
+        diminish: Rational,
+    ) {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            if let Some(light_index) = entity.light_index {
+                if let Some(light) = self.lights.get_mut(&light_index) {
+                    light.colour = colour;
+                    light.diminish = diminish;
+                }
+            }
+        }
     }
     pub(crate) fn add_entity(&mut self, coord: Coord, entity: PackedEntity) -> EntityId {
         let PackedEntity {
@@ -360,8 +404,9 @@ impl World {
         let id = self.next_id;
         self.next_id += 1;
         let light_index = light.map(|packed_light| {
-            let light_index = self.lights.len();
-            self.lights.push(packed_light.light(coord));
+            let light_index = self.next_light_id;
+            self.next_light_id += 1;
+            self.lights.insert(light_index, packed_light.light(coord));
             light_index
         });
         let entity = Entity {
@@ -407,7 +452,89 @@ impl World {
     pub(crate) fn npc_ids(&self) -> impl Iterator<Item = &EntityId> {
         self.npc_ids.iter()
     }
-    pub(crate) fn move_entity_in_direction(
+
+    const BLINK_RANGE: u32 = 8;
+
+    pub(crate) fn blink_entity_to_coord(
+        &mut self,
+        id: EntityId,
+        coord: Coord,
+    ) -> Result<ApplyAction, CancelAction> {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            if let Some(cell) = self.grid.get(coord) {
+                if cell.is_solid() {
+                    Err(CancelAction::MoveIntoSolidCell)
+                } else if cell.contains_npc() {
+                    Err(CancelAction::MoveIntoNpc)
+                } else {
+                    let original_coord = entity.coord;
+                    if original_coord.manhattan_distance(coord) <= Self::BLINK_RANGE {
+                        move_entity_to_coord(
+                            coord,
+                            entity,
+                            &mut self.grid,
+                            &mut self.lights,
+                        );
+                        Ok(ApplyAction::Animation(Animation::blink(original_coord)))
+                    } else {
+                        Err(CancelAction::OutOfRange)
+                    }
+                }
+            } else {
+                Err(CancelAction::OutOfBounds)
+            }
+        } else {
+            Err(CancelAction::NoEntity)
+        }
+    }
+
+    pub(crate) fn heal(
+        &mut self,
+        id: EntityId,
+        by: u32,
+    ) -> Result<ApplyAction, CancelAction> {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            if let Some(hit_points) = entity.hit_points.as_mut() {
+                if hit_points.current < hit_points.max {
+                    hit_points.current = (hit_points.current + by).min(hit_points.max);
+                    Ok(ApplyAction::Done)
+                } else {
+                    Err(CancelAction::AlreadyFullHitPoints)
+                }
+            } else {
+                Err(CancelAction::NoField)
+            }
+        } else {
+            Err(CancelAction::NoEntity)
+        }
+    }
+
+    pub(crate) fn bump_npc_in_direction(
+        &mut self,
+        id: EntityId,
+        direction: CardinalDirection,
+    ) -> Result<ApplyAction, CancelAction> {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            let coord = entity.coord + direction.coord();
+            if let Some(cell) = self.grid.get(coord) {
+                if entity.player && cell.contains_npc() {
+                    let id = cell
+                        .entity_iter(&self.entities)
+                        .find_map(|e| if e.npc { Some(e.id) } else { None })
+                        .unwrap();
+                    Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+                } else {
+                    Err(CancelAction::NothingToAttack)
+                }
+            } else {
+                Err(CancelAction::OutOfBounds)
+            }
+        } else {
+            Err(CancelAction::NoEntity)
+        }
+    }
+
+    pub(crate) fn move_entity_in_direction_with_attack_policy(
         &mut self,
         id: EntityId,
         direction: CardinalDirection,
@@ -418,17 +545,11 @@ impl World {
                 if cell.is_solid() {
                     Err(CancelAction::MoveIntoSolidCell)
                 } else if entity.npc && cell.contains_npc() {
-                    Err(CancelAction::NpcMoveIntoNpc)
+                    Err(CancelAction::MoveIntoNpc)
                 } else if entity.npc && cell.contains_player() {
                     let id = cell
                         .entity_iter(&self.entities)
                         .find_map(|e| if e.player { Some(e.id) } else { None })
-                        .unwrap();
-                    Ok(ApplyAction::Animation(Animation::damage(id, direction)))
-                } else if entity.player && cell.contains_npc() {
-                    let id = cell
-                        .entity_iter(&self.entities)
-                        .find_map(|e| if e.npc { Some(e.id) } else { None })
                         .unwrap();
                     Ok(ApplyAction::Animation(Animation::damage(id, direction)))
                 } else {
@@ -436,7 +557,7 @@ impl World {
                     Ok(ApplyAction::Done)
                 }
             } else {
-                Err(CancelAction::MoveOutOfBounds)
+                Err(CancelAction::OutOfBounds)
             }
         } else {
             Err(CancelAction::NoEntity)
@@ -454,6 +575,7 @@ impl World {
             .filter_map(|e| {
                 e.foreground_tile()
                     .map(|foreground_tile| match foreground_tile {
+                        ForegroundTile::Blink0 | ForegroundTile::Blink1 => 0,
                         ForegroundTile::Player => 0,
                         ForegroundTile::Stairs => 0,
                         ForegroundTile::Demon => 0,
@@ -510,6 +632,9 @@ impl World {
                 if entity.npc {
                     cell.npc_count -= 1;
                 }
+            }
+            if let Some(light_index) = entity.light_index {
+                self.lights.remove(&light_index);
             }
         }
     }

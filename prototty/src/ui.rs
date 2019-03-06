@@ -82,11 +82,20 @@ impl<'a, V: View<Gws>> View<UiData<'a>> for UiView<V> {
             match card_selection.choice {
                 CardParamChoice::Confirm | CardParamChoice::Direction => (),
                 CardParamChoice::Coord(coord) => {
-                    grid.set_cell(
-                        offset + GAME_OFFSET + coord,
-                        depth + 1,
-                        ViewCell::new().with_background(rgb24(0, 255, 255)),
-                    );
+                    if coord.x >= 0
+                        && coord.y >= 0
+                        && coord.x < GAME_SIZE.x
+                        && coord.y < GAME_SIZE.y
+                    {
+                        grid.set_cell(
+                            offset + GAME_OFFSET + coord,
+                            depth + 1,
+                            ViewCell::new()
+                                .with_character('*')
+                                .with_bold(true)
+                                .with_foreground(rgb24(0, 255, 255)),
+                        );
+                    }
                 }
             }
         }
@@ -149,7 +158,7 @@ impl CardTable {
             blink: CardInfo::new(
                 Card::Blink,
                 "Blink".to_string(),
-                "Teleport to selected square".to_string(),
+                "Teleport to visible square up to 8 away".to_string(),
                 rgb24(0, 20, 0),
             ),
             heal: CardInfo::new(

@@ -517,24 +517,53 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         }
                     }
                     let input_end_index = game_state.all_inputs.len();
-                    let end = game_state.game.tick(
+                    let tick = game_state.game.tick(
                         game_state.all_inputs[input_start_index..input_end_index]
                             .into_iter()
                             .cloned(),
                         period,
                         &mut game_state.rng_with_seed.rng,
                     );
-                    if let Some(end) = end {
-                        match end {
-                            gws::End::ExitLevel(between_levels) => {
-                                self.app_state =
-                                    AppState::BetweenLevels(Some(between_levels));
-                            }
-                            gws::End::PlayerDied => {
-                                self.save();
-                                self.app_state = AppState::Death;
+                    if let Some(tick) = tick {
+                        match tick {
+                            gws::Tick::End(end) => match end {
+                                gws::End::ExitLevel(between_levels) => {
+                                    self.app_state =
+                                        AppState::BetweenLevels(Some(between_levels));
+                                    self.card_selection = None;
+                                }
+                                gws::End::PlayerDied => {
+                                    self.save();
+                                    self.app_state = AppState::Death;
+                                }
+                            },
+                            gws::Tick::CancelAction(cancel_action) => {
+                                use gws::CancelAction::*;
+                                match cancel_action {
+                                    MoveIntoSolidCell | OutOfBounds => {
+                                        self.message =
+                                            Some("Can't move there!".to_string())
+                                    }
+                                    OutOfRange => {
+                                        self.message = Some("Out of range!".to_string())
+                                    }
+                                    NothingToAttack => {
+                                        self.message = Some("Nothing there!".to_string())
+                                    }
+                                    AlreadyFullHitPoints => {
+                                        self.message =
+                                            Some("Health is already full!".to_string())
+                                    }
+                                    DestinationNotVisible => {
+                                        self.message =
+                                            Some("Can't see there.".to_string())
+                                    }
+                                    _ => (),
+                                }
                             }
                         }
+                    } else {
+                        self.card_selection = None;
                     }
                 } else {
                     self.app_state = AppState::Menu;

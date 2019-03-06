@@ -71,6 +71,13 @@ impl VisibileArea {
     pub fn iter(&self) -> impl Iterator<Item = &VisibilityCell> {
         self.grid.iter()
     }
+    pub fn is_visible(&self, coord: Coord) -> bool {
+        if let Some(cell) = self.grid.get(coord) {
+            cell.last_seen == self.count
+        } else {
+            false
+        }
+    }
     pub fn update(&mut self, player_coord: Coord, world: &World) {
         self.count += 1;
         let count = self.count;
@@ -94,7 +101,7 @@ impl VisibileArea {
                 },
             );
         }
-        for light in world.lights().iter() {
+        for light in world.lights().values() {
             self.shadowcast.for_each_visible(
                 light.coord(),
                 &Visibility,

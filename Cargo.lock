@@ -153,7 +153,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "coord_2d"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -270,7 +270,7 @@ name = "direction"
 version = "0.17.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -474,7 +474,7 @@ name = "grid_2d"
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -494,7 +494,7 @@ dependencies = [
 name = "gws"
 version = "0.1.0"
 dependencies = [
- "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "direction 0.17.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "grid_2d 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "grid_search 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -644,7 +644,7 @@ name = "line_2d"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -913,7 +913,7 @@ name = "prototty_input"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -932,7 +932,7 @@ name = "prototty_render"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb24 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1241,7 +1241,7 @@ name = "shadowcast"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "direction 0.17.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1468,7 +1468,7 @@ name = "wfc"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "direction 0.17.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "grid_2d 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "hashbrown 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1586,7 +1586,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum cloudabi 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ddfc5b9aa5d4507acaf872de71051dfd0e309860e88966e1051e462a077aac4f"
 "checksum cocoa 0.18.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cf79daa4e11e5def06e55306aa3601b87de6b5149671529318da048f67cdd77b"
 "checksum color_quant 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
-"checksum coord_2d 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "e664c10303f030f9cc9a91a5d943206fabf0334d3a4210b01da16de68a632bcc"
+"checksum coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)" = "c39b493ca9bdc0e7c3221d326a797dccd6d3ef0f4d6dba5ce060dd0d4302ec9b"
 "checksum core-foundation 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4e2640d6d0bf22e82bed1b73c6aef8d5dd31e5abe6666c57e6d45e2649f4f887"
 "checksum core-foundation-sys 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e7ca8a5221364ef15ce201e8ed2f609fc312682a8f4e0e3d4aa5879764e0fa3b"
 "checksum core-graphics 0.17.3 (registry+https://github.com/rust-lang/crates.io-index)" = "56790968ab1c8a1202a102e6de05fc6e1ec87da99e4e93e9a7d13efbfc1e95a9"
