@@ -26,7 +26,7 @@ use ui::*;
 const TITLE: &'static str = "Get Well Soon";
 const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
 
-pub const APP_SIZE: Size = Size::new_u16(74, 56);
+pub const APP_SIZE: Size = Size::new_u16(74, 58);
 
 pub struct AppView {
     menu_and_title_view: MenuAndTitleView,
@@ -124,6 +124,8 @@ pub struct App<F: Frontend, S: Storage> {
     time_until_next_auto_save: Duration,
     help_pager: Pager,
     debug_terrain_string: Option<String>,
+    message: Option<String>,
+    card_table: CardTable,
 }
 
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
@@ -151,12 +153,30 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
             }
             AppState::Game => {
                 if let Some(game_state) = app.game_state.as_ref() {
-                    UiView(GameView).view(&game_state.game, offset, depth, grid);
+                    UiView(GameView).view(
+                        &UiData {
+                            game: &game_state.game,
+                            message: app.message.as_ref().map(String::as_str),
+                            card_table: &app.card_table,
+                        },
+                        offset,
+                        depth,
+                        grid,
+                    );
                 }
             }
             AppState::Map { .. } => {
                 if let Some(game_state) = app.game_state.as_ref() {
-                    UiView(MapView).view(&game_state.game, offset, depth, grid);
+                    UiView(MapView).view(
+                        &UiData {
+                            game: &game_state.game,
+                            message: app.message.as_ref().map(String::as_str),
+                            card_table: &app.card_table,
+                        },
+                        offset,
+                        depth,
+                        grid,
+                    );
                 }
             }
             AppState::Help { .. } => {
@@ -172,7 +192,16 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
             }
             AppState::Death => {
                 if let Some(game_state) = app.game_state.as_ref() {
-                    DeathView.view(&game_state.game, offset, depth, grid);
+                    DeathView.view(
+                        &UiData {
+                            game: &game_state.game,
+                            message: app.message.as_ref().map(String::as_str),
+                            card_table: &app.card_table,
+                        },
+                        offset,
+                        depth,
+                        grid,
+                    );
                 }
             }
         }
@@ -217,6 +246,8 @@ impl<F: Frontend, S: Storage> App<F, S> {
                 Default::default(),
             ),
             debug_terrain_string,
+            message: None,
+            card_table: CardTable::new(),
         };
         (app, init_status)
     }

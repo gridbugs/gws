@@ -47,6 +47,7 @@ pub struct Gws {
     player_id: EntityId,
     animation: Vec<Animation>,
     turn: Turn,
+    hand: Vec<Option<Card>>,
 }
 
 pub struct ToRender<'a> {
@@ -84,6 +85,12 @@ enum AnimationState {
     DamageEnd {
         id: EntityId,
     },
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub enum Card {
+    Bump,
+    Blink,
 }
 
 const DAMAGE_ANIMATION_PERIOD: Duration = Duration::from_millis(250);
@@ -192,6 +199,14 @@ impl Gws {
             pathfinding,
             animation: Vec::new(),
             turn: Turn::Player,
+            hand: vec![
+                Some(Card::Blink),
+                None,
+                Some(Card::Bump),
+                Some(Card::Bump),
+                Some(Card::Blink),
+                None,
+            ],
         };
         s.update_visible_area();
         s
@@ -313,5 +328,9 @@ impl Gws {
             player: self.player(),
             commitment_grid: self.pathfinding.commitment_grid(),
         }
+    }
+
+    pub fn hand(&self) -> &[Option<Card>] {
+        &self.hand
     }
 }

@@ -10,7 +10,7 @@ wasm.then(async wasm => {
         WasmInputBufferType: wasm.InputBuffer,
         node: app_node,
         grid_width: 74,
-        grid_height: 56,
+        grid_height: 58,
         font_family: "PxPlus_IBM_CGA",
         font_size: "16px",
         cell_width_px: 16,
