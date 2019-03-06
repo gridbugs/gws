@@ -517,6 +517,10 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         }
                     }
                     let input_end_index = game_state.all_inputs.len();
+                    if input_end_index != input_start_index {
+                        self.message = None;
+                        self.card_selection = None;
+                    }
                     let tick = game_state.game.tick(
                         game_state.all_inputs[input_start_index..input_end_index]
                             .into_iter()
@@ -531,6 +535,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     self.app_state =
                                         AppState::BetweenLevels(Some(between_levels));
                                     self.card_selection = None;
+                                    self.message = None;
                                 }
                                 gws::End::PlayerDied => {
                                     self.save();
@@ -556,14 +561,12 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     }
                                     DestinationNotVisible => {
                                         self.message =
-                                            Some("Can't see there.".to_string())
+                                            Some("Can't see there!".to_string())
                                     }
                                     _ => (),
                                 }
                             }
                         }
-                    } else {
-                        self.card_selection = None;
                     }
                 } else {
                     self.app_state = AppState::Menu;
