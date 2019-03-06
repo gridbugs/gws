@@ -311,7 +311,9 @@ impl Gws {
     }
 
     fn blink(&mut self, coord: Coord) -> PlayerTurn {
-        if self.visible_area.is_visible(coord) {
+        if self.visible_area.is_visible(coord)
+            && self.visible_area.light_colour(coord) != grey24(0)
+        {
             Self::handle_player_action_result(
                 self.world.blink_entity_to_coord(self.player_id, coord),
             )
@@ -391,21 +393,18 @@ impl Gws {
         self.animate(period);
         if self.animation.is_empty() {
             if self.turn == Turn::Player {
-                let player_turn = if let Some(input) = inputs.into_iter().next() {
-                    self.player_turn(input)
-                } else {
-                    PlayerTurn::Cancelled(CancelAction::NoInput)
+                if let Some(input) = inputs.into_iter().next() {
+                    match self.player_turn(input) {
+                        PlayerTurn::Cancelled(cancel) => {
+                            return Some(Tick::CancelAction(cancel));
+                        }
+                        PlayerTurn::Done => self.turn = Turn::Engine,
+                        PlayerTurn::Animation(animation) => {
+                            self.turn = Turn::Engine;
+                            self.animation.push(animation);
+                        }
+                    }
                 };
-                match player_turn {
-                    PlayerTurn::Cancelled(cancel) => {
-                        return Some(Tick::CancelAction(cancel));
-                    }
-                    PlayerTurn::Done => self.turn = Turn::Engine,
-                    PlayerTurn::Animation(animation) => {
-                        self.turn = Turn::Engine;
-                        self.animation.push(animation);
-                    }
-                }
             }
         }
         if self.animation.is_empty() {

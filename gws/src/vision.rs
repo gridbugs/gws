@@ -78,6 +78,17 @@ impl VisibileArea {
             false
         }
     }
+    pub fn light_colour(&self, coord: Coord) -> Rgb24 {
+        if let Some(cell) = self.grid.get(coord) {
+            if cell.last_lit == self.count {
+                cell.light_colour
+            } else {
+                grey24(0)
+            }
+        } else {
+            grey24(0)
+        }
+    }
     pub fn update(&mut self, player_coord: Coord, world: &World) {
         self.count += 1;
         let count = self.count;
@@ -146,7 +157,7 @@ impl VisibilityCell {
         if self.last_lit == state.count {
             self.light_colour
         } else {
-            rgb24(0, 0, 0)
+            grey24(0)
         }
     }
 }
