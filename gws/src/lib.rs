@@ -68,8 +68,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -250,12 +250,12 @@ impl Gws {
             turn: Turn::Player,
             hand: vec![
                 Some(Card::Blink),
-                None,
+                Some(Card::Heal),
                 Some(Card::Bump),
                 Some(Card::Bump),
                 Some(Card::Blink),
                 Some(Card::Heal),
-                None,
+                Some(Card::Bump),
             ],
         };
         s.update_visible_area();
@@ -291,14 +291,21 @@ impl Gws {
                 } else {
                     return PlayerTurn::Cancelled(CancelAction::InvalidCard);
                 };
-                match (card, param) {
+                let result = match (card, param) {
                     (Card::Blink, CardParam::Coord(coord)) => self.blink(coord),
                     (Card::Bump, CardParam::CardinalDirection(direction)) => {
                         self.bump(direction)
                     }
                     (Card::Heal, CardParam::Confirm) => self.heal(1),
                     _ => PlayerTurn::Cancelled(CancelAction::InvalidCard),
+                };
+                match result {
+                    PlayerTurn::Cancelled(_) => (),
+                    PlayerTurn::Done | PlayerTurn::Animation(_) => {
+                        self.hand[slot] = None;
+                    }
                 }
+                result
             }
         }
     }
