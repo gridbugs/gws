@@ -1,3 +1,5 @@
+use crate::ui::*;
+use gws::*;
 use prototty::*;
 
 const NORMAL_COLOUR: Rgb24 = Rgb24::new(100, 100, 150);
@@ -100,5 +102,25 @@ impl<'a, T: Copy> View<MenuAndTitle<'a, T>> for MenuAndTitleView {
         self.title_view.view(title, offset, depth, grid);
         self.menu_view
             .view(menu, offset + Coord::new(0, 2), depth, grid);
+    }
+}
+
+pub mod card_menu {
+    use super::*;
+
+    pub fn create(cards: &[Card], card_table: &CardTable) -> Option<MenuInstance<Card>> {
+        let mut cards = cards.iter().collect::<Vec<_>>();
+        cards.sort();
+        let menu = Menu::smallest(
+            cards
+                .iter()
+                .map(|&&card| {
+                    let info = card_table.get(card);
+                    let text = format!("{}: {}", info.title, info.description);
+                    (text, card)
+                })
+                .collect::<Vec<_>>(),
+        );
+        MenuInstance::new(menu)
     }
 }

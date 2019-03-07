@@ -49,6 +49,7 @@ enum Contents {
     Demon,
     Light(Rgb24),
     Stairs,
+    Flame,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -82,6 +83,9 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
         use Instruction::*;
         if let Some(contents) = cell.contents {
             match contents {
+                Contents::Flame => {
+                    instructions.push(AddEntity(coord, PackedEntity::flame()));
+                }
                 Contents::Player => {
                     player_coord = Some(coord);
                 }
@@ -157,6 +161,7 @@ fn char_to_cell(ch: char) -> Option<Cell> {
             '3' => Some(
                 Cell::new(Base::Floor).with_contents(Contents::Light(rgb24(0, 0, 255))),
             ),
+            'f' => Some(Cell::new(Base::Floor).with_contents(Contents::Flame)),
             _ => None,
         }
     }

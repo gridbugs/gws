@@ -51,6 +51,7 @@ pub enum ForegroundTile {
     Demon,
     Blink0,
     Blink1,
+    Flame,
 }
 
 pub struct EntityIter<'a> {
@@ -132,6 +133,7 @@ pub struct Entity {
     light_index: Option<LightId>,
     npc: bool,
     player: bool,
+    interactive: bool,
     taking_damage_in_direction: Option<CardinalDirection>,
     hit_points: Option<HitPoints>,
 }
@@ -160,6 +162,7 @@ pub struct PackedEntity {
     pub(crate) light: Option<PackedLight>,
     pub(crate) npc: bool,
     pub(crate) player: bool,
+    pub(crate) interactive: bool,
     pub(crate) hit_points: Option<HitPoints>,
 }
 
@@ -171,11 +174,24 @@ impl Default for PackedEntity {
             npc: false,
             player: false,
             hit_points: None,
+            interactive: false,
         }
     }
 }
 
 impl PackedEntity {
+    pub(crate) fn flame() -> Self {
+        let light = PackedLight::new(rgb24(255, 120, 0), 30, Rational::new(1, 10));
+        Self {
+            foreground_tile: Some(ForegroundTile::Flame),
+            light: Some(light),
+            npc: false,
+            player: false,
+            hit_points: Some(HitPoints::new(3, 3)),
+            interactive: true,
+        }
+    }
+
     pub(crate) fn blink() -> Self {
         let light = PackedLight::new(rgb24(0, 255, 255), 30, Rational::new(1, 10));
         Self {
@@ -184,6 +200,7 @@ impl PackedEntity {
             npc: false,
             player: false,
             hit_points: None,
+            interactive: false,
         }
     }
     pub(crate) fn player() -> Self {
@@ -194,6 +211,7 @@ impl PackedEntity {
             npc: false,
             player: true,
             hit_points: Some(HitPoints::new(2, 4)),
+            interactive: false,
         }
     }
     pub(crate) fn demon() -> Self {
@@ -203,6 +221,7 @@ impl PackedEntity {
             npc: true,
             player: false,
             hit_points: Some(HitPoints::new(2, 2)),
+            interactive: false,
         }
     }
 }
@@ -238,6 +257,7 @@ pub struct WorldCell {
     entities: HashSet<EntityId>,
     npc_count: usize,
     player_count: usize,
+    interactive_count: usize,
 }
 
 impl WorldCell {
@@ -247,6 +267,7 @@ impl WorldCell {
             entities: HashSet::new(),
             npc_count: 0,
             player_count: 0,
+            interactive_count: 0,
         }
     }
     pub fn background_tile(&self) -> BackgroundTile {
@@ -262,13 +283,16 @@ impl WorldCell {
         ForegroundTiles(self.entity_iter(entities))
     }
     pub fn is_solid(&self) -> bool {
-        self.background_tile == BackgroundTile::IceWall
+        self.background_tile == BackgroundTile::IceWall || self.interactive_count != 0
     }
     pub fn contains_npc(&self) -> bool {
         self.npc_count > 0
     }
     pub fn contains_player(&self) -> bool {
         self.player_count > 0
+    }
+    pub fn is_interactive(&self) -> bool {
+        self.interactive_count > 0
     }
 }
 
@@ -308,6 +332,7 @@ pub enum CancelAction {
 pub(crate) enum ApplyAction {
     Done,
     Animation(Animation),
+    Interact(EntityId),
 }
 
 fn move_entity_to_coord(
@@ -362,6 +387,7 @@ impl World {
             npc: entity.npc,
             player: entity.player,
             hit_points: entity.hit_points,
+            interactive: entity.interactive,
         }
     }
     pub(crate) fn lights(&self) -> &HashMap<LightId, Light> {
@@ -400,6 +426,7 @@ impl World {
             npc,
             player,
             hit_points,
+            interactive,
         } = entity;
         let id = self.next_id;
         self.next_id += 1;
@@ -418,6 +445,7 @@ impl World {
             player,
             taking_damage_in_direction: None,
             hit_points,
+            interactive,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {
@@ -427,6 +455,9 @@ impl World {
             }
             if player {
                 cell.player_count += 1;
+            }
+            if interactive {
+                cell.interactive_count += 1;
             }
         }
         if npc {
@@ -542,7 +573,15 @@ impl World {
         if let Some(entity) = self.entities.get_mut(&id) {
             let coord = entity.coord + direction.coord();
             if let Some(cell) = self.grid.get(coord) {
-                if cell.is_solid() {
+                if entity.player && cell.is_interactive() {
+                    let interactive_id = cell
+                        .entity_iter(self.entities())
+                        .find(|e| e.interactive)
+                        .map(|e| e.id)
+                        .unwrap();
+                    Ok(ApplyAction::Interact(interactive_id))
+                //Ok(ApplyAction::Interactive)
+                } else if cell.is_solid() {
                     Err(CancelAction::MoveIntoSolidCell)
                 } else if cell.contains_npc() {
                     Err(CancelAction::MoveIntoNpc)
@@ -578,6 +617,7 @@ impl World {
                         ForegroundTile::Blink0 | ForegroundTile::Blink1 => 0,
                         ForegroundTile::Player => 0,
                         ForegroundTile::Stairs => 0,
+                        ForegroundTile::Flame => 0,
                         ForegroundTile::Demon => 0,
                         ForegroundTile::Tree => 128,
                     })
@@ -631,6 +671,9 @@ impl World {
                 cell.entities.remove(&id);
                 if entity.npc {
                     cell.npc_count -= 1;
+                }
+                if entity.interactive {
+                    cell.interactive_count -= 1;
                 }
             }
             if let Some(light_index) = entity.light_index {

@@ -27,6 +27,11 @@ const STAIRS: ViewCell = ViewCell::new()
     .with_foreground(colours::WHITE)
     .with_background(colours::BLACK);
 
+const FLAME: ViewCell = ViewCell::new()
+    .with_character('Ψ')
+    .with_bold(true)
+    .with_foreground(rgb24(255, 120, 0));
+
 impl View<Gws> for MapView {
     fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
         let to_render = game.to_render();
@@ -53,6 +58,7 @@ impl View<Gws> for MapView {
                             ForegroundTile::Player => Some(PLAYER),
                             ForegroundTile::Tree => Some(TREE),
                             ForegroundTile::Stairs => Some(STAIRS),
+                            ForegroundTile::Flame => Some(FLAME),
                         }
                     });
                 if let Some(foreground_view_cell) = foreground_view_cell {

@@ -84,6 +84,7 @@ enum AppState {
     Help { opened_from_game: bool },
     BetweenLevels(Option<gws::BetweenLevels>),
     Death,
+    CardMenu,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -140,6 +141,9 @@ pub struct App<F: Frontend, S: Storage> {
     message: Option<String>,
     card_table: CardTable,
     card_selection: Option<CardInSlot>,
+    card_menu_title: String,
+    card_menu: Option<MenuInstance<gws::Card>>,
+    interactive: Option<gws::Interactive>,
 }
 
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
@@ -148,6 +152,17 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
         G: ViewGrid,
     {
         match app.app_state {
+            AppState::CardMenu => {
+                self.menu_and_title_view.view(
+                    &MenuAndTitle::new(
+                        app.card_menu.as_ref().unwrap(),
+                        app.card_menu_title.as_str(),
+                    ),
+                    offset + Coord::new(1, 1),
+                    depth,
+                    grid,
+                );
+            }
             AppState::Menu => {
                 if app.game_state.is_some() {
                     self.menu_and_title_view.view(
@@ -266,6 +281,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
             message: None,
             card_table: CardTable::new(),
             card_selection: None,
+            card_menu_title: "".to_string(),
+            card_menu: None,
+            interactive: None,
         };
         (app, init_status)
     }
@@ -290,6 +308,45 @@ impl<F: Frontend, S: Storage> App<F, S> {
         I: IntoIterator<Item = ProtottyInput>,
     {
         match self.app_state {
+            AppState::CardMenu => {
+                match self
+                    .card_menu
+                    .as_mut()
+                    .unwrap()
+                    .tick_with_mouse(inputs, &view.menu_and_title_view.menu_view)
+                {
+                    None => (),
+                    Some(MenuOutput::Cancel) => {
+                        self.app_state = AppState::Game;
+                        self.card_menu = None;
+                    }
+                    Some(MenuOutput::Quit) => return Some(Tick::Quit),
+                    Some(MenuOutput::Finalise(card)) => {
+                        let game_state = self.game_state.as_mut().unwrap();
+                        let input_start_index = game_state.all_inputs.len();
+                        let interactive = self.interactive.unwrap();
+                        let entity_id = interactive.entity_id;
+                        match interactive.typ {
+                            gws::InteractiveType::Flame => {
+                                game_state.all_inputs.push(gws::input::interact(
+                                    gws::InteractiveParam::Flame { entity_id, card },
+                                ));
+                            }
+                        }
+                        let input_end_index = game_state.all_inputs.len();
+                        let _ = game_state.game.tick(
+                            game_state.all_inputs[input_start_index..input_end_index]
+                                .into_iter()
+                                .cloned(),
+                            period,
+                            &mut game_state.rng_with_seed.rng,
+                        );
+                        self.app_state = AppState::Game;
+                        self.interactive = None;
+                        self.card_menu = None;
+                    }
+                }
+            }
             AppState::Death => {
                 for input in inputs {
                     match input {
@@ -533,6 +590,20 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     );
                     if let Some(tick) = tick {
                         match tick {
+                            gws::Tick::Interact(interactive) => {
+                                let spent = game_state.game.spent();
+                                if !spent.is_empty() {
+                                    self.interactive = Some(interactive);
+                                    self.card_menu_title = match interactive.typ {
+                                    gws::InteractiveType::Flame => {
+                                        "Cleansing Flame: Permanently remove a spent card. Lose 1 life.".to_string()
+                                    }
+                                };
+                                    self.card_menu =
+                                        menus::card_menu::create(spent, &self.card_table);
+                                    self.app_state = AppState::CardMenu;
+                                }
+                            }
                             gws::Tick::End(end) => match end {
                                 gws::End::ExitLevel(between_levels) => {
                                     self.app_state =

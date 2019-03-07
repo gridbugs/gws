@@ -54,7 +54,8 @@ impl<'a> View<UiData<'a>> for StatusView {
         let health_colour = rgb24(200, 0, 0);
         let time_colour = rgb24(0, 200, 0);
         let deck_colour = rgb24(180, 180, 0);
-        let discard_colour = rgb24(100, 0, 180);
+        let spent_colour = rgb24(100, 70, 180);
+        let waste_colour = rgb24(100, 120, 20);
         let draw_countdown = ui_data.game.draw_countdown();
         let mut offset = offset;
         StringView.view("Life:", offset, depth, grid);
@@ -85,6 +86,28 @@ impl<'a> View<UiData<'a>> for StatusView {
         )
         .view(
             &format!("{}", ui_data.game.deck().len()),
+            offset + Coord::new(7, 0),
+            depth,
+            grid,
+        );
+        offset += Coord::new(0, 2);
+        StringView.view("Spent:", offset, depth, grid);
+        RichStringView::with_info(
+            TextInfo::default().bold().foreground_colour(spent_colour),
+        )
+        .view(
+            &format!("{}", ui_data.game.spent().len()),
+            offset + Coord::new(7, 0),
+            depth,
+            grid,
+        );
+        offset += Coord::new(0, 2);
+        StringView.view("Waste:", offset, depth, grid);
+        RichStringView::with_info(
+            TextInfo::default().bold().foreground_colour(waste_colour),
+        )
+        .view(
+            &format!("{}", ui_data.game.waste().len()),
             offset + Coord::new(7, 0),
             depth,
             grid,
@@ -143,11 +166,12 @@ impl<'a, V: View<Gws>> View<UiData<'a>> for UiView<V> {
 struct CardView;
 struct CardAreaView;
 
-struct CardInfo {
-    card: Card,
-    title: String,
-    description_pager: Pager,
-    background: Rgb24,
+pub struct CardInfo {
+    pub card: Card,
+    pub title: String,
+    pub description: String,
+    pub description_pager: Pager,
+    pub background: Rgb24,
 }
 
 impl CardInfo {
@@ -160,6 +184,7 @@ impl CardInfo {
         Self {
             card,
             title,
+            description,
             description_pager,
             background,
         }
@@ -195,7 +220,7 @@ impl CardTable {
             ),
         }
     }
-    fn get(&self, card: Card) -> &CardInfo {
+    pub fn get(&self, card: Card) -> &CardInfo {
         match card {
             Card::Bump => &self.bump,
             Card::Blink => &self.blink,

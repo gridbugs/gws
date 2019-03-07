@@ -32,6 +32,7 @@ pub enum Input {
     Move(CardinalDirection),
     PlayCard { slot: usize, param: CardParam },
     Wait,
+    Interact(InteractiveParam),
 }
 
 pub mod input {
@@ -43,6 +44,9 @@ pub mod input {
     pub const WAIT: Input = Input::Wait;
     pub fn play_card(slot: usize, param: CardParam) -> Input {
         Input::PlayCard { slot, param }
+    }
+    pub fn interact(param: InteractiveParam) -> Input {
+        Input::Interact(param)
     }
 }
 
@@ -73,7 +77,8 @@ pub struct Gws {
     turn: Turn,
     hand: Vec<Option<Card>>,
     deck: Vec<Card>,
-    discard: Vec<Card>,
+    spent: Vec<Card>,
+    waste: Vec<Card>,
     draw_countdown: DrawCountdown,
 }
 
@@ -90,8 +95,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -103,9 +108,26 @@ pub enum End {
     PlayerDied,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Interactive {
+    pub entity_id: EntityId,
+    pub typ: InteractiveType,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum InteractiveType {
+    Flame,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum InteractiveParam {
+    Flame { card: Card, entity_id: EntityId },
+}
+
 pub enum Tick {
     End(End),
     CancelAction(CancelAction),
+    Interact(Interactive),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -126,7 +148,7 @@ enum AnimationState {
     },
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Card {
     Bump,
     Blink,
@@ -301,7 +323,8 @@ impl Gws {
                 Card::Blink,
                 Card::Blink,
             ],
-            discard: Vec::new(),
+            spent: Vec::new(),
+            waste: Vec::new(),
         };
         s.update_visible_area();
         s
@@ -313,6 +336,19 @@ impl Gws {
 
     fn player_turn(&mut self, input: Input) -> Result<ApplyAction, CancelAction> {
         let (result, cost) = match input {
+            Input::Interact(param) => match param {
+                InteractiveParam::Flame { card, entity_id } => {
+                    let index = self
+                        .spent
+                        .iter()
+                        .position(|&c| c == card)
+                        .expect("no such card in spent");
+                    self.spent.swap_remove(index);
+                    self.world.deal_damage(self.player_id, 1);
+                    self.world.deal_damage(entity_id, 1);
+                    (Ok(ApplyAction::Done), 0)
+                }
+            },
             Input::Move(direction) => {
                 let result = self.world.move_entity_in_direction_with_attack_policy(
                     self.player_id,
@@ -345,23 +381,28 @@ impl Gws {
                 };
                 if result.is_ok() {
                     self.hand[slot] = None;
-                    self.discard.push(card);
+                    self.spent.push(card);
                 }
                 (result, card.cost())
             }
         };
-        if result.is_ok() {
-            let should_draw =
-                if let Some(current) = self.draw_countdown.current.checked_sub(cost) {
+        // TODO this is messy
+        match result {
+            Err(_) | Ok(ApplyAction::Interact(_)) => (),
+            _ => {
+                let should_draw = if let Some(current) =
+                    self.draw_countdown.current.checked_sub(cost)
+                {
                     current == 0
                 } else {
                     true
                 };
-            if should_draw {
-                self.draw_hand();
-                self.draw_countdown.current = self.draw_countdown.max;
-            } else {
-                self.draw_countdown.current -= cost;
+                if should_draw {
+                    self.draw_hand();
+                    self.draw_countdown.current = self.draw_countdown.max;
+                } else {
+                    self.draw_countdown.current -= cost;
+                }
             }
         }
         result
@@ -370,7 +411,7 @@ impl Gws {
     fn draw_hand(&mut self) {
         for slot in self.hand.iter_mut() {
             if let Some(card) = *slot {
-                self.discard.push(card);
+                self.waste.push(card);
             }
             *slot = self.deck.pop();
         }
@@ -405,6 +446,7 @@ impl Gws {
             {
                 Ok(ApplyAction::Done) => (),
                 Ok(ApplyAction::Animation(animation)) => self.animation.push(animation),
+                Ok(ApplyAction::Interact(_)) => (),
                 Err(_) => (),
             }
         }
@@ -464,6 +506,14 @@ impl Gws {
                             return Some(Tick::CancelAction(cancel));
                         }
                         Ok(ApplyAction::Done) => self.turn = Turn::Engine,
+                        Ok(ApplyAction::Interact(entity_id)) => {
+                            let entity = self.world.entities().get(&entity_id).unwrap();
+                            let typ = match entity.foreground_tile().unwrap() {
+                                ForegroundTile::Flame => InteractiveType::Flame,
+                                _ => panic!("illegal interactive"),
+                            };
+                            return Some(Tick::Interact(Interactive { typ, entity_id }));
+                        }
                         Ok(ApplyAction::Animation(animation)) => {
                             self.turn = Turn::Engine;
                             self.animation.push(animation);
@@ -508,7 +558,11 @@ impl Gws {
         &self.deck
     }
 
-    pub fn discard(&self) -> &[Card] {
-        &self.discard
+    pub fn spent(&self) -> &[Card] {
+        &self.spent
+    }
+
+    pub fn waste(&self) -> &[Card] {
+        &self.waste
     }
 }
