@@ -492,6 +492,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 ProtottyInput::Right => {
                                     game_state.all_inputs.push(gws::input::RIGHT)
                                 }
+                                ProtottyInput::Char(' ') => {
+                                    game_state.all_inputs.push(gws::input::WAIT)
+                                }
                                 MAP_INPUT0 | MAP_INPUT1 => {
                                     self.app_state = AppState::Map {
                                         opened_from_game: true,

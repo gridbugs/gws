@@ -31,6 +31,7 @@ const NPC_VISION_RANGE: usize = 16;
 pub enum Input {
     Move(CardinalDirection),
     PlayCard { slot: usize, param: CardParam },
+    Wait,
 }
 
 pub mod input {
@@ -39,6 +40,7 @@ pub mod input {
     pub const DOWN: Input = Input::Move(CardinalDirection::South);
     pub const LEFT: Input = Input::Move(CardinalDirection::West);
     pub const RIGHT: Input = Input::Move(CardinalDirection::East);
+    pub const WAIT: Input = Input::Wait;
     pub fn play_card(slot: usize, param: CardParam) -> Input {
         Input::PlayCard { slot, param }
     }
@@ -280,6 +282,7 @@ impl Gws {
                     direction,
                 ),
             ),
+            Input::Wait => PlayerTurn::Done,
             Input::PlayCard { slot, param } => {
                 let card = if let Some(&card) = self.hand.get(slot) {
                     card
