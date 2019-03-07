@@ -72,6 +72,8 @@ pub struct Gws {
     animation: Vec<Animation>,
     turn: Turn,
     hand: Vec<Option<Card>>,
+    deck: Vec<Card>,
+    discard: Vec<Card>,
     draw_countdown: DrawCountdown,
 }
 
@@ -282,6 +284,24 @@ impl Gws {
                 Some(Card::Bump),
             ],
             draw_countdown: DrawCountdown::new(),
+            deck: vec![
+                Card::Bump,
+                Card::Bump,
+                Card::Bump,
+                Card::Bump,
+                Card::Bump,
+                Card::Bump,
+                Card::Heal,
+                Card::Heal,
+                Card::Heal,
+                Card::Heal,
+                Card::Heal,
+                Card::Blink,
+                Card::Blink,
+                Card::Blink,
+                Card::Blink,
+            ],
+            discard: Vec::new(),
         };
         s.update_visible_area();
         s
@@ -325,8 +345,9 @@ impl Gws {
                 };
                 if result.is_ok() {
                     self.hand[slot] = None;
+                    self.discard.push(card);
                 }
-                (result, 1)
+                (result, card.cost())
             }
         };
         if result.is_ok() {
@@ -337,12 +358,22 @@ impl Gws {
                     true
                 };
             if should_draw {
+                self.draw_hand();
                 self.draw_countdown.current = self.draw_countdown.max;
             } else {
                 self.draw_countdown.current -= cost;
             }
         }
         result
+    }
+
+    fn draw_hand(&mut self) {
+        for slot in self.hand.iter_mut() {
+            if let Some(card) = *slot {
+                self.discard.push(card);
+            }
+            *slot = self.deck.pop();
+        }
     }
 
     fn blink(&mut self, coord: Coord) -> Result<ApplyAction, CancelAction> {
@@ -471,5 +502,13 @@ impl Gws {
 
     pub fn hand(&self) -> &[Option<Card>] {
         &self.hand
+    }
+
+    pub fn deck(&self) -> &[Card] {
+        &self.deck
+    }
+
+    pub fn discard(&self) -> &[Card] {
+        &self.discard
     }
 }

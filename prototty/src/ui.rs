@@ -51,32 +51,41 @@ impl<'a> View<UiData<'a>> for StatusView {
     ) {
         let to_render = ui_data.game.to_render();
         let player_hit_points = to_render.player.hit_points().unwrap();
-        let health_colour = if player_hit_points.current <= 1 {
-            rgb24(255, 0, 0)
-        } else {
-            grey24(255)
-        };
-        let time_colour = rgb24(255, 255, 255);
+        let health_colour = rgb24(200, 0, 0);
+        let time_colour = rgb24(0, 200, 0);
+        let deck_colour = rgb24(180, 180, 0);
+        let discard_colour = rgb24(100, 0, 180);
         let draw_countdown = ui_data.game.draw_countdown();
         let mut offset = offset;
-        StringView.view("Health:", offset, depth, grid);
+        StringView.view("Life:", offset, depth, grid);
         RichStringView::with_info(
             TextInfo::default().bold().foreground_colour(health_colour),
         )
         .view(
             &format!("{}/{}", player_hit_points.current, player_hit_points.max),
-            offset + Coord::new(0, 1),
+            offset + Coord::new(7, 0),
             depth,
             grid,
         );
-        offset += Coord::new(0, 4);
-        StringView.view("Energy:", offset, depth, grid);
+        offset += Coord::new(0, 2);
+        StringView.view("Power:", offset, depth, grid);
         RichStringView::with_info(
             TextInfo::default().bold().foreground_colour(time_colour),
         )
         .view(
             &format!("{}/{}", draw_countdown.current, draw_countdown.max),
-            offset + Coord::new(0, 1),
+            offset + Coord::new(7, 0),
+            depth,
+            grid,
+        );
+        offset += Coord::new(0, 2);
+        StringView.view("Deck:", offset, depth, grid);
+        RichStringView::with_info(
+            TextInfo::default().bold().foreground_colour(deck_colour),
+        )
+        .view(
+            &format!("{}", ui_data.game.deck().len()),
+            offset + Coord::new(7, 0),
             depth,
             grid,
         );
