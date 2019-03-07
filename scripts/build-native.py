@@ -46,6 +46,7 @@ def build(
     target_dir,
     output_dir,
     macos_app_name,
+    package_path,
 ):
     unix_manifest = toml.load(unix_path)
     glutin_manifest = toml.load(glutin_path)
@@ -96,7 +97,8 @@ def build(
         shutil.copy(path.join(stage_dir, "LICENSE.txt"), dmg_dir)
         shutil.copy(path.join(stage_dir, "README.txt"), dmg_dir)
         shutil.copy(path.join(stage_dir, "REVISION.txt"), dmg_dir)
-        shutil.copy(glutin_bin_path, path.join(macos_dir, macos_app_name))
+        shutil.copy(path.join(package_path, "macos-run-app.sh"), path.join(macos_dir, macos_app_name))
+        shutil.copy(glutin_bin_path, path.join(macos_dir, "app"))
         os.symlink("/Applications", path.join(dmg_dir, "Applications"))
         version_number_dmg_name = "%s-v%s.dmg" % (macos_app_name, version)
         branch_dmg_name = "%s-%s.dmg" % (macos_app_name, branch)
@@ -109,6 +111,7 @@ def make_parser():
     parser.add_argument("--root-dir", default=".")
     parser.add_argument("--unix-path", default="unix/Cargo.toml")
     parser.add_argument("--glutin-path", default="glutin/Cargo.toml")
+    parser.add_argument("--package-path", default="package")
     parser.add_argument("--release", action="store_true", default=False)
     parser.add_argument("--target-dir", default="target")
     parser.add_argument("--output-dir", default="uploads")
@@ -133,6 +136,7 @@ def main(args):
         args.target_dir,
         args.output_dir,
         args.macos_app_name,
+        args.package_path,
     )
 
 
