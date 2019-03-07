@@ -21,6 +21,7 @@ use crate::vision::*;
 pub use crate::world::*;
 use coord_2d::*;
 use direction::*;
+use rand::seq::SliceRandom;
 use rand::Rng;
 use rgb24::*;
 use std::time::Duration;
@@ -50,7 +51,7 @@ pub mod input {
     }
 }
 
-const INITIAL_DRAW_COUNTDOWN: u32 = 12;
+const INITIAL_DRAW_COUNTDOWN: u32 = 40;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct DrawCountdown {
@@ -79,6 +80,7 @@ pub struct Gws {
     deck: Vec<Card>,
     spent: Vec<Card>,
     waste: Vec<Card>,
+    burnt: Vec<Card>,
     draw_countdown: DrawCountdown,
 }
 
@@ -95,12 +97,46 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
     player: PackedEntity,
+    deck: Vec<Card>,
+    burnt: Vec<Card>,
+    hand_size: usize,
+}
+
+impl BetweenLevels {
+    fn initial() -> Self {
+        let player = PackedEntity::player();
+        let deck = vec![
+            Card::Bump,
+            Card::Bump,
+            Card::Bump,
+            Card::Bump,
+            Card::Bump,
+            Card::Bump,
+            Card::Heal,
+            Card::Heal,
+            Card::Heal,
+            Card::Heal,
+            Card::Heal,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+        ];
+        let burnt = Vec::new();
+        let hand_size = 5;
+        Self {
+            player,
+            deck,
+            burnt,
+            hand_size,
+        }
+    }
 }
 
 pub enum End {
@@ -158,9 +194,9 @@ pub enum Card {
 impl Card {
     pub fn cost(self) -> u32 {
         match self {
-            Card::Blink => 3,
-            Card::Bump => 2,
-            Card::Heal => 4,
+            Card::Blink => 20,
+            Card::Bump => 10,
+            Card::Heal => 5,
         }
     }
 }
@@ -274,11 +310,15 @@ impl Gws {
             ),
             TerrainChoice::WfcIceCave(size) => terrain::wfc_ice_cave(size, rng),
         };
-        let player = match between_levels {
-            None => PackedEntity::player(),
-            Some(BetweenLevels { player }) => player,
-        };
+        let BetweenLevels {
+            player,
+            mut deck,
+            burnt,
+            hand_size,
+        } = between_levels.unwrap_or_else(BetweenLevels::initial);
+        deck.shuffle(rng);
         let mut world = World::new(size);
+        let hand = (0..hand_size).map(|_| None).collect::<Vec<_>>();
         for instruction in instructions {
             world.interpret_instruction(instruction);
         }
@@ -296,36 +336,14 @@ impl Gws {
             pathfinding,
             animation: Vec::new(),
             turn: Turn::Player,
-            hand: vec![
-                Some(Card::Blink),
-                Some(Card::Heal),
-                Some(Card::Bump),
-                Some(Card::Bump),
-                Some(Card::Blink),
-                Some(Card::Heal),
-                Some(Card::Bump),
-            ],
+            hand,
             draw_countdown: DrawCountdown::new(),
-            deck: vec![
-                Card::Bump,
-                Card::Bump,
-                Card::Bump,
-                Card::Bump,
-                Card::Bump,
-                Card::Bump,
-                Card::Heal,
-                Card::Heal,
-                Card::Heal,
-                Card::Heal,
-                Card::Heal,
-                Card::Blink,
-                Card::Blink,
-                Card::Blink,
-                Card::Blink,
-            ],
+            deck,
             spent: Vec::new(),
             waste: Vec::new(),
+            burnt,
         };
+        s.draw_hand();
         s.update_visible_area();
         s
     }
@@ -344,6 +362,7 @@ impl Gws {
                         .position(|&c| c == card)
                         .expect("no such card in spent");
                     self.spent.swap_remove(index);
+                    self.burnt.push(card);
                     self.world.deal_damage(self.player_id, 1);
                     self.world.deal_damage(entity_id, 1);
                     (Ok(ApplyAction::Done), 0)
@@ -465,14 +484,31 @@ impl Gws {
         }
     }
 
+    fn between_levels(&self) -> BetweenLevels {
+        let deck = self
+            .deck()
+            .iter()
+            .chain(self.spent.iter())
+            .chain(self.waste.iter())
+            .chain(self.hand.iter().filter_map(|c| c.as_ref()))
+            .cloned()
+            .collect::<Vec<_>>();
+        let burnt = self.burnt.clone();
+        let player = self.world.pack_entity(self.player_id);
+        BetweenLevels {
+            deck,
+            burnt,
+            player,
+            hand_size: self.hand.len(),
+        }
+    }
+
     fn check_end(&self) -> Option<End> {
         let player = self.player();
         if let Some(cell) = self.world.grid().get(player.coord()) {
             for entity in cell.entity_iter(self.world.entities()) {
                 if entity.foreground_tile() == Some(ForegroundTile::Stairs) {
-                    return Some(End::ExitLevel(BetweenLevels {
-                        player: self.world.pack_entity(self.player_id),
-                    }));
+                    return Some(End::ExitLevel(self.between_levels()));
                 }
             }
         }
@@ -564,5 +600,8 @@ impl Gws {
 
     pub fn waste(&self) -> &[Card] {
         &self.waste
+    }
+    pub fn burnt(&self) -> &[Card] {
+        &self.burnt
     }
 }

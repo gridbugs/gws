@@ -1,6 +1,34 @@
+# Cards
+
+On your turn, move, wait, or play a card.
+
+Moving and waiting cost 1 power. Each card has a power cost.
+
+Playing a card moves it to the "spent" pile.
+
+When your power reaches 0, all the cards in your hand are moved into the "waste" pile, and you draw a fresh hand from the deck.
+
+Certain actions may permanently remove a card from play, adding it to the "burnt" pile.
+
+When you descend to the next level of the dungeon, the hand, and spent and waste piles are shuffled back into the deck, but the burnt pile remains out of play.
+
+
+# Upgrades
+
+## Cleansing Flame Ψ
+
+Permanently destroy a card from your spent pile, and lose 1 life, up to 3 times.
+
+
 # Controls
 
 Move: Arrow keys
+Wait: Space
 Toggle Help: h/F1
 Toggle Map: m/F2
 Toggle Menu: ESC
+Select Card: 1-8
+List Deck: d
+List Spent: s
+List Waste: w
+List Burnt: b

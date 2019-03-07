@@ -56,6 +56,7 @@ impl<'a> View<UiData<'a>> for StatusView {
         let deck_colour = rgb24(180, 180, 0);
         let spent_colour = rgb24(100, 70, 180);
         let waste_colour = rgb24(100, 120, 20);
+        let burnt_colour = rgb24(150, 100, 40);
         let draw_countdown = ui_data.game.draw_countdown();
         let mut offset = offset;
         StringView.view("Life:", offset, depth, grid);
@@ -108,6 +109,17 @@ impl<'a> View<UiData<'a>> for StatusView {
         )
         .view(
             &format!("{}", ui_data.game.waste().len()),
+            offset + Coord::new(7, 0),
+            depth,
+            grid,
+        );
+        offset += Coord::new(0, 2);
+        StringView.view("Burnt:", offset, depth, grid);
+        RichStringView::with_info(
+            TextInfo::default().bold().foreground_colour(burnt_colour),
+        )
+        .view(
+            &format!("{}", ui_data.game.burnt().len()),
             offset + Coord::new(7, 0),
             depth,
             grid,

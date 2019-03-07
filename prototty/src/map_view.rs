@@ -24,13 +24,14 @@ const TREE: ViewCell = ViewCell::new()
 const STAIRS: ViewCell = ViewCell::new()
     .with_character('>')
     .with_bold(true)
-    .with_foreground(colours::WHITE)
+    .with_foreground(rgb24(220, 100, 50))
     .with_background(colours::BLACK);
 
 const FLAME: ViewCell = ViewCell::new()
     .with_character('Ψ')
     .with_bold(true)
-    .with_foreground(rgb24(255, 120, 0));
+    .with_foreground(rgb24(255, 120, 0))
+    .with_background(colours::BLACK);
 
 impl View<Gws> for MapView {
     fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {

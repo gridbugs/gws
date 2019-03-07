@@ -85,6 +85,10 @@ enum AppState {
     BetweenLevels(Option<gws::BetweenLevels>),
     Death,
     CardMenu,
+    ListDeck,
+    ListSpent,
+    ListWaste,
+    ListBurnt,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -146,12 +150,68 @@ pub struct App<F: Frontend, S: Storage> {
     interactive: Option<gws::Interactive>,
 }
 
+fn list_cards<G>(
+    cards: &[gws::Card],
+    card_table: &CardTable,
+    title: &str,
+    offset: Coord,
+    depth: i32,
+    grid: &mut G,
+) where
+    G: ViewGrid,
+{
+    let mut cards = cards.iter().cloned().collect::<Vec<_>>();
+    cards.sort();
+    StringView.view(title, offset + Coord::new(1, 1), depth, grid);
+    for (i, &card) in cards.iter().enumerate() {
+        let info = card_table.get(card);
+        StringView.view(
+            &format!("{}: {}", info.title, info.description),
+            offset + Coord::new(1, i as i32 + 3),
+            depth,
+            grid,
+        );
+    }
+}
+
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
     fn view<G>(&mut self, app: &App<F, S>, offset: Coord, depth: i32, grid: &mut G)
     where
         G: ViewGrid,
     {
         match app.app_state {
+            AppState::ListDeck => list_cards(
+                app.game_state.as_ref().unwrap().game.deck(),
+                &app.card_table,
+                "Deck",
+                offset,
+                depth,
+                grid,
+            ),
+            AppState::ListSpent => list_cards(
+                app.game_state.as_ref().unwrap().game.spent(),
+                &app.card_table,
+                "Spent",
+                offset,
+                depth,
+                grid,
+            ),
+            AppState::ListWaste => list_cards(
+                app.game_state.as_ref().unwrap().game.waste(),
+                &app.card_table,
+                "Waste",
+                offset,
+                depth,
+                grid,
+            ),
+            AppState::ListBurnt => list_cards(
+                app.game_state.as_ref().unwrap().game.burnt(),
+                &app.card_table,
+                "Burnt",
+                offset,
+                depth,
+                grid,
+            ),
             AppState::CardMenu => {
                 self.menu_and_title_view.view(
                     &MenuAndTitle::new(
@@ -308,6 +368,20 @@ impl<F: Frontend, S: Storage> App<F, S> {
         I: IntoIterator<Item = ProtottyInput>,
     {
         match self.app_state {
+            AppState::ListDeck
+            | AppState::ListSpent
+            | AppState::ListWaste
+            | AppState::ListBurnt => {
+                for input in inputs {
+                    match input {
+                        Input::MouseMove { .. } => (),
+                        prototty_inputs::ETX => return Some(Tick::Quit),
+                        _other => {
+                            self.app_state = AppState::Game;
+                        }
+                    }
+                }
+            }
             AppState::CardMenu => {
                 match self
                     .card_menu
@@ -562,6 +636,18 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                         opened_from_game: true,
                                     }
                                 }
+                                ProtottyInput::Char('d') => {
+                                    self.app_state = AppState::ListDeck;
+                                }
+                                ProtottyInput::Char('s') => {
+                                    self.app_state = AppState::ListSpent;
+                                }
+                                ProtottyInput::Char('w') => {
+                                    self.app_state = AppState::ListWaste;
+                                }
+                                ProtottyInput::Char('b') => {
+                                    self.app_state = AppState::ListBurnt;
+                                }
                                 ProtottyInput::Char(card_num @ '1'...'8') => {
                                     let (message, card_selection) =
                                         Self::select_card(game_state, card_num);
@@ -592,11 +678,13 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         match tick {
                             gws::Tick::Interact(interactive) => {
                                 let spent = game_state.game.spent();
-                                if !spent.is_empty() {
+                                if spent.is_empty() {
+                                    self.message = Some("You must have spent cards to interact with the Cleansing Flame.".to_string());
+                                } else {
                                     self.interactive = Some(interactive);
                                     self.card_menu_title = match interactive.typ {
                                     gws::InteractiveType::Flame => {
-                                        "Cleansing Flame: Permanently remove a spent card. Lose 1 life.".to_string()
+                                        "Cleansing Flame: Burn a spent card. Lose 1 life.".to_string()
                                     }
                                 };
                                     self.card_menu =

@@ -268,6 +268,7 @@ struct BadLevel;
 const MIN_ACCESSIBLE_CELLS: usize = 500;
 const NUM_STAIRS_CANDIDATES: usize = 100;
 const NUM_NPCS: usize = 10;
+const NUM_UPGRADES: usize = 3;
 
 fn populate_base_grid<R: Rng>(
     base_grid: &Grid<Base>,
@@ -351,6 +352,9 @@ fn populate_base_grid<R: Rng>(
     npc_candidates.shuffle(rng);
     for &coord in npc_candidates.iter().take(NUM_NPCS) {
         cell_grid.get_checked_mut(coord).contents = Some(Contents::Demon);
+    }
+    for &coord in npc_candidates.iter().take(NUM_UPGRADES) {
+        cell_grid.get_checked_mut(coord).contents = Some(Contents::Flame);
     }
     Ok(cell_grid)
 }
