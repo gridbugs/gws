@@ -56,12 +56,26 @@ impl<'a> View<UiData<'a>> for StatusView {
         } else {
             grey24(255)
         };
+        let time_colour = rgb24(255, 255, 255);
+        let draw_countdown = ui_data.game.draw_countdown();
+        let mut offset = offset;
         StringView.view("Health:", offset, depth, grid);
         RichStringView::with_info(
             TextInfo::default().bold().foreground_colour(health_colour),
         )
         .view(
             &format!("{}/{}", player_hit_points.current, player_hit_points.max),
+            offset + Coord::new(0, 1),
+            depth,
+            grid,
+        );
+        offset += Coord::new(0, 4);
+        StringView.view("Energy:", offset, depth, grid);
+        RichStringView::with_info(
+            TextInfo::default().bold().foreground_colour(time_colour),
+        )
+        .view(
+            &format!("{}/{}", draw_countdown.current, draw_countdown.max),
             offset + Coord::new(0, 1),
             depth,
             grid,
@@ -105,6 +119,7 @@ impl<'a, V: View<Gws>> View<UiData<'a>> for UiView<V> {
                 ui_data.game.hand(),
                 ui_data.card_table,
                 ui_data.card_selection.map(|cs| cs.slot),
+                *ui_data.game.draw_countdown(),
             ),
             offset + CARDS_OFFSET,
             depth,
@@ -120,19 +135,21 @@ struct CardView;
 struct CardAreaView;
 
 struct CardInfo {
+    card: Card,
     title: String,
     description_pager: Pager,
     background: Rgb24,
 }
 
 impl CardInfo {
-    fn new(_card: Card, title: String, description: String, background: Rgb24) -> Self {
+    fn new(card: Card, title: String, description: String, background: Rgb24) -> Self {
         let description_pager = Pager::new(
             &description,
             CARD_SIZE.to_size().unwrap(),
             Default::default(),
         );
         Self {
+            card,
             title,
             description_pager,
             background,
@@ -178,13 +195,21 @@ impl CardTable {
     }
 }
 
-impl<'a> View<(&'a [Option<Card>], &'a CardTable, Option<usize>)> for CardAreaView {
+impl<'a>
+    View<(
+        &'a [Option<Card>],
+        &'a CardTable,
+        Option<usize>,
+        DrawCountdown,
+    )> for CardAreaView
+{
     fn view<G: ViewGrid>(
         &mut self,
-        &(cards, card_table, selected_slot): &(
+        &(cards, card_table, selected_slot, draw_countdown): &(
             &'a [Option<Card>],
             &'a CardTable,
             Option<usize>,
+            DrawCountdown,
         ),
         offset: Coord,
         depth: i32,
@@ -203,7 +228,12 @@ impl<'a> View<(&'a [Option<Card>], &'a CardTable, Option<usize>)> for CardAreaVi
                 if let Some(card) = maybe_card.as_ref() {
                     let selected =
                         selected_slot.map(|s| s == i as usize).unwrap_or(false);
-                    CardView.view(&(card_table.get(*card), selected), coord, depth, grid);
+                    CardView.view(
+                        &(card_table.get(*card), selected, draw_countdown),
+                        coord,
+                        depth,
+                        grid,
+                    );
                 } else {
                     empty_card_view(coord, depth, grid);
                 }
@@ -255,10 +285,10 @@ fn empty_card_view<G: ViewGrid>(offset: Coord, depth: i32, grid: &mut G) {
     }
 }
 
-impl<'a> View<(&'a CardInfo, bool)> for CardView {
+impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
     fn view<G: ViewGrid>(
         &mut self,
-        &(card_info, selected): &(&'a CardInfo, bool),
+        &(card_info, selected, draw_countdown): &(&'a CardInfo, bool, DrawCountdown),
         offset: Coord,
         depth: i32,
         grid: &mut G,
@@ -277,6 +307,24 @@ impl<'a> View<(&'a CardInfo, bool)> for CardView {
         PagerView.view(
             &card_info.description_pager,
             offset + selected_offset + Coord::new(0, 2),
+            depth + 1,
+            grid,
+        );
+        let energy_cost = card_info.card.cost();
+        let energy_colour = if draw_countdown.current < energy_cost {
+            rgb24(255, 0, 0)
+        } else {
+            rgb24(255, 255, 255)
+        };
+        DefaultRichTextView.view(
+            &RichText::one_line(vec![
+                ("Cost: ".to_string(), Default::default()),
+                (
+                    format!("{}", energy_cost),
+                    TextInfo::default().foreground_colour(energy_colour).bold(),
+                ),
+            ]),
+            offset + selected_offset + Coord::new(0, 9),
             depth + 1,
             grid,
         );
@@ -348,7 +396,12 @@ impl<'a> View<UiData<'a>> for DeathView {
             grid,
         );
         CardAreaView.view(
-            &(ui_data.game.hand(), ui_data.card_table, None),
+            &(
+                ui_data.game.hand(),
+                ui_data.card_table,
+                None,
+                *ui_data.game.draw_countdown(),
+            ),
             offset + CARDS_OFFSET,
             depth,
             grid,

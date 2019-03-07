@@ -566,6 +566,10 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                         self.message =
                                             Some("Can't see there!".to_string())
                                     }
+                                    NotEnoughEnergy => {
+                                        self.message =
+                                            Some("Not enough energy!".to_string())
+                                    }
                                     _ => (),
                                 }
                             }
@@ -647,24 +651,31 @@ impl<F: Frontend, S: Storage> App<F, S> {
         let card_selection;
         if let Some(&maybe_card) = hand.get(card_index) {
             if let Some(card) = maybe_card {
-                let choice = match card {
-                    gws::Card::Bump => {
-                        message = Some("Choose a direction.".to_string());
-                        CardParamChoice::Direction
-                    }
-                    gws::Card::Blink => {
-                        message = Some("Choose a destination.".to_string());
-                        CardParamChoice::Coord(game_state.game.to_render().player.coord())
-                    }
-                    gws::Card::Heal => {
-                        message = Some("Confirm selection.".to_string());
-                        CardParamChoice::Confirm
-                    }
-                };
-                card_selection = Some(CardInSlot {
-                    slot: card_index,
-                    choice,
-                });
+                if game_state.game.draw_countdown().current < card.cost() {
+                    message = Some("Not enough energy!".to_string());
+                    card_selection = None;
+                } else {
+                    let choice = match card {
+                        gws::Card::Bump => {
+                            message = Some("Choose a direction.".to_string());
+                            CardParamChoice::Direction
+                        }
+                        gws::Card::Blink => {
+                            message = Some("Choose a destination.".to_string());
+                            CardParamChoice::Coord(
+                                game_state.game.to_render().player.coord(),
+                            )
+                        }
+                        gws::Card::Heal => {
+                            message = Some("Confirm selection.".to_string());
+                            CardParamChoice::Confirm
+                        }
+                    };
+                    card_selection = Some(CardInSlot {
+                        slot: card_index,
+                        choice,
+                    });
+                }
             } else {
                 message = Some(format!("No card in slot {}.", card_num));
                 card_selection = None;

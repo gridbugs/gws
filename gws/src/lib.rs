@@ -46,6 +46,23 @@ pub mod input {
     }
 }
 
+const INITIAL_DRAW_COUNTDOWN: u32 = 12;
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct DrawCountdown {
+    pub current: u32,
+    pub max: u32,
+}
+
+impl DrawCountdown {
+    fn new() -> Self {
+        Self {
+            current: INITIAL_DRAW_COUNTDOWN,
+            max: INITIAL_DRAW_COUNTDOWN,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Gws {
     world: World,
@@ -55,6 +72,7 @@ pub struct Gws {
     animation: Vec<Animation>,
     turn: Turn,
     hand: Vec<Option<Card>>,
+    draw_countdown: DrawCountdown,
 }
 
 pub struct ToRender<'a> {
@@ -113,6 +131,16 @@ pub enum Card {
     Heal,
 }
 
+impl Card {
+    pub fn cost(self) -> u32 {
+        match self {
+            Card::Blink => 3,
+            Card::Bump => 2,
+            Card::Heal => 4,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum CardParam {
     Coord(Coord),
@@ -166,12 +194,6 @@ impl AnimationState {
 enum Turn {
     Player,
     Engine,
-}
-
-enum PlayerTurn {
-    Done,
-    Cancelled(CancelAction),
-    Animation(Animation),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -259,80 +281,89 @@ impl Gws {
                 Some(Card::Heal),
                 Some(Card::Bump),
             ],
+            draw_countdown: DrawCountdown::new(),
         };
         s.update_visible_area();
         s
     }
 
-    fn handle_player_action_result(
-        result: Result<ApplyAction, CancelAction>,
-    ) -> PlayerTurn {
-        match result {
-            Ok(ApplyAction::Done) => PlayerTurn::Done,
-            Ok(ApplyAction::Animation(animation)) => PlayerTurn::Animation(animation),
-            Err(cancel) => PlayerTurn::Cancelled(cancel),
-        }
+    pub fn draw_countdown(&self) -> &DrawCountdown {
+        &self.draw_countdown
     }
 
-    fn player_turn(&mut self, input: Input) -> PlayerTurn {
-        match input {
-            Input::Move(direction) => Self::handle_player_action_result(
-                self.world.move_entity_in_direction_with_attack_policy(
+    fn player_turn(&mut self, input: Input) -> Result<ApplyAction, CancelAction> {
+        let (result, cost) = match input {
+            Input::Move(direction) => {
+                let result = self.world.move_entity_in_direction_with_attack_policy(
                     self.player_id,
                     direction,
-                ),
-            ),
-            Input::Wait => PlayerTurn::Done,
+                );
+                (result, 1)
+            }
+            Input::Wait => (Ok(ApplyAction::Done), 1),
             Input::PlayCard { slot, param } => {
                 let card = if let Some(&card) = self.hand.get(slot) {
                     card
                 } else {
-                    return PlayerTurn::Cancelled(CancelAction::InvalidCard);
+                    return Err(CancelAction::InvalidCard);
                 };
                 let card = if let Some(card) = card {
                     card
                 } else {
-                    return PlayerTurn::Cancelled(CancelAction::InvalidCard);
+                    return Err(CancelAction::InvalidCard);
                 };
+                if card.cost() > self.draw_countdown.current {
+                    return Err(CancelAction::NotEnoughEnergy);
+                }
                 let result = match (card, param) {
                     (Card::Blink, CardParam::Coord(coord)) => self.blink(coord),
                     (Card::Bump, CardParam::CardinalDirection(direction)) => {
                         self.bump(direction)
                     }
                     (Card::Heal, CardParam::Confirm) => self.heal(1),
-                    _ => PlayerTurn::Cancelled(CancelAction::InvalidCard),
+                    _ => return Err(CancelAction::InvalidCard),
                 };
-                match result {
-                    PlayerTurn::Cancelled(_) => (),
-                    PlayerTurn::Done | PlayerTurn::Animation(_) => {
-                        self.hand[slot] = None;
-                    }
+                if result.is_ok() {
+                    self.hand[slot] = None;
                 }
-                result
+                (result, 1)
+            }
+        };
+        if result.is_ok() {
+            let should_draw =
+                if let Some(current) = self.draw_countdown.current.checked_sub(cost) {
+                    current == 0
+                } else {
+                    true
+                };
+            if should_draw {
+                self.draw_countdown.current = self.draw_countdown.max;
+            } else {
+                self.draw_countdown.current -= cost;
             }
         }
+        result
     }
 
-    fn blink(&mut self, coord: Coord) -> PlayerTurn {
+    fn blink(&mut self, coord: Coord) -> Result<ApplyAction, CancelAction> {
         if self.visible_area.is_visible(coord)
             && self.visible_area.light_colour(coord) != grey24(0)
         {
-            Self::handle_player_action_result(
-                self.world.blink_entity_to_coord(self.player_id, coord),
-            )
+            self.world.blink_entity_to_coord(self.player_id, coord)
         } else {
-            PlayerTurn::Cancelled(CancelAction::DestinationNotVisible)
+            Err(CancelAction::DestinationNotVisible)
         }
     }
 
-    fn bump(&mut self, direction: CardinalDirection) -> PlayerTurn {
-        Self::handle_player_action_result(
-            self.world.bump_npc_in_direction(self.player_id, direction),
-        )
+    fn bump(
+        &mut self,
+        direction: CardinalDirection,
+    ) -> Result<ApplyAction, CancelAction> {
+        self.world.bump_npc_in_direction(self.player_id, direction)
     }
 
-    fn heal(&mut self, by: u32) -> PlayerTurn {
-        Self::handle_player_action_result(self.world.heal(self.player_id, by))
+    fn heal(&mut self, by: u32) -> Result<ApplyAction, CancelAction> {
+        self.world.heal(self.player_id, by)
     }
 
     fn engine_turn(&mut self) {
@@ -398,11 +429,11 @@ impl Gws {
             if self.turn == Turn::Player {
                 if let Some(input) = inputs.into_iter().next() {
                     match self.player_turn(input) {
-                        PlayerTurn::Cancelled(cancel) => {
+                        Err(cancel) => {
                             return Some(Tick::CancelAction(cancel));
                         }
-                        PlayerTurn::Done => self.turn = Turn::Engine,
-                        PlayerTurn::Animation(animation) => {
+                        Ok(ApplyAction::Done) => self.turn = Turn::Engine,
+                        Ok(ApplyAction::Animation(animation)) => {
                             self.turn = Turn::Engine;
                             self.animation.push(animation);
                         }
