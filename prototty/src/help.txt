@@ -6,7 +6,7 @@ Moving and waiting cost 1 power. Each card has a power cost.
 
 Playing a card moves it to the "spent" pile.
 
-When your power reaches 0, all the cards in your hand are moved into the "waste" pile, and you draw a fresh hand from the deck.
+When your power reaches 0, all the cards in your hand are moved into the "waste" pile, and you draw a fresh hand from the deck. Your power is reset to its maximum.
 
 Certain actions may permanently remove a card from play, adding it to the "burnt" pile.
 
