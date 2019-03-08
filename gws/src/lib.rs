@@ -16,7 +16,7 @@ mod terrain;
 mod vision;
 mod world;
 
-use crate::pathfinding::*;
+pub use crate::pathfinding::*;
 use crate::vision::*;
 pub use crate::world::*;
 use coord_2d::*;
@@ -97,8 +97,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -117,7 +117,6 @@ impl BetweenLevels {
             Card::Spark,
             Card::Spark,
             Card::Spark,
-            /*
             Card::Bump,
             Card::Bump,
             Card::Bump,
@@ -132,7 +131,7 @@ impl BetweenLevels {
             Card::Blink,
             Card::Blink,
             Card::Blink,
-            Card::Blink, */
+            Card::Blink,
         ];
         let burnt = Vec::new();
         let hand_size = 5;
@@ -214,6 +213,11 @@ enum AnimationState {
         direction: CardinalDirection,
         remaining_range: u32,
     },
+    GlowFadeIn {
+        id: EntityId,
+        remaining_frames: u32,
+        total_frames: u32,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -244,7 +248,8 @@ pub enum CardParam {
 
 const DAMAGE_ANIMATION_PERIOD: Duration = Duration::from_millis(250);
 const BLINK_ANIMATION_PERIOD: Duration = Duration::from_millis(50);
-const PROJECTILE_ANIMATION_PERIOD: Duration = Duration::from_millis(50);
+const PROJECTILE_ANIMATION_PERIOD: Duration = Duration::from_millis(20);
+const GLOW_FADE_IN_PERIOD: Duration = Duration::from_millis(20);
 
 impl AnimationState {
     fn update(self, world: &mut World) -> Option<Animation> {
@@ -315,6 +320,29 @@ impl AnimationState {
                 }
                 next
             }
+            AnimationState::GlowFadeIn {
+                id,
+                remaining_frames,
+                total_frames,
+            } => {
+                if remaining_frames == 0 {
+                    world.remove_entity(id);
+                    None
+                } else {
+                    world.set_light_diminish_denom(
+                        id,
+                        total_frames - remaining_frames + 1,
+                    );
+                    Some(Animation::new(
+                        GLOW_FADE_IN_PERIOD,
+                        AnimationState::GlowFadeIn {
+                            remaining_frames: remaining_frames - 1,
+                            total_frames,
+                            id,
+                        },
+                    ))
+                }
+            }
         }
     }
 }
@@ -373,6 +401,16 @@ impl Animation {
             },
         )
     }
+    pub fn glow_fade_out(id: EntityId, remaining_frames: u32) -> Self {
+        Self::new(
+            Duration::from_secs(0),
+            AnimationState::GlowFadeIn {
+                id,
+                remaining_frames,
+                total_frames: remaining_frames,
+            },
+        )
+    }
 }
 
 impl Gws {
@@ -405,11 +443,7 @@ impl Gws {
         }
         let player_id = world.add_entity(player_coord, player);
         let visible_area = VisibileArea::new(size);
-        let mut pathfinding = PathfindingContext::new(size);
-        pathfinding.update_player_coord(player_coord, &world);
-        for &id in world.npc_ids() {
-            pathfinding.commit_to_moving_towards_player(id, &world);
-        }
+        let pathfinding = PathfindingContext::new(size);
         let mut s = Self {
             world,
             visible_area,
@@ -424,6 +458,7 @@ impl Gws {
             waste: Vec::new(),
             burnt,
         };
+        s.engine_commit();
         s.draw_hand();
         s.update_visible_area();
         s
@@ -560,28 +595,119 @@ impl Gws {
     }
 
     fn engine_turn(&mut self) {
-        for &(id, direction) in self.pathfinding.committed_movements().iter() {
-            match self
-                .world
-                .move_entity_in_direction_with_attack_policy(id, direction)
-            {
+        for &(id, direction, typ) in self.pathfinding.committed_actions().iter() {
+            let entity = self.world.entities().get(&id).unwrap();
+            let result = match typ {
+                CommitmentType::Move => self
+                    .world
+                    .move_entity_in_direction_with_attack_policy(id, direction),
+                CommitmentType::Cast => self.world.spark_in_direction(id, direction),
+                CommitmentType::Heal(0) => {
+                    let heal_range = 10;
+                    let coord = entity.coord();
+                    let to_heal = self
+                        .world
+                        .npc_ids()
+                        .map(|id| self.world.entities().get(id).unwrap())
+                        .filter_map(|e| {
+                            if entity.coord().manhattan_distance(e.coord()) < heal_range {
+                                if let Some(hit_points) = e.hit_points() {
+                                    if hit_points.current < hit_points.max {
+                                        Some(e.id())
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>();
+                    for id in to_heal {
+                        let _ = self.world.heal(id, 1);
+                    }
+                    let _ = self.world.set_heal_countdown(id, None);
+                    Ok(ApplyAction::Animation(Animation::glow_fade_out(
+                        self.world
+                            .add_entity(coord, PackedEntity::glow(rgb24(255, 255, 0))),
+                        10,
+                    )))
+                }
+                CommitmentType::Heal(count) => {
+                    self.world.set_heal_countdown(id, Some(count))
+                }
+            };
+            match result {
                 Ok(ApplyAction::Done) => (),
                 Ok(ApplyAction::Animation(animation)) => self.animation.push(animation),
                 Ok(ApplyAction::Interact(_)) => (),
                 Err(_) => (),
             }
         }
+        self.engine_commit();
+    }
+    fn engine_commit(&mut self) {
         let player_coord = self.player().coord();
         self.pathfinding
             .update_player_coord(player_coord, &self.world);
         for &id in self.world.npc_ids() {
-            let npc_coord = self.world.entities().get(&id).unwrap().coord();
+            let npc = self.world.entities().get(&id).unwrap();
             if self
                 .world
-                .can_see(npc_coord, player_coord, NPC_VISION_RANGE)
+                .can_see(npc.coord(), player_coord, NPC_VISION_RANGE)
             {
-                self.pathfinding
-                    .commit_to_moving_towards_player(id, &self.world);
+                if npc.foreground_tile() == Some(ForegroundTile::Caster)
+                    && (npc.coord().x == player_coord.x
+                        || npc.coord().y == player_coord.y)
+                    && npc.coord().manhattan_distance(player_coord) < 8
+                {
+                    self.pathfinding
+                        .commit_action(id, &self.world, CommitmentType::Cast);
+                } else if npc.foreground_tile() == Some(ForegroundTile::Healer) {
+                    if let Some(heal_countdown) = npc.heal_countdown() {
+                        if heal_countdown > 0 {
+                            self.pathfinding.commit_action(
+                                id,
+                                &self.world,
+                                CommitmentType::Heal(heal_countdown.saturating_sub(1)),
+                            );
+                        }
+                    } else {
+                        let heal_range = 8;
+                        if let Some(_) = self
+                            .world
+                            .npc_ids()
+                            .map(|id| self.world.entities().get(id).unwrap())
+                            .find(|e| {
+                                npc.coord().manhattan_distance(e.coord()) < heal_range
+                                    && {
+                                        if let Some(hit_points) = e.hit_points() {
+                                            hit_points.current < hit_points.max
+                                        } else {
+                                            false
+                                        }
+                                    }
+                            })
+                        {
+                            self.pathfinding.commit_action(
+                                id,
+                                &self.world,
+                                CommitmentType::Heal(3),
+                            );
+                        } else {
+                            self.pathfinding.commit_action(
+                                id,
+                                &self.world,
+                                CommitmentType::Move,
+                            );
+                        }
+                    }
+                } else {
+                    self.pathfinding
+                        .commit_action(id, &self.world, CommitmentType::Move);
+                }
             }
         }
     }

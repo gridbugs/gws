@@ -149,7 +149,7 @@ impl<'a, V: View<Gws>> View<UiData<'a>> for UiView<V> {
                             offset + GAME_OFFSET + coord,
                             depth + 1,
                             ViewCell::new()
-                                .with_character('*')
+                                .with_character('Х')
                                 .with_bold(true)
                                 .with_foreground(rgb24(0, 255, 255)),
                         );

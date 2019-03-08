@@ -47,6 +47,8 @@ enum Base {
 enum Contents {
     Player,
     Demon,
+    Caster,
+    Healer,
     Light(Rgb24),
     Stairs,
     Flame,
@@ -99,6 +101,12 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
                 }
                 Contents::Demon => {
                     instructions.push(AddEntity(coord, PackedEntity::demon()));
+                }
+                Contents::Caster => {
+                    instructions.push(AddEntity(coord, PackedEntity::caster()));
+                }
+                Contents::Healer => {
+                    instructions.push(AddEntity(coord, PackedEntity::healer()));
                 }
                 Contents::Stairs => {
                     instructions.push(AddEntity(
@@ -160,6 +168,8 @@ fn char_to_cell(ch: char) -> Option<Cell> {
         match ch {
             '@' => Some(Cell::new(Base::Floor).with_contents(Contents::Player)),
             'd' => Some(Cell::new(Base::Floor).with_contents(Contents::Demon)),
+            'c' => Some(Cell::new(Base::Floor).with_contents(Contents::Caster)),
+            'h' => Some(Cell::new(Base::Floor).with_contents(Contents::Healer)),
             '1' => Some(
                 Cell::new(Base::Floor).with_contents(Contents::Light(rgb24(255, 0, 0))),
             ),

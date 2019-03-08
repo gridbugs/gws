@@ -42,10 +42,30 @@ const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
 const DEMON_CHAR: char = 'd';
 const DEMON_VIEW_CELL: ViewCell = ViewCell::new()
     .with_bold(true)
+    .with_foreground(rgb24(200, 20, 80));
+
+const CASTER_CHAR: char = 'c';
+const CASTER_VIEW_CELL: ViewCell = ViewCell::new()
+    .with_bold(true)
     .with_foreground(rgb24(30, 200, 80));
+
+const HEALER_CHAR: char = 'h';
+const HEALER_VIEW_CELL: ViewCell = ViewCell::new()
+    .with_bold(true)
+    .with_foreground(rgb24(200, 200, 80));
 
 const ARROW_CHARS: CardinalDirectionTable<char> =
     CardinalDirectionTable::new_array(['↑', '→', '↓', '←']);
+
+const MOVE_VIEW_CELL: ViewCell = ViewCell::new()
+    .with_bold(false)
+    .with_foreground(rgb24(255, 255, 255));
+const ATTACK_VIEW_CELL: ViewCell = ViewCell::new()
+    .with_bold(false)
+    .with_foreground(rgb24(0, 255, 255));
+const HEAL_VIEW_CELL: ViewCell = ViewCell::new()
+    .with_bold(true)
+    .with_foreground(rgb24(200, 200, 0));
 
 const BLINK0: ViewCell = ViewCell::new()
     .with_character('☼')
@@ -78,8 +98,11 @@ const FOUNTAIN: ViewCell = ViewCell::new()
     .with_foreground(rgb24(50, 100, 200));
 
 fn npc_view_cell(entity: &Entity) -> ViewCell {
+    // TODO messy
     let (ch, view_cell) = match entity.foreground_tile().unwrap() {
         ForegroundTile::Demon => (DEMON_CHAR, DEMON_VIEW_CELL),
+        ForegroundTile::Caster => (CASTER_CHAR, CASTER_VIEW_CELL),
+        ForegroundTile::Healer => (HEALER_CHAR, HEALER_VIEW_CELL),
         _ => panic!("not npc"),
     };
     match entity.hit_points().expect("missing hit points").current {
@@ -133,7 +156,12 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
                 .with_foreground(rgb24(255, 0, 0))
                 .coalesce(view_cell)
         } else if entity.is_npc() {
-            npc_view_cell(entity).coalesce(view_cell)
+            if let Some(heal_countdown) = entity.heal_countdown() {
+                let ch = heal_countdown.to_string().chars().next().unwrap();
+                HEAL_VIEW_CELL.with_character(ch).coalesce(view_cell)
+            } else {
+                npc_view_cell(entity).coalesce(view_cell)
+            }
         } else if let Some(foreground_tile) = entity.foreground_tile() {
             match foreground_tile {
                 ForegroundTile::Player => PLAYER,
@@ -152,10 +180,16 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
             view_cell
         }
     } else {
-        if let Some(direction) = to_render.commitment_grid.get_direction_checked(coord) {
-            ViewCell::new()
-                .with_character(ARROW_CHARS[direction])
-                .coalesce(view_cell)
+        if let Some((direction, typ)) = to_render.commitment_grid.get_checked(coord) {
+            match typ {
+                CommitmentType::Move => MOVE_VIEW_CELL
+                    .with_character(ARROW_CHARS[direction])
+                    .coalesce(view_cell),
+                CommitmentType::Cast => {
+                    ATTACK_VIEW_CELL.with_character('*').coalesce(view_cell)
+                }
+                CommitmentType::Heal(_) => view_cell,
+            }
         } else {
             view_cell
         }

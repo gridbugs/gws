@@ -3,10 +3,18 @@ use direction::*;
 use grid_2d::*;
 use grid_search::*;
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub enum CommitmentType {
+    Move,
+    Cast,
+    Heal(u32),
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 struct CommitmentCell {
     seq: u64,
     direction: Option<CardinalDirection>,
+    typ: CommitmentType,
 }
 
 impl CommitmentCell {
@@ -14,6 +22,8 @@ impl CommitmentCell {
         Self {
             seq: 0,
             direction: None,
+            // TODO inconstent
+            typ: CommitmentType::Move,
         }
     }
 }
@@ -33,18 +43,27 @@ impl CommitmentGrid {
     fn clear(&mut self) {
         self.seq += 1;
     }
-    fn commit(&mut self, coord: Coord, direction: CardinalDirection) {
+    fn commit(
+        &mut self,
+        coord: Coord,
+        direction: CardinalDirection,
+        typ: CommitmentType,
+    ) {
         let cell = self.grid.get_checked_mut(coord);
         cell.seq = self.seq;
         cell.direction = Some(direction);
+        cell.typ = typ;
     }
     fn is_committed(&self, coord: Coord) -> bool {
         self.grid.get_checked(coord).seq == self.seq
     }
-    pub fn get_direction_checked(&self, coord: Coord) -> Option<CardinalDirection> {
+    pub fn get_checked(
+        &self,
+        coord: Coord,
+    ) -> Option<(CardinalDirection, CommitmentType)> {
         let cell = self.grid.get_checked(coord);
         if cell.seq == self.seq {
-            cell.direction
+            cell.direction.map(|d| (d, cell.typ))
         } else {
             None
         }
@@ -59,7 +78,7 @@ pub struct PathfindingContext {
     path: Vec<Direction>,
     commitment_grid: CommitmentGrid,
     player_coord: Coord,
-    committed_movements: Vec<(EntityId, CardinalDirection)>,
+    committed_actions: Vec<(EntityId, CardinalDirection, CommitmentType)>,
 }
 
 struct Solid<'a>(&'a World);
@@ -102,7 +121,7 @@ impl PathfindingContext {
             bfs: BfsContext::new(size),
             commitment_grid: CommitmentGrid::new(size),
             distance_to_player: UniformDistanceMap::new(size, DirectionsCardinal),
-            committed_movements: Vec::new(),
+            committed_actions: Vec::new(),
             path: Vec::new(),
         }
     }
@@ -122,7 +141,7 @@ impl PathfindingContext {
         }
         self.player_coord = player_coord;
         self.commitment_grid.clear();
-        self.committed_movements.clear();
+        self.committed_actions.clear();
     }
     pub fn direction_towards_player(
         &mut self,
@@ -145,17 +164,17 @@ impl PathfindingContext {
             Err(_) => None,
         }
     }
-    pub fn commit_to_moving_towards_player(&mut self, id: EntityId, world: &World) {
+    pub fn commit_action(&mut self, id: EntityId, world: &World, typ: CommitmentType) {
         let coord = world.entities().get(&id).unwrap().coord();
         if let Some(direction) = self.direction_towards_player(coord, world) {
             let next_coord = coord + direction.coord();
             if next_coord != self.player_coord {
-                self.commitment_grid.commit(next_coord, direction);
+                self.commitment_grid.commit(next_coord, direction, typ);
             }
-            self.committed_movements.push((id, direction));
+            self.committed_actions.push((id, direction, typ));
         }
     }
-    pub fn committed_movements(&self) -> &[(EntityId, CardinalDirection)] {
-        &self.committed_movements
+    pub fn committed_actions(&self) -> &[(EntityId, CardinalDirection, CommitmentType)] {
+        &self.committed_actions
     }
 }

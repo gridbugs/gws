@@ -49,6 +49,8 @@ pub enum ForegroundTile {
     Tree,
     Stairs,
     Demon,
+    Caster,
+    Healer,
     Blink0,
     Blink1,
     Flame,
@@ -139,9 +141,13 @@ pub struct Entity {
     interactive: bool,
     taking_damage_in_direction: Option<CardinalDirection>,
     hit_points: Option<HitPoints>,
+    heal_countdown: Option<u32>,
 }
 
 impl Entity {
+    pub fn id(&self) -> EntityId {
+        self.id
+    }
     pub fn coord(&self) -> Coord {
         self.coord
     }
@@ -159,6 +165,9 @@ impl Entity {
     }
     pub fn is_projectile(&self) -> bool {
         self.foreground_tile == Some(ForegroundTile::Spark)
+    }
+    pub fn heal_countdown(&self) -> Option<u32> {
+        self.heal_countdown
     }
 }
 
@@ -242,6 +251,17 @@ impl PackedEntity {
             interactive: false,
         }
     }
+    pub(crate) fn glow(colour: Rgb24) -> Self {
+        let light = PackedLight::new(colour, 30, Rational::new(1, 10));
+        Self {
+            foreground_tile: None,
+            light: Some(light),
+            npc: false,
+            player: false,
+            hit_points: None,
+            interactive: false,
+        }
+    }
     pub(crate) fn player() -> Self {
         let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 10));
         Self {
@@ -260,6 +280,26 @@ impl PackedEntity {
             npc: true,
             player: false,
             hit_points: Some(HitPoints::new(2, 2)),
+            interactive: false,
+        }
+    }
+    pub(crate) fn caster() -> Self {
+        Self {
+            foreground_tile: Some(ForegroundTile::Caster),
+            light: None,
+            npc: true,
+            player: false,
+            hit_points: Some(HitPoints::new(1, 2)),
+            interactive: false,
+        }
+    }
+    pub(crate) fn healer() -> Self {
+        Self {
+            foreground_tile: Some(ForegroundTile::Healer),
+            light: None,
+            npc: true,
+            player: false,
+            hit_points: Some(HitPoints::new(1, 1)),
             interactive: false,
         }
     }
@@ -412,6 +452,14 @@ fn move_entity_to_coord(
 }
 
 impl World {
+    pub(crate) fn set_heal_countdown(
+        &mut self,
+        id: EntityId,
+        heal_countdown: Option<u32>,
+    ) -> Result<ApplyAction, CancelAction> {
+        self.entities.get_mut(&id).unwrap().heal_countdown = heal_countdown;
+        Ok(ApplyAction::Done)
+    }
     pub(crate) fn new(size: Size) -> Self {
         Self {
             grid: Grid::new_default(size),
@@ -491,6 +539,7 @@ impl World {
             taking_damage_in_direction: None,
             hit_points,
             interactive,
+            heal_countdown: None,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {
@@ -711,6 +760,8 @@ impl World {
                     .map(|foreground_tile| match foreground_tile {
                         ForegroundTile::Blink0 | ForegroundTile::Blink1 => 0,
                         ForegroundTile::Spark => 0,
+                        ForegroundTile::Caster => 0,
+                        ForegroundTile::Healer => 0,
                         ForegroundTile::Player => 0,
                         ForegroundTile::Stairs => 0,
                         ForegroundTile::Flame => 0,
@@ -776,6 +827,15 @@ impl World {
             }
             if let Some(light_index) = entity.light_index {
                 self.lights.remove(&light_index);
+            }
+        }
+    }
+    pub(crate) fn set_light_diminish_denom(&mut self, id: EntityId, denom: u32) {
+        if let Some(entity) = self.entities.get(&id) {
+            if let Some(light_id) = entity.light_index {
+                if let Some(light) = self.lights.get_mut(&light_id) {
+                    light.diminish.denom = denom;
+                }
             }
         }
     }
