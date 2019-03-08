@@ -33,6 +33,18 @@ const FLAME: ViewCell = ViewCell::new()
     .with_foreground(rgb24(255, 120, 0))
     .with_background(colours::BLACK);
 
+const ALTAR: ViewCell = ViewCell::new()
+    .with_character('₪')
+    .with_bold(true)
+    .with_foreground(rgb24(0, 200, 50))
+    .with_background(colours::BLACK);
+
+const FOUNTAIN: ViewCell = ViewCell::new()
+    .with_character('≈')
+    .with_bold(true)
+    .with_foreground(rgb24(50, 100, 200))
+    .with_background(colours::BLACK);
+
 impl View<Gws> for MapView {
     fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
         let to_render = game.to_render();
@@ -60,6 +72,8 @@ impl View<Gws> for MapView {
                             ForegroundTile::Tree => Some(TREE),
                             ForegroundTile::Stairs => Some(STAIRS),
                             ForegroundTile::Flame => Some(FLAME),
+                            ForegroundTile::Altar => Some(ALTAR),
+                            ForegroundTile::Fountain => Some(FOUNTAIN),
                         }
                     });
                 if let Some(foreground_view_cell) = foreground_view_cell {

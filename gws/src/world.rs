@@ -52,6 +52,8 @@ pub enum ForegroundTile {
     Blink0,
     Blink1,
     Flame,
+    Altar,
+    Fountain,
 }
 
 pub struct EntityIter<'a> {
@@ -187,7 +189,29 @@ impl PackedEntity {
             light: Some(light),
             npc: false,
             player: false,
+            hit_points: Some(HitPoints::new(1, 1)),
+            interactive: true,
+        }
+    }
+    pub(crate) fn altar() -> Self {
+        let light = PackedLight::new(rgb24(0, 200, 50), 30, Rational::new(1, 10));
+        Self {
+            foreground_tile: Some(ForegroundTile::Altar),
+            light: Some(light),
+            npc: false,
+            player: false,
             hit_points: Some(HitPoints::new(3, 3)),
+            interactive: true,
+        }
+    }
+    pub(crate) fn fountain() -> Self {
+        let light = PackedLight::new(rgb24(50, 100, 200), 30, Rational::new(1, 10));
+        Self {
+            foreground_tile: Some(ForegroundTile::Fountain),
+            light: Some(light),
+            npc: false,
+            player: false,
+            hit_points: Some(HitPoints::new(1, 1)),
             interactive: true,
         }
     }
@@ -618,6 +642,8 @@ impl World {
                         ForegroundTile::Player => 0,
                         ForegroundTile::Stairs => 0,
                         ForegroundTile::Flame => 0,
+                        ForegroundTile::Altar => 0,
+                        ForegroundTile::Fountain => 0,
                         ForegroundTile::Demon => 0,
                         ForegroundTile::Tree => 128,
                     })

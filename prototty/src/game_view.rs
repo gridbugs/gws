@@ -62,6 +62,16 @@ const FLAME: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(rgb24(255, 120, 0));
 
+const ALTAR: ViewCell = ViewCell::new()
+    .with_character('₪')
+    .with_bold(true)
+    .with_foreground(rgb24(0, 200, 50));
+
+const FOUNTAIN: ViewCell = ViewCell::new()
+    .with_character('≈')
+    .with_bold(true)
+    .with_foreground(rgb24(50, 100, 200));
+
 fn npc_view_cell(entity: &Entity) -> ViewCell {
     let (ch, view_cell) = match entity.foreground_tile().unwrap() {
         ForegroundTile::Demon => (DEMON_CHAR, DEMON_VIEW_CELL),
@@ -127,6 +137,8 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
                 ForegroundTile::Blink0 => BLINK0,
                 ForegroundTile::Blink1 => BLINK1,
                 ForegroundTile::Flame => FLAME,
+                ForegroundTile::Altar => ALTAR,
+                ForegroundTile::Fountain => FOUNTAIN,
                 _ => panic!(),
             }
             .coalesce(view_cell)

@@ -406,6 +406,12 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     gws::InteractiveParam::Flame { entity_id, card },
                                 ));
                             }
+                            gws::InteractiveType::Altar => {
+                                // TODO
+                            }
+                            gws::InteractiveType::Fountain => {
+                                // TODO
+                            }
                         }
                         let input_end_index = game_state.all_inputs.len();
                         let _ = game_state.game.tick(
@@ -677,19 +683,28 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     if let Some(tick) = tick {
                         match tick {
                             gws::Tick::Interact(interactive) => {
-                                let spent = game_state.game.spent();
-                                if spent.is_empty() {
-                                    self.message = Some("You must have spent cards to interact with the Cleansing Flame.".to_string());
-                                } else {
-                                    self.interactive = Some(interactive);
-                                    self.card_menu_title = match interactive.typ {
+                                self.interactive = Some(interactive);
+                                match interactive.typ {
                                     gws::InteractiveType::Flame => {
-                                        "Cleansing Flame: Burn a spent card. Lose 1 life.".to_string()
+                                        let spent = game_state.game.spent();
+                                        if spent.is_empty() {
+                                            self.message = Some("You must have spent cards to interact with the Cleansing Flame.".to_string());
+                                        } else {
+                                            self.card_menu_title =
+                                                "Cleansing Flame: Burn a spent card. Lose 1 life.".to_string();
+                                            self.card_menu = menus::card_menu::create(
+                                                spent,
+                                                &self.card_table,
+                                            );
+                                            self.app_state = AppState::CardMenu;
+                                        }
                                     }
-                                };
-                                    self.card_menu =
-                                        menus::card_menu::create(spent, &self.card_table);
-                                    self.app_state = AppState::CardMenu;
+                                    gws::InteractiveType::Altar => {
+                                        // TODO
+                                    }
+                                    gws::InteractiveType::Fountain => {
+                                        // TODO
+                                    }
                                 }
                             }
                             gws::Tick::End(end) => match end {

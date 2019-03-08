@@ -50,6 +50,8 @@ enum Contents {
     Light(Rgb24),
     Stairs,
     Flame,
+    Altar,
+    Fountain,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -85,6 +87,12 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
             match contents {
                 Contents::Flame => {
                     instructions.push(AddEntity(coord, PackedEntity::flame()));
+                }
+                Contents::Altar => {
+                    instructions.push(AddEntity(coord, PackedEntity::altar()));
+                }
+                Contents::Fountain => {
+                    instructions.push(AddEntity(coord, PackedEntity::fountain()));
                 }
                 Contents::Player => {
                     player_coord = Some(coord);
@@ -162,6 +170,8 @@ fn char_to_cell(ch: char) -> Option<Cell> {
                 Cell::new(Base::Floor).with_contents(Contents::Light(rgb24(0, 0, 255))),
             ),
             'f' => Some(Cell::new(Base::Floor).with_contents(Contents::Flame)),
+            'a' => Some(Cell::new(Base::Floor).with_contents(Contents::Altar)),
+            'p' => Some(Cell::new(Base::Floor).with_contents(Contents::Fountain)),
             _ => None,
         }
     }
@@ -268,7 +278,7 @@ struct BadLevel;
 const MIN_ACCESSIBLE_CELLS: usize = 500;
 const NUM_STAIRS_CANDIDATES: usize = 100;
 const NUM_NPCS: usize = 10;
-const NUM_UPGRADES: usize = 3;
+const NUM_UPGRADES: usize = 4;
 
 fn populate_base_grid<R: Rng>(
     base_grid: &Grid<Base>,
@@ -353,8 +363,10 @@ fn populate_base_grid<R: Rng>(
     for &coord in npc_candidates.iter().take(NUM_NPCS) {
         cell_grid.get_checked_mut(coord).contents = Some(Contents::Demon);
     }
+    let upgrades = [Contents::Flame, Contents::Altar, Contents::Fountain];
     for &coord in npc_candidates.iter().take(NUM_UPGRADES) {
-        cell_grid.get_checked_mut(coord).contents = Some(Contents::Flame);
+        let &upgrade = upgrades.choose(rng).unwrap();
+        cell_grid.get_checked_mut(coord).contents = Some(upgrade);
     }
     Ok(cell_grid)
 }

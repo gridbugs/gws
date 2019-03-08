@@ -153,11 +153,32 @@ pub struct Interactive {
 #[derive(Debug, Clone, Copy)]
 pub enum InteractiveType {
     Flame,
+    Altar,
+    Fountain,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum CharacterUpgrade {
+    Life,
+    Power,
+    Deck,
+    Vision,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum InteractiveParam {
-    Flame { card: Card, entity_id: EntityId },
+    Flame {
+        card: Card,
+        entity_id: EntityId,
+    },
+    Altar {
+        character_upgrade: CharacterUpgrade,
+        entity_id: EntityId,
+    },
+    Fountain {
+        card: Card,
+        entity_id: EntityId,
+    },
 }
 
 pub enum Tick {
@@ -367,6 +388,17 @@ impl Gws {
                     self.world.deal_damage(entity_id, 1);
                     (Ok(ApplyAction::Done), 0)
                 }
+                InteractiveParam::Fountain { card, entity_id } => {
+                    // TODO
+                    (Ok(ApplyAction::Done), 0)
+                }
+                InteractiveParam::Altar {
+                    character_upgrade,
+                    entity_id,
+                } => {
+                    // TODO
+                    (Ok(ApplyAction::Done), 0)
+                }
             },
             Input::Move(direction) => {
                 let result = self.world.move_entity_in_direction_with_attack_policy(
@@ -546,6 +578,8 @@ impl Gws {
                             let entity = self.world.entities().get(&entity_id).unwrap();
                             let typ = match entity.foreground_tile().unwrap() {
                                 ForegroundTile::Flame => InteractiveType::Flame,
+                                ForegroundTile::Altar => InteractiveType::Altar,
+                                ForegroundTile::Fountain => InteractiveType::Fountain,
                                 _ => panic!("illegal interactive"),
                             };
                             return Some(Tick::Interact(Interactive { typ, entity_id }));
