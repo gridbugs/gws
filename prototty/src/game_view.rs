@@ -39,8 +39,8 @@ const STAIRS: ViewCell = ViewCell::new()
     .with_foreground(STAIRS_COLOUR);
 const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
 
-const DEMON_CHAR: char = 'd';
-const DEMON_VIEW_CELL: ViewCell = ViewCell::new()
+const BUMPER_CHAR: char = 'b';
+const BUMPER_VIEW_CELL: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(rgb24(200, 20, 80));
 
@@ -100,7 +100,7 @@ const FOUNTAIN: ViewCell = ViewCell::new()
 fn npc_view_cell(entity: &Entity) -> ViewCell {
     // TODO messy
     let (ch, view_cell) = match entity.foreground_tile().unwrap() {
-        ForegroundTile::Demon => (DEMON_CHAR, DEMON_VIEW_CELL),
+        ForegroundTile::Bumper => (BUMPER_CHAR, BUMPER_VIEW_CELL),
         ForegroundTile::Caster => (CASTER_CHAR, CASTER_VIEW_CELL),
         ForegroundTile::Healer => (HEALER_CHAR, HEALER_VIEW_CELL),
         _ => panic!("not npc"),

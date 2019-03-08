@@ -46,7 +46,7 @@ enum Base {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Contents {
     Player,
-    Demon,
+    Bumper,
     Caster,
     Healer,
     Light(Rgb24),
@@ -99,8 +99,8 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
                 Contents::Player => {
                     player_coord = Some(coord);
                 }
-                Contents::Demon => {
-                    instructions.push(AddEntity(coord, PackedEntity::demon()));
+                Contents::Bumper => {
+                    instructions.push(AddEntity(coord, PackedEntity::bumper()));
                 }
                 Contents::Caster => {
                     instructions.push(AddEntity(coord, PackedEntity::caster()));
@@ -167,7 +167,7 @@ fn char_to_cell(ch: char) -> Option<Cell> {
     } else {
         match ch {
             '@' => Some(Cell::new(Base::Floor).with_contents(Contents::Player)),
-            'd' => Some(Cell::new(Base::Floor).with_contents(Contents::Demon)),
+            'd' => Some(Cell::new(Base::Floor).with_contents(Contents::Bumper)),
             'c' => Some(Cell::new(Base::Floor).with_contents(Contents::Caster)),
             'h' => Some(Cell::new(Base::Floor).with_contents(Contents::Healer)),
             '1' => Some(
@@ -370,8 +370,10 @@ fn populate_base_grid<R: Rng>(
         .filter(|&coord| cell_grid.get_checked(coord).contents.is_none())
         .collect::<Vec<_>>();
     npc_candidates.shuffle(rng);
+    let npcs = [Contents::Bumper, Contents::Caster, Contents::Healer];
     for &coord in npc_candidates.iter().take(NUM_NPCS) {
-        cell_grid.get_checked_mut(coord).contents = Some(Contents::Demon);
+        let &npc = npcs.choose(rng).unwrap();
+        cell_grid.get_checked_mut(coord).contents = Some(npc);
     }
     let upgrades = [Contents::Flame, Contents::Altar, Contents::Fountain];
     for &coord in npc_candidates.iter().take(NUM_UPGRADES) {

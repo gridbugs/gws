@@ -48,7 +48,7 @@ pub enum ForegroundTile {
     Player,
     Tree,
     Stairs,
-    Demon,
+    Bumper,
     Caster,
     Healer,
     Blink0,
@@ -273,13 +273,13 @@ impl PackedEntity {
             interactive: false,
         }
     }
-    pub(crate) fn demon() -> Self {
+    pub(crate) fn bumper() -> Self {
         Self {
-            foreground_tile: Some(ForegroundTile::Demon),
+            foreground_tile: Some(ForegroundTile::Bumper),
             light: None,
             npc: true,
             player: false,
-            hit_points: Some(HitPoints::new(2, 2)),
+            hit_points: Some(HitPoints::new(2, 3)),
             interactive: false,
         }
     }
@@ -767,7 +767,7 @@ impl World {
                         ForegroundTile::Flame => 0,
                         ForegroundTile::Altar => 0,
                         ForegroundTile::Fountain => 0,
-                        ForegroundTile::Demon => 0,
+                        ForegroundTile::Bumper => 0,
                         ForegroundTile::Tree => 128,
                     })
             })

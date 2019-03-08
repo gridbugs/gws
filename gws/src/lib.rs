@@ -21,6 +21,7 @@ use crate::vision::*;
 pub use crate::world::*;
 use coord_2d::*;
 use direction::*;
+use line_2d::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use rgb24::*;
@@ -248,8 +249,8 @@ pub enum CardParam {
 
 const DAMAGE_ANIMATION_PERIOD: Duration = Duration::from_millis(250);
 const BLINK_ANIMATION_PERIOD: Duration = Duration::from_millis(50);
-const PROJECTILE_ANIMATION_PERIOD: Duration = Duration::from_millis(20);
-const GLOW_FADE_IN_PERIOD: Duration = Duration::from_millis(20);
+const PROJECTILE_ANIMATION_PERIOD: Duration = Duration::from_millis(50);
+const GLOW_FADE_IN_PERIOD: Duration = Duration::from_millis(50);
 
 impl AnimationState {
     fn update(self, world: &mut World) -> Option<Animation> {
@@ -596,57 +597,63 @@ impl Gws {
 
     fn engine_turn(&mut self) {
         for &(id, direction, typ) in self.pathfinding.committed_actions().iter() {
-            let entity = self.world.entities().get(&id).unwrap();
-            let result = match typ {
-                CommitmentType::Move => self
-                    .world
-                    .move_entity_in_direction_with_attack_policy(id, direction),
-                CommitmentType::Cast => self.world.spark_in_direction(id, direction),
-                CommitmentType::Heal(0) => {
-                    let heal_range = 10;
-                    let coord = entity.coord();
-                    let to_heal = self
+            if let Some(entity) = self.world.entities().get(&id) {
+                let result = match typ {
+                    CommitmentType::Move => self
                         .world
-                        .npc_ids()
-                        .map(|id| self.world.entities().get(id).unwrap())
-                        .filter_map(|e| {
-                            if entity.coord().manhattan_distance(e.coord()) < heal_range {
-                                if let Some(hit_points) = e.hit_points() {
-                                    if hit_points.current < hit_points.max {
-                                        Some(e.id())
+                        .move_entity_in_direction_with_attack_policy(id, direction),
+                    CommitmentType::Cast => self.world.spark_in_direction(id, direction),
+                    CommitmentType::Heal(0) => {
+                        let heal_range = 10;
+                        let coord = entity.coord();
+                        let to_heal = self
+                            .world
+                            .npc_ids()
+                            .map(|id| self.world.entities().get(id).unwrap())
+                            .filter_map(|e| {
+                                if entity.coord().manhattan_distance(e.coord())
+                                    < heal_range
+                                {
+                                    if let Some(hit_points) = e.hit_points() {
+                                        if hit_points.current < hit_points.max {
+                                            Some(e.id())
+                                        } else {
+                                            None
+                                        }
                                     } else {
                                         None
                                     }
                                 } else {
                                     None
                                 }
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<_>>();
-                    for id in to_heal {
-                        let _ = self.world.heal(id, 1);
+                            })
+                            .collect::<Vec<_>>();
+                        for id in to_heal {
+                            let _ = self.world.heal(id, 1);
+                        }
+                        let _ = self.world.set_heal_countdown(id, None);
+                        Ok(ApplyAction::Animation(Animation::glow_fade_out(
+                            self.world.add_entity(
+                                coord,
+                                PackedEntity::glow(rgb24(255, 255, 0)),
+                            ),
+                            10,
+                        )))
                     }
-                    let _ = self.world.set_heal_countdown(id, None);
-                    Ok(ApplyAction::Animation(Animation::glow_fade_out(
-                        self.world
-                            .add_entity(coord, PackedEntity::glow(rgb24(255, 255, 0))),
-                        10,
-                    )))
+                    CommitmentType::Heal(count) => {
+                        self.world.set_heal_countdown(id, Some(count))
+                    }
+                };
+                match result {
+                    Ok(ApplyAction::Done) => (),
+                    Ok(ApplyAction::Animation(animation)) => {
+                        self.animation.push(animation)
+                    }
+                    Ok(ApplyAction::Interact(_)) => (),
+                    Err(_) => (),
                 }
-                CommitmentType::Heal(count) => {
-                    self.world.set_heal_countdown(id, Some(count))
-                }
-            };
-            match result {
-                Ok(ApplyAction::Done) => (),
-                Ok(ApplyAction::Animation(animation)) => self.animation.push(animation),
-                Ok(ApplyAction::Interact(_)) => (),
-                Err(_) => (),
             }
         }
-        self.engine_commit();
     }
     fn engine_commit(&mut self) {
         let player_coord = self.player().coord();
@@ -663,8 +670,31 @@ impl Gws {
                         || npc.coord().y == player_coord.y)
                     && npc.coord().manhattan_distance(player_coord) < 8
                 {
-                    self.pathfinding
-                        .commit_action(id, &self.world, CommitmentType::Cast);
+                    let mut clean_shot = true;
+                    for coord in LineSegment::new(npc.coord(), player_coord)
+                        .iter_config(Config::new().exclude_start().exclude_end())
+                    {
+                        if let Some(cell) = self.world.grid().get(coord) {
+                            if cell.contains_npc() {
+                                clean_shot = false;
+                            } else if cell.is_solid() {
+                                clean_shot = false;
+                            }
+                        }
+                    }
+                    if clean_shot {
+                        self.pathfinding.commit_action(
+                            id,
+                            &self.world,
+                            CommitmentType::Cast,
+                        );
+                    } else {
+                        self.pathfinding.commit_action(
+                            id,
+                            &self.world,
+                            CommitmentType::Move,
+                        );
+                    }
                 } else if npc.foreground_tile() == Some(ForegroundTile::Healer) {
                     if let Some(heal_countdown) = npc.heal_countdown() {
                         if heal_countdown > 0 {
@@ -710,6 +740,7 @@ impl Gws {
                 }
             }
         }
+        self.turn = Turn::Player;
     }
 
     fn between_levels(&self) -> BetweenLevels {
@@ -752,6 +783,9 @@ impl Gws {
                 self.animation.push(animation);
             }
         }
+        if self.animation.is_empty() && self.turn == Turn::Engine {
+            self.engine_commit();
+        }
     }
 
     pub fn tick<I: IntoIterator<Item = Input>, R: Rng>(
@@ -791,7 +825,6 @@ impl Gws {
         if self.animation.is_empty() {
             if self.turn == Turn::Engine {
                 self.engine_turn();
-                self.turn = Turn::Player;
             }
         }
         self.animate(Duration::from_secs(0));

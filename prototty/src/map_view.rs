@@ -65,7 +65,7 @@ impl View<Gws> for MapView {
                 let foreground_view_cell =
                     entity.foreground_tile().and_then(|foreground_tile| {
                         match foreground_tile {
-                            ForegroundTile::Demon => None,
+                            ForegroundTile::Bumper => None,
                             ForegroundTile::Caster => None,
                             ForegroundTile::Healer => None,
                             ForegroundTile::Spark => None,
