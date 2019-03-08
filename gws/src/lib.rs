@@ -97,8 +97,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -112,6 +112,12 @@ impl BetweenLevels {
     fn initial() -> Self {
         let player = PackedEntity::player();
         let deck = vec![
+            Card::Spark,
+            Card::Spark,
+            Card::Spark,
+            Card::Spark,
+            Card::Spark,
+            /*
             Card::Bump,
             Card::Bump,
             Card::Bump,
@@ -126,7 +132,7 @@ impl BetweenLevels {
             Card::Blink,
             Card::Blink,
             Card::Blink,
-            Card::Blink,
+            Card::Blink, */
         ];
         let burnt = Vec::new();
         let hand_size = 5;
@@ -203,6 +209,11 @@ enum AnimationState {
         id: EntityId,
         stage: u8,
     },
+    Projectile {
+        id: EntityId,
+        direction: CardinalDirection,
+        remaining_range: u32,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -210,6 +221,7 @@ pub enum Card {
     Bump,
     Blink,
     Heal,
+    Spark,
 }
 
 impl Card {
@@ -218,6 +230,7 @@ impl Card {
             Card::Blink => 20,
             Card::Bump => 10,
             Card::Heal => 5,
+            Card::Spark => 20,
         }
     }
 }
@@ -231,6 +244,7 @@ pub enum CardParam {
 
 const DAMAGE_ANIMATION_PERIOD: Duration = Duration::from_millis(250);
 const BLINK_ANIMATION_PERIOD: Duration = Duration::from_millis(50);
+const PROJECTILE_ANIMATION_PERIOD: Duration = Duration::from_millis(50);
 
 impl AnimationState {
     fn update(self, world: &mut World) -> Option<Animation> {
@@ -267,6 +281,40 @@ impl AnimationState {
                     None
                 }
             }
+            AnimationState::Projectile {
+                id,
+                direction,
+                remaining_range,
+            } => {
+                let next = match world.can_move_projectile_in_direction(id, direction) {
+                    Err(_) => None,
+                    Ok(ProjectileMove::HitObstacle) => None,
+                    Ok(ProjectileMove::HitCharacter(id)) => {
+                        world.deal_damage(id, 1);
+                        None
+                    }
+                    Ok(ProjectileMove::Continue) => {
+                        if remaining_range == 0 {
+                            None
+                        } else {
+                            Some(Animation::new(
+                                PROJECTILE_ANIMATION_PERIOD,
+                                AnimationState::Projectile {
+                                    remaining_range: remaining_range - 1,
+                                    direction,
+                                    id,
+                                },
+                            ))
+                        }
+                    }
+                };
+                if next.is_none() {
+                    world.remove_entity(id);
+                } else {
+                    world.move_entity_in_direction(id, direction);
+                }
+                next
+            }
         }
     }
 }
@@ -282,6 +330,8 @@ struct Animation {
     next_update_in: Duration,
     state: AnimationState,
 }
+
+const PROJECTILE_RANGE: u32 = 12;
 
 impl Animation {
     pub fn new(next_update_in: Duration, state: AnimationState) -> Self {
@@ -312,6 +362,16 @@ impl Animation {
     }
     pub fn blink(coord: Coord) -> Self {
         Self::new(Duration::from_secs(0), AnimationState::BlinkStart { coord })
+    }
+    pub fn spark(id: EntityId, direction: CardinalDirection) -> Self {
+        Self::new(
+            Duration::from_secs(0),
+            AnimationState::Projectile {
+                id,
+                direction,
+                remaining_range: PROJECTILE_RANGE,
+            },
+        )
     }
 }
 
@@ -427,6 +487,9 @@ impl Gws {
                     (Card::Bump, CardParam::CardinalDirection(direction)) => {
                         self.bump(direction)
                     }
+                    (Card::Spark, CardParam::CardinalDirection(direction)) => {
+                        self.spark(direction)
+                    }
                     (Card::Heal, CardParam::Confirm) => self.heal(1),
                     _ => return Err(CancelAction::InvalidCard),
                 };
@@ -487,6 +550,13 @@ impl Gws {
 
     fn heal(&mut self, by: u32) -> Result<ApplyAction, CancelAction> {
         self.world.heal(self.player_id, by)
+    }
+
+    fn spark(
+        &mut self,
+        direction: CardinalDirection,
+    ) -> Result<ApplyAction, CancelAction> {
+        self.world.spark_in_direction(self.player_id, direction)
     }
 
     fn engine_turn(&mut self) {

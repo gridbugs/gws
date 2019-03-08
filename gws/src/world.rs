@@ -54,6 +54,7 @@ pub enum ForegroundTile {
     Flame,
     Altar,
     Fountain,
+    Spark,
 }
 
 pub struct EntityIter<'a> {
@@ -156,6 +157,9 @@ impl Entity {
     pub fn is_npc(&self) -> bool {
         self.npc
     }
+    pub fn is_projectile(&self) -> bool {
+        self.foreground_tile == Some(ForegroundTile::Spark)
+    }
 }
 
 #[derive(Clone)]
@@ -182,6 +186,17 @@ impl Default for PackedEntity {
 }
 
 impl PackedEntity {
+    pub(crate) fn spark() -> Self {
+        let light = PackedLight::new(rgb24(0, 200, 200), 30, Rational::new(1, 10));
+        Self {
+            foreground_tile: Some(ForegroundTile::Spark),
+            light: Some(light),
+            npc: false,
+            player: false,
+            hit_points: None,
+            interactive: false,
+        }
+    }
     pub(crate) fn flame() -> Self {
         let light = PackedLight::new(rgb24(255, 120, 0), 30, Rational::new(1, 10));
         Self {
@@ -248,6 +263,12 @@ impl PackedEntity {
             interactive: false,
         }
     }
+}
+
+pub enum ProjectileMove {
+    Continue,
+    HitObstacle,
+    HitCharacter(EntityId),
 }
 
 #[derive(Clone)]
@@ -510,6 +531,20 @@ impl World {
 
     const BLINK_RANGE: u32 = 8;
 
+    pub(crate) fn spark_in_direction(
+        &mut self,
+        id: EntityId,
+        direction: CardinalDirection,
+    ) -> Result<ApplyAction, CancelAction> {
+        if let Some(entity) = self.entities.get(&id) {
+            let id = self
+                .add_entity(entity.coord() + direction.coord(), PackedEntity::spark());
+            Ok(ApplyAction::Animation(Animation::spark(id, direction)))
+        } else {
+            Err(CancelAction::NoEntity)
+        }
+    }
+
     pub(crate) fn blink_entity_to_coord(
         &mut self,
         id: EntityId,
@@ -589,6 +624,43 @@ impl World {
         }
     }
 
+    pub(crate) fn can_move_projectile_in_direction(
+        &self,
+        id: EntityId,
+        direction: CardinalDirection,
+    ) -> Result<ProjectileMove, CancelAction> {
+        if let Some(entity) = self.entities.get(&id) {
+            let coord = entity.coord + direction.coord();
+            if let Some(cell) = self.grid.get(coord) {
+                if cell.contains_player() || cell.contains_npc() {
+                    let character = cell
+                        .entity_iter(&self.entities)
+                        .find_map(|e| if e.player || e.npc { Some(e.id) } else { None })
+                        .unwrap();
+                    Ok(ProjectileMove::HitCharacter(character))
+                } else if cell.is_solid() {
+                    Ok(ProjectileMove::HitObstacle)
+                } else {
+                    Ok(ProjectileMove::Continue)
+                }
+            } else {
+                Err(CancelAction::OutOfBounds)
+            }
+        } else {
+            Err(CancelAction::NoEntity)
+        }
+    }
+
+    pub(crate) fn move_entity_in_direction(
+        &mut self,
+        id: EntityId,
+        direction: CardinalDirection,
+    ) {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            let coord = entity.coord + direction.coord();
+            move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
+        }
+    }
     pub(crate) fn move_entity_in_direction_with_attack_policy(
         &mut self,
         id: EntityId,
@@ -604,7 +676,6 @@ impl World {
                         .map(|e| e.id)
                         .unwrap();
                     Ok(ApplyAction::Interact(interactive_id))
-                //Ok(ApplyAction::Interactive)
                 } else if cell.is_solid() {
                     Err(CancelAction::MoveIntoSolidCell)
                 } else if cell.contains_npc() {
@@ -639,6 +710,7 @@ impl World {
                 e.foreground_tile()
                     .map(|foreground_tile| match foreground_tile {
                         ForegroundTile::Blink0 | ForegroundTile::Blink1 => 0,
+                        ForegroundTile::Spark => 0,
                         ForegroundTile::Player => 0,
                         ForegroundTile::Stairs => 0,
                         ForegroundTile::Flame => 0,

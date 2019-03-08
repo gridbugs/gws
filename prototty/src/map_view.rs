@@ -66,6 +66,7 @@ impl View<Gws> for MapView {
                     entity.foreground_tile().and_then(|foreground_tile| {
                         match foreground_tile {
                             ForegroundTile::Demon => None,
+                            ForegroundTile::Spark => None,
                             ForegroundTile::Blink0 => None,
                             ForegroundTile::Blink1 => None,
                             ForegroundTile::Player => Some(PLAYER),

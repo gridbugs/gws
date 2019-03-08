@@ -207,6 +207,7 @@ pub struct CardTable {
     bump: CardInfo,
     blink: CardInfo,
     heal: CardInfo,
+    spark: CardInfo,
 }
 
 impl CardTable {
@@ -230,6 +231,12 @@ impl CardTable {
                 "Recover 1 hit point".to_string(),
                 rgb24(0, 20, 0),
             ),
+            spark: CardInfo::new(
+                Card::Spark,
+                "Spark".to_string(),
+                "Shoot a spark dealing 1 damage with 12 range.".to_string(),
+                rgb24(20, 0, 0),
+            ),
         }
     }
     pub fn get(&self, card: Card) -> &CardInfo {
@@ -237,6 +244,7 @@ impl CardTable {
             Card::Bump => &self.bump,
             Card::Blink => &self.blink,
             Card::Heal => &self.heal,
+            Card::Spark => &self.spark,
         }
     }
 }

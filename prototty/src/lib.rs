@@ -830,7 +830,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     card_selection = None;
                 } else {
                     let choice = match card {
-                        gws::Card::Bump => {
+                        gws::Card::Bump | gws::Card::Spark => {
                             message = Some("Choose a direction.".to_string());
                             CardParamChoice::Direction
                         }

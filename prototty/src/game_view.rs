@@ -57,6 +57,11 @@ const BLINK1: ViewCell = ViewCell::new()
     .with_bold(false)
     .with_foreground(rgb24(0, 255, 255));
 
+const SPARK: ViewCell = ViewCell::new()
+    .with_character('*')
+    .with_bold(false)
+    .with_foreground(rgb24(0, 200, 200));
+
 const FLAME: ViewCell = ViewCell::new()
     .with_character('Ψ')
     .with_bold(true)
@@ -132,6 +137,7 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
         } else if let Some(foreground_tile) = entity.foreground_tile() {
             match foreground_tile {
                 ForegroundTile::Player => PLAYER,
+                ForegroundTile::Spark => SPARK,
                 ForegroundTile::Tree => TREE,
                 ForegroundTile::Stairs => STAIRS,
                 ForegroundTile::Blink0 => BLINK0,
