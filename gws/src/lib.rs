@@ -116,10 +116,6 @@ impl BetweenLevels {
             Card::Bump,
             Card::Bump,
             Card::Bump,
-            Card::Bump,
-            Card::Bump,
-            Card::Heal,
-            Card::Heal,
             Card::Heal,
             Card::Heal,
             Card::Heal,
@@ -127,6 +123,10 @@ impl BetweenLevels {
             Card::Blink,
             Card::Blink,
             Card::Blink,
+            Card::Block,
+            Card::Block,
+            Card::Block,
+            Card::Block,
         ];
         let burnt = Vec::new();
         let hand_size = 5;
@@ -228,6 +228,7 @@ pub enum Card {
     Clog,
     Parasite,
     Drain,
+    Block,
 }
 
 const NEGATIVE_CARDS: &'static [Card] = &[Card::Clog, Card::Parasite, Card::Drain];
@@ -244,6 +245,7 @@ impl Card {
             Card::Clog => 10,
             Card::Parasite => 10,
             Card::Drain => 40,
+            Card::Block => 10,
         }
     }
 }
@@ -573,6 +575,7 @@ impl Gws {
                         (Ok(ApplyAction::Done), Burnt)
                     }
                     (Card::Drain, CardParam::Confirm) => (Ok(ApplyAction::Done), Burnt),
+                    (Card::Block, CardParam::Coord(coord)) => (self.block(coord), Spent),
                     _ => return Err(CancelAction::InvalidCard),
                 };
                 if result.is_ok() {
@@ -616,6 +619,24 @@ impl Gws {
         }
     }
 
+    fn block(&mut self, coord: Coord) -> Result<ApplyAction, CancelAction> {
+        if self.visible_area.is_visible(coord)
+            && self.visible_area.light_colour(coord) != grey24(0)
+        {
+            if let Some(cell) = self.world.grid().get(coord) {
+                if cell.contains_npc() || cell.is_solid() {
+                    Err(CancelAction::LocationBlocked)
+                } else {
+                    self.world.add_entity(coord, PackedEntity::block());
+                    Ok(ApplyAction::Done)
+                }
+            } else {
+                Err(CancelAction::OutOfBounds)
+            }
+        } else {
+            Err(CancelAction::DestinationNotVisible)
+        }
+    }
     fn blink(&mut self, coord: Coord) -> Result<ApplyAction, CancelAction> {
         if self.visible_area.is_visible(coord)
             && self.visible_area.light_colour(coord) != grey24(0)
@@ -645,6 +666,7 @@ impl Gws {
     }
 
     fn engine_turn(&mut self) {
+        self.world.reduce_remaining_turns();
         for &(id, direction, typ) in self.pathfinding.committed_actions().iter() {
             if let Some(entity) = self.world.entities().get(&id) {
                 let result = match typ {

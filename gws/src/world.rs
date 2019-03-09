@@ -45,6 +45,7 @@ pub enum BackgroundTile {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ForegroundTile {
+    Block,
     Player,
     Tree,
     Stairs,
@@ -130,7 +131,7 @@ impl Light {
 pub type LightId = u64;
 pub type EntityId = u64;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Entity {
     id: EntityId,
     coord: Coord,
@@ -139,6 +140,7 @@ pub struct Entity {
     npc: bool,
     player: bool,
     interactive: bool,
+    solid: bool,
     taking_damage_in_direction: Option<CardinalDirection>,
     hit_points: Option<HitPoints>,
     heal_countdown: Option<u32>,
@@ -179,6 +181,8 @@ pub struct PackedEntity {
     pub(crate) player: bool,
     pub(crate) interactive: bool,
     pub(crate) hit_points: Option<HitPoints>,
+    pub(crate) remaining_turns: Option<u32>,
+    pub(crate) solid: bool,
 }
 
 impl Default for PackedEntity {
@@ -190,6 +194,8 @@ impl Default for PackedEntity {
             player: false,
             hit_points: None,
             interactive: false,
+            remaining_turns: None,
+            solid: false,
         }
     }
 }
@@ -204,6 +210,7 @@ impl PackedEntity {
             player: false,
             hit_points: None,
             interactive: false,
+            ..Default::default()
         }
     }
     pub(crate) fn flame() -> Self {
@@ -215,6 +222,7 @@ impl PackedEntity {
             player: false,
             hit_points: Some(HitPoints::new(3, 3)),
             interactive: true,
+            ..Default::default()
         }
     }
     pub(crate) fn altar() -> Self {
@@ -226,6 +234,7 @@ impl PackedEntity {
             player: false,
             hit_points: Some(HitPoints::new(1, 1)),
             interactive: true,
+            ..Default::default()
         }
     }
     pub(crate) fn fountain() -> Self {
@@ -237,6 +246,7 @@ impl PackedEntity {
             player: false,
             hit_points: Some(HitPoints::new(1, 1)),
             interactive: true,
+            ..Default::default()
         }
     }
 
@@ -249,6 +259,7 @@ impl PackedEntity {
             player: false,
             hit_points: None,
             interactive: false,
+            ..Default::default()
         }
     }
     pub(crate) fn glow(colour: Rgb24) -> Self {
@@ -260,6 +271,15 @@ impl PackedEntity {
             player: false,
             hit_points: None,
             interactive: false,
+            ..Default::default()
+        }
+    }
+    pub(crate) fn block() -> Self {
+        Self {
+            foreground_tile: Some(ForegroundTile::Block),
+            remaining_turns: Some(4),
+            solid: true,
+            ..Default::default()
         }
     }
     pub(crate) fn player() -> Self {
@@ -271,6 +291,7 @@ impl PackedEntity {
             player: true,
             hit_points: Some(HitPoints::new(2, 4)),
             interactive: false,
+            ..Default::default()
         }
     }
     pub(crate) fn bumper() -> Self {
@@ -281,6 +302,7 @@ impl PackedEntity {
             player: false,
             hit_points: Some(HitPoints::new(2, 3)),
             interactive: false,
+            ..Default::default()
         }
     }
     pub(crate) fn caster() -> Self {
@@ -291,6 +313,7 @@ impl PackedEntity {
             player: false,
             hit_points: Some(HitPoints::new(1, 2)),
             interactive: false,
+            ..Default::default()
         }
     }
     pub(crate) fn healer() -> Self {
@@ -301,6 +324,7 @@ impl PackedEntity {
             player: false,
             hit_points: Some(HitPoints::new(1, 1)),
             interactive: false,
+            ..Default::default()
         }
     }
 }
@@ -343,6 +367,7 @@ pub struct WorldCell {
     npc_count: usize,
     player_count: usize,
     interactive_count: usize,
+    solid_count: usize,
 }
 
 impl WorldCell {
@@ -353,6 +378,7 @@ impl WorldCell {
             npc_count: 0,
             player_count: 0,
             interactive_count: 0,
+            solid_count: 0,
         }
     }
     pub fn background_tile(&self) -> BackgroundTile {
@@ -368,7 +394,9 @@ impl WorldCell {
         ForegroundTiles(self.entity_iter(entities))
     }
     pub fn is_solid(&self) -> bool {
-        self.background_tile == BackgroundTile::IceWall || self.interactive_count != 0
+        self.background_tile == BackgroundTile::IceWall
+            || self.interactive_count != 0
+            || self.solid_count != 0
     }
     pub fn contains_npc(&self) -> bool {
         self.npc_count > 0
@@ -397,6 +425,7 @@ pub struct World {
     next_id: EntityId,
     next_light_id: LightId,
     npc_ids: HashSet<EntityId>,
+    remove_in_turns: HashMap<EntityId, u32>,
 }
 
 #[derive(Debug)]
@@ -406,6 +435,7 @@ pub enum CancelAction {
     OutOfBounds,
     OutOfRange,
     DestinationNotVisible,
+    LocationBlocked,
     NoEntity,
     NoField,
     NothingToAttack,
@@ -468,6 +498,7 @@ impl World {
             next_id: 0,
             next_light_id: 0,
             npc_ids: HashSet::new(),
+            remove_in_turns: HashMap::new(),
         }
     }
     pub(crate) fn pack_entity(&self, id: EntityId) -> PackedEntity {
@@ -481,6 +512,8 @@ impl World {
             player: entity.player,
             hit_points: entity.hit_points,
             interactive: entity.interactive,
+            remaining_turns: self.remove_in_turns.get(&id).cloned(),
+            solid: entity.solid,
         }
     }
     pub(crate) fn lights(&self) -> &HashMap<LightId, Light> {
@@ -512,6 +545,19 @@ impl World {
             }
         }
     }
+    pub(crate) fn reduce_remaining_turns(&mut self) {
+        let mut ids_to_remove = Vec::new();
+        for (&id, count) in self.remove_in_turns.iter_mut() {
+            if *count == 0 {
+                ids_to_remove.push(id);
+            } else {
+                *count -= 1;
+            }
+        }
+        for id in ids_to_remove {
+            self.remove_entity(id);
+        }
+    }
     pub(crate) fn add_entity(&mut self, coord: Coord, entity: PackedEntity) -> EntityId {
         let PackedEntity {
             foreground_tile,
@@ -520,6 +566,8 @@ impl World {
             player,
             hit_points,
             interactive,
+            remaining_turns,
+            solid,
         } = entity;
         let id = self.next_id;
         self.next_id += 1;
@@ -529,6 +577,9 @@ impl World {
             self.lights.insert(light_index, packed_light.light(coord));
             light_index
         });
+        if let Some(remaining_turns) = remaining_turns {
+            self.remove_in_turns.insert(id, remaining_turns);
+        }
         let entity = Entity {
             id,
             coord,
@@ -540,6 +591,7 @@ impl World {
             hit_points,
             interactive,
             heal_countdown: None,
+            solid,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {
@@ -552,6 +604,9 @@ impl World {
             }
             if interactive {
                 cell.interactive_count += 1;
+            }
+            if solid {
+                cell.solid_count += 1;
             }
         }
         if npc {
@@ -760,6 +815,7 @@ impl World {
                     .map(|foreground_tile| match foreground_tile {
                         ForegroundTile::Blink0 | ForegroundTile::Blink1 => 0,
                         ForegroundTile::Spark => 0,
+                        ForegroundTile::Block => 255,
                         ForegroundTile::Caster => 0,
                         ForegroundTile::Healer => 0,
                         ForegroundTile::Player => 0,
@@ -832,6 +888,9 @@ impl World {
                 }
                 if entity.interactive {
                     cell.interactive_count -= 1;
+                }
+                if entity.solid {
+                    cell.solid_count -= 1;
                 }
             }
             if let Some(light_index) = entity.light_index {

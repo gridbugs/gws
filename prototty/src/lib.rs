@@ -478,6 +478,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     ForegroundTile::Blink1 => None,
                                     ForegroundTile::Player => Some("You".to_string()),
                                     ForegroundTile::Tree => Some("Tree".to_string()),
+                                    ForegroundTile::Block => Some("Block".to_string()),
                                     ForegroundTile::Stairs => {
                                         Some("Stairs to the next level".to_string())
                                     }
@@ -949,6 +950,10 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                         self.message =
                                             Some("Can't move there!".to_string())
                                     }
+                                    LocationBlocked => {
+                                        self.message =
+                                            Some("Location is blocked".to_string())
+                                    }
                                     OutOfRange => {
                                         self.message = Some("Out of range!".to_string())
                                     }
@@ -1057,8 +1062,8 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             message = Some("Choose a direction.".to_string());
                             CardParamChoice::Direction
                         }
-                        gws::Card::Blink => {
-                            message = Some("Choose a destination.".to_string());
+                        gws::Card::Blink | gws::Card::Block => {
+                            message = Some("Choose a location.".to_string());
                             CardParamChoice::Coord(
                                 game_state.game.to_render().player.coord(),
                             )

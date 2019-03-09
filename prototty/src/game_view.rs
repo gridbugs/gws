@@ -8,10 +8,25 @@ const FLOOR_BACKGROUND: Rgb24 = rgb24(0, 10, 30);
 const FLOOR_FOREGROUND: Rgb24 = rgb24(120, 150, 240);
 const GROUND_BACKGROUND: Rgb24 = rgb24(2, 20, 5);
 const GROUND_FOREGROUND: Rgb24 = rgb24(255, 255, 255);
-const ICE_WALL_TOP_COLOUR: Rgb24 = rgb24(60, 80, 120);
-const ICE_WALL_FRONT_COLOUR: Rgb24 = FLOOR_FOREGROUND;
 const TREE_COLOUR: Rgb24 = rgb24(30, 200, 60);
 const STAIRS_COLOUR: Rgb24 = rgb24(220, 100, 50);
+
+const ICE_WALL_TOP_COLOUR: Rgb24 = rgb24(60, 80, 120);
+const ICE_WALL_FRONT_COLOUR: Rgb24 = FLOOR_FOREGROUND;
+const ICE_WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
+    .with_character('▀')
+    .with_foreground(ICE_WALL_TOP_COLOUR)
+    .with_background(ICE_WALL_FRONT_COLOUR);
+const ICE_WALL_ABOVE_WALL: ViewCell = ViewCell::new()
+    .with_character(' ')
+    .with_background(ICE_WALL_TOP_COLOUR);
+
+const BLOCK_TOP_COLOUR: Rgb24 = rgb24(60, 140, 100);
+const BLOCK_FRONT_COLOUR: Rgb24 = rgb24(100, 200, 140);
+const BLOCK: ViewCell = ViewCell::new()
+    .with_character('▀')
+    .with_foreground(BLOCK_TOP_COLOUR)
+    .with_background(BLOCK_FRONT_COLOUR);
 
 const FLOOR: ViewCell = ViewCell::new()
     .with_character('.')
@@ -21,13 +36,6 @@ const GROUND: ViewCell = ViewCell::new()
     .with_character('.')
     .with_foreground(GROUND_FOREGROUND)
     .with_background(GROUND_BACKGROUND);
-const ICE_WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
-    .with_character('▀')
-    .with_foreground(ICE_WALL_TOP_COLOUR)
-    .with_background(ICE_WALL_FRONT_COLOUR);
-const ICE_WALL_ABOVE_WALL: ViewCell = ViewCell::new()
-    .with_character(' ')
-    .with_background(ICE_WALL_TOP_COLOUR);
 const TREE: ViewCell = ViewCell::new()
     .with_character('♣')
     .with_bold(true)
@@ -105,6 +113,7 @@ fn npc_view_cell(entity: &Entity) -> ViewCell {
         _ => panic!("not npc"),
     };
     match entity.hit_points().expect("missing hit points").current {
+        0 => view_cell.with_character('?'),
         1 => view_cell.with_character(ch),
         2 => view_cell.with_character(ch.to_uppercase().next().unwrap()),
         3 => view_cell
@@ -148,7 +157,10 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
             }
         }
     };
-    if let Some(entity) = cell.entity_iter(to_render.world.entities()).next() {
+    if let Some(entity) = cell
+        .entity_iter(to_render.world.entities())
+        .find(|e| e.foreground_tile().is_some())
+    {
         if let Some(direction) = entity.taking_damage_in_direction() {
             ViewCell::new()
                 .with_character(ARROW_CHARS[direction])
@@ -164,6 +176,7 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
         } else if let Some(foreground_tile) = entity.foreground_tile() {
             match foreground_tile {
                 ForegroundTile::Player => PLAYER,
+                ForegroundTile::Block => BLOCK,
                 ForegroundTile::Spark => SPARK,
                 ForegroundTile::Tree => TREE,
                 ForegroundTile::Stairs => STAIRS,

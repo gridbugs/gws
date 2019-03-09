@@ -227,6 +227,7 @@ pub struct CardTable {
     clog: CardInfo,
     parasite: CardInfo,
     drain: CardInfo,
+    block: CardInfo,
 }
 
 impl CardTable {
@@ -274,6 +275,12 @@ impl CardTable {
                 "Burn this card.".to_string(),
                 rgb24(20, 20, 20),
             ),
+            block: CardInfo::new(
+                Card::Block,
+                "Block".to_string(),
+                "Summon a temporary obstacle.".to_string(),
+                rgb24(20, 0, 0),
+            ),
         }
     }
     pub fn get(&self, card: Card) -> &CardInfo {
@@ -285,6 +292,7 @@ impl CardTable {
             Card::Clog => &self.clog,
             Card::Parasite => &self.parasite,
             Card::Drain => &self.drain,
+            Card::Block => &self.block,
         }
     }
 }
