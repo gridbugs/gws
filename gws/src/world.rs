@@ -144,9 +144,13 @@ pub struct Entity {
     taking_damage_in_direction: Option<CardinalDirection>,
     hit_points: Option<HitPoints>,
     heal_countdown: Option<u32>,
+    frozen: Option<u32>,
 }
 
 impl Entity {
+    pub fn is_frozen(&self) -> bool {
+        self.frozen.is_some()
+    }
     pub fn id(&self) -> EntityId {
         self.id
     }
@@ -558,6 +562,20 @@ impl World {
             self.remove_entity(id);
         }
     }
+    pub(crate) fn freeze_entity(&mut self, id: EntityId, turns: u32) {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            entity.frozen = Some(turns);
+        }
+    }
+    pub(crate) fn reduce_freeze(&mut self, id: EntityId) {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            entity.frozen = match entity.frozen {
+                None => None,
+                Some(0) => None,
+                Some(n) => Some(n - 1),
+            };
+        }
+    }
     pub(crate) fn add_entity(&mut self, coord: Coord, entity: PackedEntity) -> EntityId {
         let PackedEntity {
             foreground_tile,
@@ -592,6 +610,7 @@ impl World {
             interactive,
             heal_countdown: None,
             solid,
+            frozen: None,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {

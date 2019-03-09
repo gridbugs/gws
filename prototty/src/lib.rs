@@ -1062,7 +1062,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             message = Some("Choose a direction.".to_string());
                             CardParamChoice::Direction
                         }
-                        gws::Card::Blink | gws::Card::Block => {
+                        gws::Card::Blink | gws::Card::Block | gws::Card::Freeze => {
                             message = Some("Choose a location.".to_string());
                             CardParamChoice::Coord(
                                 game_state.game.to_render().player.coord(),

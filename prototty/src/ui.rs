@@ -228,6 +228,7 @@ pub struct CardTable {
     parasite: CardInfo,
     drain: CardInfo,
     block: CardInfo,
+    freeze: CardInfo,
 }
 
 impl CardTable {
@@ -278,8 +279,14 @@ impl CardTable {
             block: CardInfo::new(
                 Card::Block,
                 "Block".to_string(),
-                "Summon a temporary obstacle.".to_string(),
-                rgb24(20, 0, 0),
+                "Summon a block which lasts 4 turns.".to_string(),
+                rgb24(0, 20, 0),
+            ),
+            freeze: CardInfo::new(
+                Card::Freeze,
+                "Freeze".to_string(),
+                "Prevent an enemy from moving for 4 turns.".to_string(),
+                rgb24(0, 20, 0),
             ),
         }
     }
@@ -293,6 +300,7 @@ impl CardTable {
             Card::Parasite => &self.parasite,
             Card::Drain => &self.drain,
             Card::Block => &self.block,
+            Card::Freeze => &self.freeze,
         }
     }
 }

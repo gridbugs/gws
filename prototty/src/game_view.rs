@@ -167,12 +167,18 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
                 .with_foreground(rgb24(255, 0, 0))
                 .coalesce(view_cell)
         } else if entity.is_npc() {
-            if let Some(heal_countdown) = entity.heal_countdown() {
+            let view_cell = if let Some(heal_countdown) = entity.heal_countdown() {
                 let ch = heal_countdown.to_string().chars().next().unwrap();
                 HEAL_VIEW_CELL.with_character(ch).coalesce(view_cell)
             } else {
                 npc_view_cell(entity).coalesce(view_cell)
-            }
+            };
+            let view_cell = if entity.is_frozen() {
+                view_cell.with_foreground(rgb24(80, 220, 80))
+            } else {
+                view_cell
+            };
+            view_cell
         } else if let Some(foreground_tile) = entity.foreground_tile() {
             match foreground_tile {
                 ForegroundTile::Player => PLAYER,

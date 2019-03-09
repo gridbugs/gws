@@ -126,7 +126,7 @@ impl BetweenLevels {
             Card::Block,
             Card::Block,
             Card::Block,
-            Card::Block,
+            Card::Freeze,
         ];
         let burnt = Vec::new();
         let hand_size = 5;
@@ -229,11 +229,18 @@ pub enum Card {
     Parasite,
     Drain,
     Block,
+    Freeze,
 }
 
 const NEGATIVE_CARDS: &'static [Card] = &[Card::Clog, Card::Parasite, Card::Drain];
-const POSITIVE_CARDS: &'static [Card] =
-    &[Card::Bump, Card::Blink, Card::Heal, Card::Spark];
+const POSITIVE_CARDS: &'static [Card] = &[
+    Card::Bump,
+    Card::Blink,
+    Card::Heal,
+    Card::Spark,
+    Card::Block,
+    Card::Freeze,
+];
 
 impl Card {
     pub fn cost(self) -> u32 {
@@ -246,6 +253,7 @@ impl Card {
             Card::Parasite => 10,
             Card::Drain => 40,
             Card::Block => 10,
+            Card::Freeze => 10,
         }
     }
 }
@@ -523,7 +531,7 @@ impl Gws {
                     use CharacterUpgrade::*;
                     match character_upgrade {
                         Life => self.world.increase_max_hit_points(self.player_id, 2),
-                        Power => self.draw_countdown.max += 2,
+                        Power => self.draw_countdown.max += 10,
                         Hand => self.hand.push(None),
                         Vision => self.world.increase_light_radius(self.player_id, 30),
                     }
@@ -576,6 +584,9 @@ impl Gws {
                     }
                     (Card::Drain, CardParam::Confirm) => (Ok(ApplyAction::Done), Burnt),
                     (Card::Block, CardParam::Coord(coord)) => (self.block(coord), Spent),
+                    (Card::Freeze, CardParam::Coord(coord)) => {
+                        (self.freeze(coord), Spent)
+                    }
                     _ => return Err(CancelAction::InvalidCard),
                 };
                 if result.is_ok() {
@@ -616,6 +627,29 @@ impl Gws {
                 self.waste.push(card);
             }
             *slot = self.deck.pop();
+        }
+    }
+
+    fn freeze(&mut self, coord: Coord) -> Result<ApplyAction, CancelAction> {
+        if self.visible_area.is_visible(coord)
+            && self.visible_area.light_colour(coord) != grey24(0)
+        {
+            if let Some(cell) = self.world.grid().get(coord) {
+                if cell.contains_npc() {
+                    let id = cell
+                        .entity_iter(&self.world.entities())
+                        .find_map(|e| if e.is_npc() { Some(e.id()) } else { None })
+                        .unwrap();
+                    self.world.freeze_entity(id, 4);
+                    Ok(ApplyAction::Done)
+                } else {
+                    Err(CancelAction::NoEntity)
+                }
+            } else {
+                Err(CancelAction::OutOfBounds)
+            }
+        } else {
+            Err(CancelAction::NoEntity)
         }
     }
 
@@ -667,8 +701,22 @@ impl Gws {
 
     fn engine_turn(&mut self) {
         self.world.reduce_remaining_turns();
+        let mut unfreeze = Vec::new();
+        for &id in self.world.npc_ids() {
+            if let Some(entity) = self.world.entities().get(&id) {
+                if entity.is_frozen() {
+                    unfreeze.push(id);
+                }
+            }
+        }
+        for id in unfreeze {
+            self.world.reduce_freeze(id);
+        }
         for &(id, direction, typ) in self.pathfinding.committed_actions().iter() {
             if let Some(entity) = self.world.entities().get(&id) {
+                if entity.is_frozen() {
+                    continue;
+                }
                 let result = match typ {
                     CommitmentType::Move => self
                         .world
@@ -733,6 +781,9 @@ impl Gws {
             .update_player_coord(player_coord, &self.world);
         for &id in self.world.npc_ids() {
             let npc = self.world.entities().get(&id).unwrap();
+            if npc.is_frozen() {
+                continue;
+            }
             if self
                 .world
                 .can_see(npc.coord(), player_coord, NPC_VISION_RANGE)
