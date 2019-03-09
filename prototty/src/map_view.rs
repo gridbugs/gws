@@ -67,6 +67,7 @@ impl View<Gws> for MapView {
                         match foreground_tile {
                             ForegroundTile::Bumper => None,
                             ForegroundTile::Block => None,
+                            ForegroundTile::Spike => None,
                             ForegroundTile::Caster => None,
                             ForegroundTile::Healer => None,
                             ForegroundTile::Spark => None,

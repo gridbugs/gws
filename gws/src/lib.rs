@@ -127,6 +127,7 @@ impl BetweenLevels {
             Card::Block,
             Card::Block,
             Card::Freeze,
+            Card::Spike,
         ];
         let burnt = Vec::new();
         let hand_size = 5;
@@ -230,6 +231,7 @@ pub enum Card {
     Drain,
     Block,
     Freeze,
+    Spike,
 }
 
 const NEGATIVE_CARDS: &'static [Card] = &[Card::Clog, Card::Parasite, Card::Drain];
@@ -240,6 +242,7 @@ const POSITIVE_CARDS: &'static [Card] = &[
     Card::Spark,
     Card::Block,
     Card::Freeze,
+    Card::Spike,
 ];
 
 impl Card {
@@ -247,13 +250,14 @@ impl Card {
         match self {
             Card::Blink => 20,
             Card::Bump => 10,
-            Card::Heal => 5,
+            Card::Heal => 10,
             Card::Spark => 20,
             Card::Clog => 10,
             Card::Parasite => 10,
             Card::Drain => 40,
             Card::Block => 10,
             Card::Freeze => 10,
+            Card::Spike => 10,
         }
     }
 }
@@ -587,6 +591,7 @@ impl Gws {
                     (Card::Freeze, CardParam::Coord(coord)) => {
                         (self.freeze(coord), Spent)
                     }
+                    (Card::Spike, CardParam::Coord(coord)) => (self.spike(coord), Spent),
                     _ => return Err(CancelAction::InvalidCard),
                 };
                 if result.is_ok() {
@@ -627,6 +632,25 @@ impl Gws {
                 self.waste.push(card);
             }
             *slot = self.deck.pop();
+        }
+    }
+
+    fn spike(&mut self, coord: Coord) -> Result<ApplyAction, CancelAction> {
+        if self.visible_area.is_visible(coord)
+            && self.visible_area.light_colour(coord) != grey24(0)
+        {
+            if let Some(cell) = self.world.grid().get(coord) {
+                if cell.contains_npc() || cell.is_solid() {
+                    Err(CancelAction::LocationBlocked)
+                } else {
+                    self.world.add_entity(coord, PackedEntity::spike());
+                    Ok(ApplyAction::Done)
+                }
+            } else {
+                Err(CancelAction::OutOfBounds)
+            }
+        } else {
+            Err(CancelAction::DestinationNotVisible)
         }
     }
 

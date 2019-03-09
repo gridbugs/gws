@@ -229,6 +229,7 @@ pub struct CardTable {
     drain: CardInfo,
     block: CardInfo,
     freeze: CardInfo,
+    spike: CardInfo,
 }
 
 impl CardTable {
@@ -288,6 +289,12 @@ impl CardTable {
                 "Prevent an enemy from moving for 4 turns.".to_string(),
                 rgb24(0, 20, 0),
             ),
+            spike: CardInfo::new(
+                Card::Spike,
+                "Spike".to_string(),
+                "Summon a spike trap which lasts 4 turns.".to_string(),
+                rgb24(20, 0, 0),
+            ),
         }
     }
     pub fn get(&self, card: Card) -> &CardInfo {
@@ -301,6 +308,7 @@ impl CardTable {
             Card::Drain => &self.drain,
             Card::Block => &self.block,
             Card::Freeze => &self.freeze,
+            Card::Spike => &self.spike,
         }
     }
 }

@@ -104,6 +104,11 @@ const FOUNTAIN: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(rgb24(50, 100, 200));
 
+const SPIKE: ViewCell = ViewCell::new()
+    .with_character('▲')
+    .with_bold(true)
+    .with_foreground(rgb24(0, 255, 255));
+
 fn npc_view_cell(entity: &Entity) -> ViewCell {
     // TODO messy
     let (ch, view_cell) = match entity.foreground_tile().unwrap() {
@@ -157,10 +162,15 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
             }
         }
     };
-    if let Some(entity) = cell
-        .entity_iter(to_render.world.entities())
-        .find(|e| e.foreground_tile().is_some())
-    {
+    // TODO this rule should live somewhere else
+    let entity = if cell.contains_npc() {
+        cell.entity_iter(to_render.world.entities())
+            .find(|e| e.is_npc())
+    } else {
+        cell.entity_iter(to_render.world.entities())
+            .find(|e| e.foreground_tile().is_some())
+    };
+    if let Some(entity) = entity {
         if let Some(direction) = entity.taking_damage_in_direction() {
             ViewCell::new()
                 .with_character(ARROW_CHARS[direction])
@@ -183,6 +193,7 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
             match foreground_tile {
                 ForegroundTile::Player => PLAYER,
                 ForegroundTile::Block => BLOCK,
+                ForegroundTile::Spike => SPIKE,
                 ForegroundTile::Spark => SPARK,
                 ForegroundTile::Tree => TREE,
                 ForegroundTile::Stairs => STAIRS,

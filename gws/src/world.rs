@@ -45,6 +45,7 @@ pub enum BackgroundTile {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ForegroundTile {
+    Spike,
     Block,
     Player,
     Tree,
@@ -145,6 +146,7 @@ pub struct Entity {
     hit_points: Option<HitPoints>,
     heal_countdown: Option<u32>,
     frozen: Option<u32>,
+    spike: bool,
 }
 
 impl Entity {
@@ -187,6 +189,7 @@ pub struct PackedEntity {
     pub(crate) hit_points: Option<HitPoints>,
     pub(crate) remaining_turns: Option<u32>,
     pub(crate) solid: bool,
+    pub(crate) spike: bool,
 }
 
 impl Default for PackedEntity {
@@ -200,6 +203,7 @@ impl Default for PackedEntity {
             interactive: false,
             remaining_turns: None,
             solid: false,
+            spike: false,
         }
     }
 }
@@ -286,6 +290,15 @@ impl PackedEntity {
             ..Default::default()
         }
     }
+    pub(crate) fn spike() -> Self {
+        Self {
+            foreground_tile: Some(ForegroundTile::Spike),
+            remaining_turns: Some(4),
+            spike: true,
+            ..Default::default()
+        }
+    }
+
     pub(crate) fn player() -> Self {
         let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 10));
         Self {
@@ -372,6 +385,7 @@ pub struct WorldCell {
     player_count: usize,
     interactive_count: usize,
     solid_count: usize,
+    spike_count: usize,
 }
 
 impl WorldCell {
@@ -383,6 +397,7 @@ impl WorldCell {
             player_count: 0,
             interactive_count: 0,
             solid_count: 0,
+            spike_count: 0,
         }
     }
     pub fn background_tile(&self) -> BackgroundTile {
@@ -407,6 +422,9 @@ impl WorldCell {
     }
     pub fn contains_player(&self) -> bool {
         self.player_count > 0
+    }
+    pub fn contains_spike(&self) -> bool {
+        self.spike_count > 0
     }
     pub fn is_interactive(&self) -> bool {
         self.interactive_count > 0
@@ -518,6 +536,7 @@ impl World {
             interactive: entity.interactive,
             remaining_turns: self.remove_in_turns.get(&id).cloned(),
             solid: entity.solid,
+            spike: entity.spike,
         }
     }
     pub(crate) fn lights(&self) -> &HashMap<LightId, Light> {
@@ -586,6 +605,7 @@ impl World {
             interactive,
             remaining_turns,
             solid,
+            spike,
         } = entity;
         let id = self.next_id;
         self.next_id += 1;
@@ -611,6 +631,7 @@ impl World {
             heal_countdown: None,
             solid,
             frozen: None,
+            spike,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {
@@ -626,6 +647,9 @@ impl World {
             }
             if solid {
                 cell.solid_count += 1;
+            }
+            if spike {
+                cell.spike_count += 1;
             }
         }
         if npc {
@@ -782,6 +806,11 @@ impl World {
         if let Some(entity) = self.entities.get_mut(&id) {
             let coord = entity.coord + direction.coord();
             move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
+            if let Some(cell) = self.grid.get(coord) {
+                if cell.contains_spike() {
+                    self.deal_damage(id, 1);
+                }
+            }
         }
     }
     pub(crate) fn move_entity_in_direction_with_attack_policy(
@@ -811,6 +840,11 @@ impl World {
                     Ok(ApplyAction::Animation(Animation::damage(id, direction)))
                 } else {
                     move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
+                    if let Some(cell) = self.grid.get(coord) {
+                        if cell.contains_spike() {
+                            self.deal_damage(id, 1);
+                        }
+                    }
                     Ok(ApplyAction::Done)
                 }
             } else {
@@ -834,6 +868,7 @@ impl World {
                     .map(|foreground_tile| match foreground_tile {
                         ForegroundTile::Blink0 | ForegroundTile::Blink1 => 0,
                         ForegroundTile::Spark => 0,
+                        ForegroundTile::Spike => 0,
                         ForegroundTile::Block => 255,
                         ForegroundTile::Caster => 0,
                         ForegroundTile::Healer => 0,
@@ -910,6 +945,9 @@ impl World {
                 }
                 if entity.solid {
                     cell.solid_count -= 1;
+                }
+                if entity.spike {
+                    cell.spike_count -= 1;
                 }
             }
             if let Some(light_index) = entity.light_index {

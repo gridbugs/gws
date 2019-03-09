@@ -473,6 +473,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     ForegroundTile::Bumper => Some("Bumper".to_string()),
                                     ForegroundTile::Caster => Some("Caster".to_string()),
                                     ForegroundTile::Healer => Some("Healer".to_string()),
+                                    ForegroundTile::Spike => Some("Spike".to_string()),
                                     ForegroundTile::Spark => None,
                                     ForegroundTile::Blink0 => None,
                                     ForegroundTile::Blink1 => None,
@@ -1062,7 +1063,10 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             message = Some("Choose a direction.".to_string());
                             CardParamChoice::Direction
                         }
-                        gws::Card::Blink | gws::Card::Block | gws::Card::Freeze => {
+                        gws::Card::Blink
+                        | gws::Card::Block
+                        | gws::Card::Freeze
+                        | gws::Card::Spike => {
                             message = Some("Choose a location.".to_string());
                             CardParamChoice::Coord(
                                 game_state.game.to_render().player.coord(),
