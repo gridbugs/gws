@@ -201,6 +201,14 @@ impl CardInfo {
             background,
         }
     }
+    pub fn to_string(&self) -> String {
+        format!(
+            "{}: {} (Cost {})",
+            self.title,
+            self.description,
+            self.card.cost()
+        )
+    }
 }
 
 pub struct CardTable {

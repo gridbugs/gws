@@ -28,9 +28,13 @@ const TITLE: &'static str = "Get Well Soon";
 const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
 
 pub const APP_SIZE: Size = Size::new_u16(74, 58);
+const TITLE_COLOUR: Rgb24 = Rgb24::new(0, 120, 240);
 
 pub struct AppView {
     menu_and_title_view: MenuAndTitleView,
+    flame_view: MenuAndTitleView,
+    altar_view: MenuAndTitleView,
+    fountain_view: MenuAndTitleView,
 }
 
 pub enum Tick {
@@ -85,6 +89,8 @@ enum AppState {
     BetweenLevels(Option<gws::BetweenLevels>),
     Death,
     CardMenu,
+    AltarMenu,
+    FountainMenu,
     ListDeck,
     ListSpent,
     ListWaste,
@@ -147,6 +153,8 @@ pub struct App<F: Frontend, S: Storage> {
     card_selection: Option<CardInSlot>,
     card_menu_title: String,
     card_menu: Option<MenuInstance<gws::Card>>,
+    altar_menu: Option<menus::altar_menu::T>,
+    fountain_menu: Option<menus::fountain_menu::T>,
     interactive: Option<gws::Interactive>,
 }
 
@@ -212,8 +220,30 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                 depth,
                 grid,
             ),
+            AppState::AltarMenu => {
+                self.altar_view.view(
+                    &MenuAndTitle::new(
+                        app.altar_menu.as_ref().unwrap(),
+                        "Cursed Altar: Better yourself, but shuffle a cursed card into your deck.",
+                    ),
+                    offset + Coord::new(1, 1),
+                    depth,
+                    grid,
+                );
+            }
+            AppState::FountainMenu => {
+                self.fountain_view.view(
+                    &MenuAndTitle::new(
+                        app.fountain_menu.as_ref().unwrap(),
+                        "Bountiful Fountain: Shuffle cards into your deck.",
+                    ),
+                    offset + Coord::new(1, 1),
+                    depth,
+                    grid,
+                );
+            }
             AppState::CardMenu => {
-                self.menu_and_title_view.view(
+                self.flame_view.view(
                     &MenuAndTitle::new(
                         app.card_menu.as_ref().unwrap(),
                         app.card_menu_title.as_str(),
@@ -343,6 +373,8 @@ impl<F: Frontend, S: Storage> App<F, S> {
             card_selection: None,
             card_menu_title: "".to_string(),
             card_menu: None,
+            altar_menu: None,
+            fountain_menu: None,
             interactive: None,
         };
         (app, init_status)
@@ -382,12 +414,90 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     }
                 }
             }
+            AppState::AltarMenu => {
+                match self
+                    .altar_menu
+                    .as_mut()
+                    .unwrap()
+                    .tick_with_mouse(inputs, &view.altar_view.menu_view)
+                {
+                    None => (),
+                    Some(MenuOutput::Cancel) => {
+                        self.app_state = AppState::Game;
+                        self.altar_menu = None;
+                    }
+                    Some(MenuOutput::Quit) => return Some(Tick::Quit),
+                    Some(MenuOutput::Finalise((character_upgrade, card))) => {
+                        let game_state = self.game_state.as_mut().unwrap();
+                        let input_start_index = game_state.all_inputs.len();
+                        let interactive = self.interactive.unwrap();
+                        let entity_id = interactive.entity_id;
+                        game_state.all_inputs.push(gws::input::interact(
+                            gws::InteractiveParam::Altar {
+                                entity_id,
+                                card,
+                                character_upgrade,
+                            },
+                        ));
+                        let input_end_index = game_state.all_inputs.len();
+                        let _ = game_state.game.tick(
+                            game_state.all_inputs[input_start_index..input_end_index]
+                                .into_iter()
+                                .cloned(),
+                            period,
+                            &mut game_state.rng_with_seed.rng,
+                        );
+                        self.app_state = AppState::Game;
+                        self.interactive = None;
+                        self.altar_menu = None;
+                    }
+                }
+            }
+            AppState::FountainMenu => {
+                match self
+                    .fountain_menu
+                    .as_mut()
+                    .unwrap()
+                    .tick_with_mouse(inputs, &view.fountain_view.menu_view)
+                {
+                    None => (),
+                    Some(MenuOutput::Cancel) => {
+                        self.app_state = AppState::Game;
+                        self.fountain_menu = None;
+                    }
+                    Some(MenuOutput::Quit) => return Some(Tick::Quit),
+                    Some(MenuOutput::Finalise((card, count))) => {
+                        let game_state = self.game_state.as_mut().unwrap();
+                        let input_start_index = game_state.all_inputs.len();
+                        let interactive = self.interactive.unwrap();
+                        let entity_id = interactive.entity_id;
+                        game_state.all_inputs.push(gws::input::interact(
+                            gws::InteractiveParam::Fountain {
+                                entity_id,
+                                card,
+                                count,
+                            },
+                        ));
+                        let input_end_index = game_state.all_inputs.len();
+                        let _ = game_state.game.tick(
+                            game_state.all_inputs[input_start_index..input_end_index]
+                                .into_iter()
+                                .cloned(),
+                            period,
+                            &mut game_state.rng_with_seed.rng,
+                        );
+                        self.app_state = AppState::Game;
+                        self.interactive = None;
+                        self.fountain_menu = None;
+                    }
+                }
+            }
             AppState::CardMenu => {
                 match self
                     .card_menu
                     .as_mut()
                     .unwrap()
-                    .tick_with_mouse(inputs, &view.menu_and_title_view.menu_view)
+                    .tick_with_mouse(inputs, &view.flame_view.menu_view)
                 {
                     None => (),
                     Some(MenuOutput::Cancel) => {
@@ -400,19 +510,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         let input_start_index = game_state.all_inputs.len();
                         let interactive = self.interactive.unwrap();
                         let entity_id = interactive.entity_id;
-                        match interactive.typ {
-                            gws::InteractiveType::Flame => {
-                                game_state.all_inputs.push(gws::input::interact(
-                                    gws::InteractiveParam::Flame { entity_id, card },
-                                ));
-                            }
-                            gws::InteractiveType::Altar => {
-                                // TODO
-                            }
-                            gws::InteractiveType::Fountain => {
-                                // TODO
-                            }
-                        }
+                        game_state.all_inputs.push(gws::input::interact(
+                            gws::InteractiveParam::Flame { entity_id, card },
+                        ));
                         let input_end_index = game_state.all_inputs.len();
                         let _ = game_state.game.tick(
                             game_state.all_inputs[input_start_index..input_end_index]
@@ -700,10 +800,22 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                         }
                                     }
                                     gws::InteractiveType::Altar => {
-                                        // TODO
+                                        self.altar_menu =
+                                            Some(menus::altar_menu::create(
+                                                &game_state.game,
+                                                &self.card_table,
+                                                &mut game_state.rng_with_seed.rng,
+                                            ));
+                                        self.app_state = AppState::AltarMenu;
                                     }
                                     gws::InteractiveType::Fountain => {
-                                        // TODO
+                                        self.fountain_menu =
+                                            Some(menus::fountain_menu::create(
+                                                &game_state.game,
+                                                &self.card_table,
+                                                &mut game_state.rng_with_seed.rng,
+                                            ));
+                                        self.app_state = AppState::FountainMenu;
                                     }
                                 }
                             }
@@ -868,7 +980,10 @@ impl<F: Frontend, S: Storage> App<F, S> {
 impl AppView {
     pub fn new() -> Self {
         Self {
-            menu_and_title_view: MenuAndTitleView::new(),
+            menu_and_title_view: MenuAndTitleView::new(TITLE_COLOUR),
+            flame_view: MenuAndTitleView::new(rgb24(255, 120, 0)),
+            altar_view: MenuAndTitleView::new(rgb24(0, 200, 50)),
+            fountain_view: MenuAndTitleView::new(rgb24(50, 100, 200)),
         }
     }
     pub fn set_size(&mut self, _size: Size) {}

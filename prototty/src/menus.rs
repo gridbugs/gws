@@ -1,6 +1,7 @@
 use crate::ui::*;
 use gws::*;
 use prototty::*;
+use rand::*;
 
 const NORMAL_COLOUR: Rgb24 = Rgb24::new(100, 100, 150);
 const SELECTED_COLOUR: Rgb24 = Rgb24::new(0, 120, 240);
@@ -78,12 +79,12 @@ pub struct MenuAndTitleView {
 }
 
 impl MenuAndTitleView {
-    pub fn new() -> Self {
+    pub fn new(colour: Rgb24) -> Self {
         Self {
             title_view: RichStringView::with_info(TextInfo {
                 bold: true,
                 underline: false,
-                foreground_colour: Some(SELECTED_COLOUR),
+                foreground_colour: Some(colour),
                 background_colour: None,
             }),
             menu_view: DefaultMenuInstanceView::new(),
@@ -116,11 +117,72 @@ pub mod card_menu {
                 .iter()
                 .map(|&&card| {
                     let info = card_table.get(card);
-                    let text = format!("{}: {}", info.title, info.description);
+                    let text = info.to_string();
                     (text, card)
                 })
                 .collect::<Vec<_>>(),
         );
         MenuInstance::new(menu)
+    }
+}
+
+pub mod altar_menu {
+    use super::*;
+
+    fn upgrade_text(upgrade: CharacterUpgrade) -> &'static str {
+        use CharacterUpgrade::*;
+        match upgrade {
+            Life => "Increase Max Life",
+            Hand => "Increase Hand Size",
+            Power => "Increase Max Power",
+            Vision => "Increase Vision",
+        }
+    }
+
+    pub type T = MenuInstance<(CharacterUpgrade, Card)>;
+
+    pub fn create<R: Rng>(game: &Gws, card_table: &CardTable, rng: &mut R) -> T {
+        let num_choices = 3;
+        let choices = game
+            .choose_upgrades(num_choices, rng)
+            .cloned()
+            .zip(game.choose_negative_cards(num_choices, rng).cloned());
+        let menu = Menu::smallest(
+            choices
+                .map(|(upgrade, card)| {
+                    let info = card_table.get(card);
+                    let text = format!("{}, {}", upgrade_text(upgrade), info.to_string());
+                    (text, (upgrade, card))
+                })
+                .collect::<Vec<_>>(),
+        );
+        MenuInstance::new(menu).unwrap()
+    }
+}
+
+pub mod fountain_menu {
+    use super::*;
+    use rand::seq::SliceRandom;
+
+    pub type T = MenuInstance<(Card, usize)>;
+
+    const COUNTS: &'static [usize] = &[3, 4, 4, 4, 5, 5, 6];
+    pub fn create<R: Rng>(game: &Gws, card_table: &CardTable, rng: &mut R) -> T {
+        let num_choices = 3;
+        let choices = game
+            .choose_positive_cards(num_choices, rng)
+            .cloned()
+            .zip(COUNTS.choose_multiple(rng, num_choices).cloned());
+        let menu = Menu::smallest(
+            choices
+                .map(|(card, count)| {
+                    let info = card_table.get(card);
+                    let text =
+                        format!("{} x {}: {}", count, info.title, info.description);
+                    (text, (card, count))
+                })
+                .collect::<Vec<_>>(),
+        );
+        MenuInstance::new(menu).unwrap()
     }
 }

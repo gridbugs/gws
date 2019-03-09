@@ -60,14 +60,7 @@ pub struct DrawCountdown {
     pub max: u32,
 }
 
-impl DrawCountdown {
-    fn new() -> Self {
-        Self {
-            current: INITIAL_DRAW_COUNTDOWN,
-            max: INITIAL_DRAW_COUNTDOWN,
-        }
-    }
-}
+const MAX_NUM_CARDS: usize = 8;
 
 #[derive(Serialize, Deserialize)]
 pub struct Gws {
@@ -98,8 +91,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -107,6 +100,7 @@ pub struct BetweenLevels {
     deck: Vec<Card>,
     burnt: Vec<Card>,
     hand_size: usize,
+    max_draw_countdown: u32,
 }
 
 impl BetweenLevels {
@@ -136,11 +130,13 @@ impl BetweenLevels {
         ];
         let burnt = Vec::new();
         let hand_size = 5;
+        let max_draw_countdown = INITIAL_DRAW_COUNTDOWN;
         Self {
             player,
             deck,
             burnt,
             hand_size,
+            max_draw_countdown,
         }
     }
 }
@@ -167,7 +163,7 @@ pub enum InteractiveType {
 pub enum CharacterUpgrade {
     Life,
     Power,
-    Deck,
+    Hand,
     Vision,
 }
 
@@ -179,11 +175,13 @@ pub enum InteractiveParam {
     },
     Altar {
         character_upgrade: CharacterUpgrade,
+        card: Card,
         entity_id: EntityId,
     },
     Fountain {
         card: Card,
         entity_id: EntityId,
+        count: usize,
     },
 }
 
@@ -231,6 +229,10 @@ pub enum Card {
     Parasite,
     Drain,
 }
+
+const NEGATIVE_CARDS: &'static [Card] = &[Card::Clog, Card::Parasite, Card::Drain];
+const POSITIVE_CARDS: &'static [Card] =
+    &[Card::Bump, Card::Blink, Card::Heal, Card::Spark];
 
 impl Card {
     pub fn cost(self) -> u32 {
@@ -441,8 +443,13 @@ impl Gws {
             mut deck,
             burnt,
             hand_size,
+            max_draw_countdown,
         } = between_levels.unwrap_or_else(BetweenLevels::initial);
         deck.shuffle(rng);
+        let draw_countdown = DrawCountdown {
+            max: max_draw_countdown,
+            current: max_draw_countdown,
+        };
         let mut world = World::new(size);
         let hand = (0..hand_size).map(|_| None).collect::<Vec<_>>();
         for instruction in instructions {
@@ -459,7 +466,7 @@ impl Gws {
             animation: Vec::new(),
             turn: Turn::Player,
             hand,
-            draw_countdown: DrawCountdown::new(),
+            draw_countdown,
             deck,
             spent: Vec::new(),
             waste: Vec::new(),
@@ -475,7 +482,11 @@ impl Gws {
         &self.draw_countdown
     }
 
-    fn player_turn(&mut self, input: Input) -> Result<ApplyAction, CancelAction> {
+    fn player_turn<R: Rng>(
+        &mut self,
+        input: Input,
+        rng: &mut R,
+    ) -> Result<ApplyAction, CancelAction> {
         let (result, cost) = match input {
             Input::Interact(param) => match param {
                 InteractiveParam::Flame { card, entity_id } => {
@@ -490,15 +501,33 @@ impl Gws {
                     self.world.deal_damage(entity_id, 1);
                     (Ok(ApplyAction::Done), 0)
                 }
-                InteractiveParam::Fountain { card, entity_id } => {
-                    // TODO
+                InteractiveParam::Fountain {
+                    card,
+                    entity_id,
+                    count,
+                } => {
+                    for _ in 0..count {
+                        self.deck.push(card);
+                    }
+                    self.deck.shuffle(rng);
+                    self.world.deal_damage(entity_id, 1);
                     (Ok(ApplyAction::Done), 0)
                 }
                 InteractiveParam::Altar {
                     character_upgrade,
                     entity_id,
+                    card,
                 } => {
-                    // TODO
+                    use CharacterUpgrade::*;
+                    match character_upgrade {
+                        Life => self.world.increase_max_hit_points(self.player_id, 2),
+                        Power => self.draw_countdown.max += 2,
+                        Hand => self.hand.push(None),
+                        Vision => self.world.increase_light_radius(self.player_id, 30),
+                    }
+                    self.deck.push(card);
+                    self.deck.shuffle(rng);
+                    self.world.deal_damage(entity_id, 1);
                     (Ok(ApplyAction::Done), 0)
                 }
             },
@@ -674,6 +703,7 @@ impl Gws {
                 }
             }
         }
+        self.pathfinding.clear_commitments();
     }
     fn engine_commit(&mut self) {
         let player_coord = self.player().coord();
@@ -779,6 +809,7 @@ impl Gws {
             burnt,
             player,
             hand_size: self.hand.len(),
+            max_draw_countdown: self.draw_countdown.max,
         }
     }
 
@@ -819,7 +850,7 @@ impl Gws {
         if self.animation.is_empty() {
             if self.turn == Turn::Player {
                 if let Some(input) = inputs.into_iter().next() {
-                    match self.player_turn(input) {
+                    match self.player_turn(input, rng) {
                         Err(cancel) => {
                             return Some(Tick::CancelAction(cancel));
                         }
@@ -886,5 +917,34 @@ impl Gws {
     }
     pub fn burnt(&self) -> &[Card] {
         &self.burnt
+    }
+    pub fn choose_upgrades<R: Rng>(
+        &self,
+        amount: usize,
+        rng: &mut R,
+    ) -> impl Iterator<Item = &'static CharacterUpgrade> {
+        use CharacterUpgrade::*;
+        const WITH_HAND: &'static [CharacterUpgrade] = &[Life, Power, Hand, Vision];
+        const WITHOUT_HAND: &'static [CharacterUpgrade] = &[Life, Power, Vision];
+        let slice = if self.hand.len() >= MAX_NUM_CARDS {
+            WITHOUT_HAND
+        } else {
+            WITH_HAND
+        };
+        slice.choose_multiple(rng, amount)
+    }
+    pub fn choose_negative_cards<R: Rng>(
+        &self,
+        amount: usize,
+        rng: &mut R,
+    ) -> impl Iterator<Item = &'static Card> {
+        NEGATIVE_CARDS.choose_multiple(rng, amount)
+    }
+    pub fn choose_positive_cards<R: Rng>(
+        &self,
+        amount: usize,
+        rng: &mut R,
+    ) -> impl Iterator<Item = &'static Card> {
+        POSITIVE_CARDS.choose_multiple(rng, amount)
     }
 }

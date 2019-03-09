@@ -213,7 +213,7 @@ impl PackedEntity {
             light: Some(light),
             npc: false,
             player: false,
-            hit_points: Some(HitPoints::new(1, 1)),
+            hit_points: Some(HitPoints::new(3, 3)),
             interactive: true,
         }
     }
@@ -224,7 +224,7 @@ impl PackedEntity {
             light: Some(light),
             npc: false,
             player: false,
-            hit_points: Some(HitPoints::new(3, 3)),
+            hit_points: Some(HitPoints::new(1, 1)),
             interactive: true,
         }
     }
@@ -806,6 +806,15 @@ impl World {
             }
         }
     }
+
+    pub(crate) fn increase_max_hit_points(&mut self, id: EntityId, by: u32) {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            if let Some(hit_points) = entity.hit_points.as_mut() {
+                hit_points.max += by;
+            }
+        }
+    }
+
     pub(crate) fn remove_entity(&mut self, id: EntityId) {
         if let Some(entity) = self.entities.get(&id) {
             if entity.player {
@@ -835,6 +844,17 @@ impl World {
             if let Some(light_id) = entity.light_index {
                 if let Some(light) = self.lights.get_mut(&light_id) {
                     light.diminish.denom = denom;
+                }
+            }
+        }
+    }
+    pub(crate) fn increase_light_radius(&mut self, id: EntityId, by: u32) {
+        if let Some(entity) = self.entities.get(&id) {
+            if let Some(light_id) = entity.light_index {
+                if let Some(light) = self.lights.get_mut(&light_id) {
+                    let distance_squared = light.range.distance_squared();
+                    light.range =
+                        vision_distance::Circle::new_squared(distance_squared + by);
                 }
             }
         }

@@ -21,7 +21,7 @@ impl InputGrid for Visibility {
     }
 }
 
-const VISION_DISTANCE_SQUARED: u32 = 120;
+const VISION_DISTANCE_SQUARED: u32 = 160;
 const VISION_DISTANCE: vision_distance::Circle =
     vision_distance::Circle::new_squared(VISION_DISTANCE_SQUARED);
 

@@ -143,6 +143,9 @@ impl PathfindingContext {
         self.commitment_grid.clear();
         self.committed_actions.clear();
     }
+    pub fn clear_commitments(&mut self) {
+        self.commitment_grid.clear();
+    }
     pub fn direction_towards_player(
         &mut self,
         coord: Coord,
