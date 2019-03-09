@@ -33,7 +33,6 @@ const NPC_VISION_RANGE: usize = 16;
 pub enum Input {
     Move(CardinalDirection),
     PlayCard { slot: usize, param: CardParam },
-    Wait,
     Interact(InteractiveParam),
 }
 
@@ -43,7 +42,6 @@ pub mod input {
     pub const DOWN: Input = Input::Move(CardinalDirection::South);
     pub const LEFT: Input = Input::Move(CardinalDirection::West);
     pub const RIGHT: Input = Input::Move(CardinalDirection::East);
-    pub const WAIT: Input = Input::Wait;
     pub fn play_card(slot: usize, param: CardParam) -> Input {
         Input::PlayCard { slot, param }
     }
@@ -92,8 +90,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -111,10 +109,6 @@ impl BetweenLevels {
         let deck = vec![
             Card::Bump,
             Card::Bump,
-            Card::Bump,
-            Card::Bump,
-            Card::Bump,
-            Card::Heal,
             Card::Heal,
             Card::Heal,
             Card::Block,
@@ -124,18 +118,17 @@ impl BetweenLevels {
             Card::Spike,
             Card::Spike,
             Card::Spike,
-            Card::Spike,
             Card::Empower,
             Card::Empower,
             Card::Blink,
             Card::Blink,
-        ];
-        let deck = vec![
-            Card::Bump,
-            Card::Bump,
+            Card::Deposit,
+            Card::Deposit,
+            Card::Caltrop,
             Card::Spark,
             Card::Spark,
-            Card::Blink,
+            Card::Bash,
+            Card::Bash,
         ];
         let burnt = Vec::new();
         let hand_size = 5;
@@ -207,9 +200,11 @@ enum AnimationState {
     DamageStart {
         id: EntityId,
         direction: CardinalDirection,
+        amount: u32,
     },
     DamageEnd {
         id: EntityId,
+        amount: u32,
     },
     BlinkStart {
         coord: Coord,
@@ -253,6 +248,8 @@ pub enum Card {
     Save,
     Spend,
     Burn,
+    Deposit,
+    Caltrop,
 }
 
 const NEGATIVE_CARDS: &'static [Card] = &[Card::Clog, Card::Parasite, Card::Drain];
@@ -275,6 +272,8 @@ const POSITIVE_CARDS: &'static [Card] = &[
     Card::Save,
     Card::Spend,
     Card::Burn,
+    Card::Deposit,
+    Card::Caltrop,
 ];
 
 impl Card {
@@ -287,11 +286,13 @@ impl Card {
             Card::Spike => 10,
             Card::Empower => 10,
             Card::Spend => 0,
+            Card::Deposit => 20,
+            Card::Caltrop => 20,
             Card::Blink => 20,
-            Card::Spark => 20,
+            Card::Spark => 10,
             Card::Garden => 20,
             Card::Armour => 20,
-            Card::Bash => 20,
+            Card::Bash => 10,
             Card::Burn => 99,
             Card::Blast => 30,
             Card::Surround => 30,
@@ -320,16 +321,20 @@ const GLOW_FADE_IN_PERIOD: Duration = Duration::from_millis(50);
 impl AnimationState {
     fn update(self, world: &mut World) -> Option<Animation> {
         match self {
-            AnimationState::DamageStart { id, direction } => {
+            AnimationState::DamageStart {
+                id,
+                direction,
+                amount,
+            } => {
                 world.set_taking_damage_in_direction(id, Some(direction));
                 Some(Animation::new(
                     DAMAGE_ANIMATION_PERIOD,
-                    AnimationState::DamageEnd { id },
+                    AnimationState::DamageEnd { id, amount },
                 ))
             }
-            AnimationState::DamageEnd { id } => {
+            AnimationState::DamageEnd { id, amount } => {
                 world.set_taking_damage_in_direction(id, None);
-                world.deal_damage(id, 1);
+                world.deal_damage(id, amount);
                 None
             }
             AnimationState::BlinkStart { coord } => {
@@ -425,7 +430,7 @@ struct Animation {
     state: AnimationState,
 }
 
-const PROJECTILE_RANGE: u32 = 12;
+const PROJECTILE_RANGE: u32 = 10;
 
 impl Animation {
     pub fn new(next_update_in: Duration, state: AnimationState) -> Self {
@@ -448,10 +453,14 @@ impl Animation {
             })
         }
     }
-    pub fn damage(id: EntityId, direction: CardinalDirection) -> Self {
+    pub fn damage(id: EntityId, direction: CardinalDirection, amount: u32) -> Self {
         Self::new(
             Duration::from_secs(0),
-            AnimationState::DamageStart { id, direction },
+            AnimationState::DamageStart {
+                id,
+                direction,
+                amount,
+            },
         )
     }
     pub fn blink(coord: Coord) -> Self {
@@ -551,13 +560,12 @@ impl Gws {
             Input::Interact(param) => match param {
                 InteractiveParam::Flame { card, entity_id } => {
                     let index = self
-                        .spent
+                        .waste
                         .iter()
                         .position(|&c| c == card)
-                        .expect("no such card in spent");
-                    self.spent.swap_remove(index);
+                        .expect("no such card in waste");
+                    self.waste.swap_remove(index);
                     self.burnt.push(card);
-                    self.world.deal_damage(self.player_id, 1);
                     self.world.deal_damage(entity_id, 1);
                     (Ok(ApplyAction::Done), 0)
                 }
@@ -598,7 +606,6 @@ impl Gws {
                 );
                 (result, 1)
             }
-            Input::Wait => (Ok(ApplyAction::Done), 1),
             Input::PlayCard { slot, param } => {
                 let card = if let Some(&card) = self.hand.get(slot) {
                     card
@@ -658,6 +665,29 @@ impl Gws {
                         (Ok(ApplyAction::Done), Burnt)
                     }
                     (Card::Drain, CardParam::Confirm) => (Ok(ApplyAction::Done), Burnt),
+                    (Card::Deposit, CardParam::CardinalDirection(direction)) => {
+                        let player_coord = self.player().coord();
+                        let result = self
+                            .world
+                            .move_entity_in_direction_with_attack_policy(
+                                self.player_id,
+                                direction,
+                            )
+                            .and_then(|_| self.block(player_coord));
+                        (result, Spent)
+                    }
+                    (Card::Caltrop, CardParam::CardinalDirection(direction)) => {
+                        let player_coord = self.player().coord();
+                        let result = self
+                            .world
+                            .move_entity_in_direction_with_attack_policy(
+                                self.player_id,
+                                direction,
+                            )
+                            .and_then(|_| self.spike(player_coord));
+                        (result, Spent)
+                    }
+
                     (Card::Block, CardParam::Coord(coord)) => (self.block(coord), Spent),
                     (Card::Surround, CardParam::Coord(coord)) => {
                         for d in CardinalDirections {
@@ -809,7 +839,7 @@ impl Gws {
                         .entity_iter(&self.world.entities())
                         .find_map(|e| if e.is_npc() { Some(e.id()) } else { None })
                         .unwrap();
-                    self.world.freeze_entity(id, 4);
+                    self.world.freeze_entity(id, 8);
                     Ok(ApplyAction::Done)
                 } else {
                     Err(CancelAction::NoEntity)
@@ -980,6 +1010,12 @@ impl Gws {
                             if cell.contains_npc() {
                                 clean_shot = false;
                             } else if cell.is_solid() {
+                                clean_shot = false;
+                            } else if self
+                                .pathfinding
+                                .commitment_grid()
+                                .is_committed(coord)
+                            {
                                 clean_shot = false;
                             }
                         }

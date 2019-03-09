@@ -18,25 +18,21 @@ pub struct Upgrade {
 
 impl Upgrade {
     pub fn new<R: Rng>(positive_card_dist: &[Card], rng: &mut R) -> Self {
-        const NUM_CHOICES: usize = 3;
         const COUNTS: &'static [usize] = &[1, 2, 2, 3, 3, 3, 3, 3, 4, 4];
         use Card::*;
         const NEGATIVE_CARDS: &'static [Card] =
             &[Clog, Clog, Clog, Drain, Drain, Parasite, Parasite];
         use CharacterUpgrade::*;
         const CHARACTER_UPGRADES: &'static [CharacterUpgrade] =
-            &[Life, Power, Vision, Hand];
+            &[Life, Power, Vision, Hand, Life, Power, Vision, Hand];
         let positive_cards = positive_card_dist
-            .choose_multiple(rng, NUM_CHOICES)
+            .choose_multiple(rng, 8)
             .cloned()
             .collect();
-        let negative_cards = NEGATIVE_CARDS
-            .choose_multiple(rng, NUM_CHOICES)
-            .cloned()
-            .collect();
-        let counts = COUNTS.choose_multiple(rng, NUM_CHOICES).cloned().collect();
+        let negative_cards = NEGATIVE_CARDS.choose_multiple(rng, 4).cloned().collect();
+        let counts = COUNTS.choose_multiple(rng, 8).cloned().collect();
         let character_upgrades = CHARACTER_UPGRADES
-            .choose_multiple(rng, NUM_CHOICES)
+            .choose_multiple(rng, 4)
             .cloned()
             .collect();
         Self {
@@ -298,7 +294,7 @@ impl PackedEntity {
             light: Some(light),
             npc: false,
             player: false,
-            hit_points: Some(HitPoints::new(3, 3)),
+            hit_points: Some(HitPoints::new(1, 1)),
             interactive: true,
             ..Default::default()
         }
@@ -357,7 +353,7 @@ impl PackedEntity {
     pub(crate) fn block() -> Self {
         Self {
             foreground_tile: Some(ForegroundTile::Block),
-            remaining_turns: Some(4),
+            remaining_turns: Some(8),
             solid: true,
             ..Default::default()
         }
@@ -365,7 +361,7 @@ impl PackedEntity {
     pub(crate) fn spike() -> Self {
         Self {
             foreground_tile: Some(ForegroundTile::Spike),
-            remaining_turns: Some(4),
+            remaining_turns: Some(8),
             spike: true,
             ..Default::default()
         }
@@ -386,7 +382,7 @@ impl PackedEntity {
     }
 
     pub(crate) fn player() -> Self {
-        let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 10));
+        let player_light = PackedLight::new(grey24(128), 60, Rational::new(1, 10));
         Self {
             foreground_tile: Some(ForegroundTile::Player),
             light: Some(player_light),
@@ -414,7 +410,7 @@ impl PackedEntity {
             light: None,
             npc: true,
             player: false,
-            hit_points: Some(HitPoints::new(1, 2)),
+            hit_points: Some(HitPoints::new(2, 3)),
             interactive: false,
             ..Default::default()
         }
@@ -425,7 +421,7 @@ impl PackedEntity {
             light: None,
             npc: true,
             player: false,
-            hit_points: Some(HitPoints::new(1, 1)),
+            hit_points: Some(HitPoints::new(1, 2)),
             interactive: false,
             ..Default::default()
         }
@@ -881,7 +877,7 @@ impl World {
                         .entity_iter(&self.entities)
                         .find_map(|e| if e.npc { Some(e.id) } else { None })
                         .unwrap();
-                    Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+                    Ok(ApplyAction::Animation(Animation::damage(id, direction, 2)))
                 } else {
                     Err(CancelAction::NothingToAttack)
                 }
@@ -907,7 +903,7 @@ impl World {
                         .find_map(|e| if e.npc { Some(e.id) } else { None })
                         .unwrap();
                     let _ = self.move_entity_in_direction(id, direction);
-                    Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+                    Ok(ApplyAction::Animation(Animation::damage(id, direction, 1)))
                 } else {
                     Err(CancelAction::NothingToAttack)
                 }
@@ -1002,15 +998,25 @@ impl World {
                         .unwrap();
                     Ok(ApplyAction::Interact(interactive_id))
                 } else if cell.is_solid() {
-                    Err(CancelAction::MoveIntoSolidCell)
-                } else if cell.contains_npc() {
+                    if entity.player
+                        && cell
+                            .entity_iter(&self.entities)
+                            .any(|e| e.foreground_tile == Some(ForegroundTile::Block))
+                    {
+                        Ok(ApplyAction::Done)
+                    } else {
+                        Err(CancelAction::MoveIntoSolidCell)
+                    }
+                } else if entity.npc && cell.contains_npc() {
                     Err(CancelAction::MoveIntoNpc)
-                } else if entity.npc && cell.contains_player() {
+                } else if (entity.npc && cell.contains_player())
+                    || (entity.player && cell.contains_npc())
+                {
                     let id = cell
                         .entity_iter(&self.entities)
-                        .find_map(|e| if e.player { Some(e.id) } else { None })
+                        .find_map(|e| if e.player || e.npc { Some(e.id) } else { None })
                         .unwrap();
-                    Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+                    Ok(ApplyAction::Animation(Animation::damage(id, direction, 1)))
                 } else {
                     move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
                     if let Some(cell) = self.grid.get(coord) {
@@ -1092,6 +1098,9 @@ impl World {
     }
     pub(crate) fn deal_damage(&mut self, id: EntityId, damage: u32) {
         if let Some(entity) = self.entities.get_mut(&id) {
+            if entity.is_frozen() {
+                return;
+            }
             if let Some(hit_points) = entity.hit_points.as_mut() {
                 hit_points.current = hit_points.current.saturating_sub(damage);
                 if hit_points.current == 0 {

@@ -241,7 +241,7 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
                 npc_view_cell(entity).coalesce(view_cell)
             };
             let view_cell = if entity.is_frozen() {
-                view_cell.with_foreground(rgb24(80, 220, 80))
+                view_cell.with_foreground(rgb24(120, 120, 255))
             } else {
                 view_cell
             };

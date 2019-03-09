@@ -454,6 +454,12 @@ fn populate_base_grid<R: Rng>(
             cell_grid.get_checked_mut(coord).contents = Some(Contents::NaturalSpike);
         }
     }
+    for _ in 0..config.num_pickups {
+        if let Some(coord) = npc_candidates.pop() {
+            cell_grid.get_checked_mut(coord).contents = Some(Contents::HealthPickup);
+        }
+    }
+
     Ok(cell_grid)
 }
 
@@ -575,13 +581,17 @@ pub fn wfc<R: Rng>(output_size: Size, level: u32, rng: &mut R) -> TerrainDescrip
         0 => {
             let config = Config {
                 wall: Base::IceWall,
-                npc_count: 16,
+                npc_count: 12,
                 npc_dist: vec![
                     Bruiser, Bruiser, Bruiser, Bruiser, Bruiser, Caster, Caster, Caster,
                 ],
-                card_dist: vec![Bump, Heal, Freeze, Block, Spike, Empower, Blink],
+                card_dist: vec![
+                    Bump, Heal, Freeze, Block, Spike, Empower, Blink, Deposit, Caltrop,
+                    Bash,
+                ],
                 num_spikes: 8,
-                num_upgrades: 4,
+                num_pickups: 4,
+                num_upgrades: 5,
                 include_end: false,
             };
             wfc_common(include_str!("wfc_ice_cave.txt"), output_size, config, rng)
@@ -589,16 +599,17 @@ pub fn wfc<R: Rng>(output_size: Size, level: u32, rng: &mut R) -> TerrainDescrip
         1 => {
             let config = Config {
                 wall: Base::IceWall,
-                npc_count: 18,
+                npc_count: 14,
                 npc_dist: vec![
                     Bruiser, Bruiser, Bruiser, Bruiser, Caster, Caster, Caster, Healer,
                 ],
                 card_dist: vec![
                     Bump, Heal, Freeze, Block, Spike, Empower, Blink, Spend, Spark,
-                    Garden, Armour, Bash,
+                    Spark, Armour, Bash, Blink, Deposit, Deposit, Caltrop, Caltrop,
                 ],
                 num_spikes: 10,
-                num_upgrades: 4,
+                num_pickups: 4,
+                num_upgrades: 5,
                 include_end: false,
             };
             wfc_common(include_str!("wfc_ice_cave.txt"), output_size, config, rng)
@@ -606,17 +617,18 @@ pub fn wfc<R: Rng>(output_size: Size, level: u32, rng: &mut R) -> TerrainDescrip
         2 => {
             let config = Config {
                 wall: Base::BrickWall,
-                npc_count: 20,
+                npc_count: 16,
                 npc_dist: vec![
                     Bruiser, Bruiser, Caster, Caster, Caster, Healer, Healer, Healer,
                 ],
                 card_dist: vec![
-                    Bump, Heal, Freeze, Block, Spike, Empower, Blink, Spend, Spark,
-                    Garden, Armour, Bash, Garden, Armour, Bash, Garden, Armour, Bash,
-                    Burn, Blast, Surround,
+                    Bump, Heal, Freeze, Block, Spike, Empower, Blink, Deposit, Caltrop,
+                    Spend, Spark, Spark, Armour, Bash, Armour, Bash, Armour, Bash, Burn,
+                    Blast, Surround,
                 ],
                 num_spikes: 12,
-                num_upgrades: 4,
+                num_pickups: 4,
+                num_upgrades: 5,
                 include_end: false,
             };
             wfc_common(include_str!("wfc_ruins.txt"), output_size, config, rng)
@@ -624,17 +636,18 @@ pub fn wfc<R: Rng>(output_size: Size, level: u32, rng: &mut R) -> TerrainDescrip
         3 => {
             let config = Config {
                 wall: Base::BrickWall,
-                npc_count: 22,
+                npc_count: 18,
                 npc_dist: vec![
                     Bruiser, Bruiser, Caster, Caster, Caster, Healer, Healer, Healer,
                 ],
                 card_dist: vec![
-                    Bump, Heal, Freeze, Block, Spike, Empower, Blink, Spend, Spark,
-                    Garden, Armour, Bash, Garden, Armour, Bash, Burn, Blast, Surround,
-                    Burn, Blast, Surround, Burn, Blast, Surround,
+                    Bump, Heal, Freeze, Block, Spike, Empower, Blink, Deposit, Caltrop,
+                    Spend, Spark, Spark, Armour, Bash, Armour, Bash, Burn, Blast,
+                    Surround, Burn, Blast, Surround, Burn, Blast, Surround,
                 ],
                 num_spikes: 12,
-                num_upgrades: 4,
+                num_pickups: 4,
+                num_upgrades: 5,
                 include_end: false,
             };
             wfc_common(include_str!("wfc_ruins.txt"), output_size, config, rng)
@@ -642,16 +655,17 @@ pub fn wfc<R: Rng>(output_size: Size, level: u32, rng: &mut R) -> TerrainDescrip
         4 => {
             let config = Config {
                 wall: Base::StoneWall,
-                npc_count: 24,
+                npc_count: 22,
                 npc_dist: vec![
                     Bruiser, Bruiser, Caster, Caster, Caster, Healer, Healer, Healer,
                 ],
                 card_dist: vec![
-                    Burn, Save, Shred, Shred, Shred, Surround, Surround, Surround,
-                    Recover, Recover, Garden, Garden, Armour, Armour, Bash, Bash, Bash,
+                    Spark, Burn, Save, Shred, Shred, Shred, Surround, Surround, Surround,
+                    Recover, Recover, Armour, Armour, Bash, Bash, Bash, Deposit, Caltrop,
                 ],
                 num_spikes: 20,
-                num_upgrades: 4,
+                num_pickups: 4,
+                num_upgrades: 5,
                 include_end: false,
             };
             wfc_common(include_str!("wfc_finale.txt"), output_size, config, rng)
@@ -659,16 +673,17 @@ pub fn wfc<R: Rng>(output_size: Size, level: u32, rng: &mut R) -> TerrainDescrip
         5 => {
             let config = Config {
                 wall: Base::StoneWall,
-                npc_count: 26,
+                npc_count: 24,
                 npc_dist: vec![
                     Bruiser, Bruiser, Caster, Caster, Caster, Healer, Healer, Healer,
                 ],
                 card_dist: vec![
-                    Burn, Save, Shred, Shred, Shred, Surround, Surround, Surround,
-                    Recover, Recover, Garden, Garden, Armour, Armour, Bash, Bash, Bash,
+                    Spark, Burn, Save, Shred, Shred, Shred, Surround, Surround, Surround,
+                    Recover, Recover, Armour, Armour, Bash, Bash, Bash, Deposit, Caltrop,
                 ],
                 num_spikes: 20,
-                num_upgrades: 4,
+                num_pickups: 4,
+                num_upgrades: 5,
                 include_end: true,
             };
             wfc_common(include_str!("wfc_finale.txt"), output_size, config, rng)
@@ -683,7 +698,8 @@ pub fn wfc<R: Rng>(output_size: Size, level: u32, rng: &mut R) -> TerrainDescrip
                 ],
                 card_dist: vec![Bump, Bump, Blink, Heal, Spark],
                 num_spikes: 8,
-                num_upgrades: 4,
+                num_pickups: 4,
+                num_upgrades: 5,
                 include_end: false,
             };
             wfc_common(include_str!("wfc_ice_cave.txt"), output_size, config, rng)
@@ -698,6 +714,7 @@ struct Config {
     card_dist: Vec<Card>,
     num_spikes: u32,
     num_upgrades: u32,
+    num_pickups: u32,
     include_end: bool,
 }
 
@@ -716,6 +733,7 @@ impl Config {
             num_spikes: 8,
             num_upgrades: 4,
             include_end: false,
+            num_pickups: 4,
         }
     }
 }

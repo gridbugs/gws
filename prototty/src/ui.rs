@@ -254,6 +254,8 @@ pub struct CardTable {
     save: CardInfo,
     burn: CardInfo,
     spend: CardInfo,
+    deposit: CardInfo,
+    caltrop: CardInfo,
 }
 
 impl CardTable {
@@ -262,7 +264,7 @@ impl CardTable {
             bump: CardInfo::new(
                 Card::Bump,
                 "Bump".to_string(),
-                "Attack adjacent square for 1 damage".to_string(),
+                "Attack adjacent square for 2 damage".to_string(),
                 rgb24(20, 0, 0),
             ),
             blink: CardInfo::new(
@@ -280,7 +282,7 @@ impl CardTable {
             spark: CardInfo::new(
                 Card::Spark,
                 "Spark".to_string(),
-                "Shoot a spark dealing 1 damage with 12 range.".to_string(),
+                "Shoot a spark dealing 1 damage with 10 range.".to_string(),
                 rgb24(20, 0, 0),
             ),
             clog: CardInfo::new(
@@ -304,19 +306,19 @@ impl CardTable {
             block: CardInfo::new(
                 Card::Block,
                 "Block".to_string(),
-                "Summon a block which lasts 4 turns.".to_string(),
+                "Summon a block which lasts 8 turns.".to_string(),
                 rgb24(0, 20, 0),
             ),
             freeze: CardInfo::new(
                 Card::Freeze,
                 "Freeze".to_string(),
-                "Prevent an enemy from moving for 4 turns.".to_string(),
+                "Prevent an enemy from moving for 8 turns.".to_string(),
                 rgb24(0, 20, 0),
             ),
             spike: CardInfo::new(
                 Card::Spike,
                 "Spike".to_string(),
-                "Summon a spike trap which lasts 4 turns.".to_string(),
+                "Summon a spike trap which lasts 8 turns.".to_string(),
                 rgb24(20, 0, 0),
             ),
             blast: CardInfo::new(
@@ -340,25 +342,25 @@ impl CardTable {
             surround: CardInfo::new(
                 Card::Surround,
                 "Surround".to_string(),
-                "Surround a square with walls lasting 4 turns each.".to_string(),
+                "Surround a square with walls lasting 8 turns each.".to_string(),
                 rgb24(0, 20, 0),
             ),
             shred: CardInfo::new(
                 Card::Shred,
                 "Shred".to_string(),
-                "Summon 5 spike traps lasting 4 turns each.".to_string(),
+                "Summon 5 spike traps lasting 8 turns each.".to_string(),
                 rgb24(20, 0, 0),
             ),
             garden: CardInfo::new(
                 Card::Garden,
                 "Garden".to_string(),
-                "Surround yourself with spike traps lasting 4 turns.".to_string(),
+                "Surround yourself with spike traps lasting 8 turns.".to_string(),
                 rgb24(20, 0, 0),
             ),
             armour: CardInfo::new(
                 Card::Armour,
                 "Armour".to_string(),
-                "Surround yourself with walls lasting 4 turns.".to_string(),
+                "Surround yourself with walls lasting 8 turns.".to_string(),
                 rgb24(0, 20, 0),
             ),
             empower: CardInfo::new(
@@ -385,6 +387,18 @@ impl CardTable {
                 "Burn all the cards in your hand.".to_string(),
                 rgb24(0, 0, 20),
             ),
+            deposit: CardInfo::new(
+                Card::Deposit,
+                "Deposit".to_string(),
+                "Move, leaving behind a temporary wall.".to_string(),
+                rgb24(0, 20, 0),
+            ),
+            caltrop: CardInfo::new(
+                Card::Caltrop,
+                "Caltrop".to_string(),
+                "Move, leaving behind a temporary spike.".to_string(),
+                rgb24(0, 20, 0),
+            ),
         }
     }
     pub fn get(&self, card: Card) -> &CardInfo {
@@ -410,6 +424,8 @@ impl CardTable {
             Card::Save => &self.save,
             Card::Spend => &self.spend,
             Card::Burn => &self.burn,
+            Card::Deposit => &self.deposit,
+            Card::Caltrop => &self.caltrop,
         }
     }
 }

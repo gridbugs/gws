@@ -151,7 +151,7 @@ impl VisibilityCell {
         self.last_seen == state.count
     }
     pub fn is_discovered(&self) -> bool {
-        self.last_seen != 0
+        self.last_seen != 0 && self.last_lit != 0
     }
     pub fn light_colour(&self, state: VisibilityState) -> Rgb24 {
         if self.last_lit == state.count {

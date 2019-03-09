@@ -1,8 +1,8 @@
 # Cards
 
-On your turn, move, wait, or play a card.
+On your turn, move or play a card.
 
-Moving and waiting cost 1 power. Each card has a power cost.
+Moving costs 1 power. Each card has a power cost.
 
 Playing a card moves it to the "spent" pile.
 
@@ -35,7 +35,6 @@ Enemies are represented by letters. A lowercase letter means the enemy has 1 hit
 # Controls
 
 Move: Arrow keys
-Wait: Space
 View: v
 Select Card: 1-8
 List Deck: d

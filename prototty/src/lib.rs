@@ -1043,9 +1043,6 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 ProtottyInput::Right => {
                                     game_state.all_inputs.push(gws::input::RIGHT)
                                 }
-                                ProtottyInput::Char(' ') => {
-                                    game_state.all_inputs.push(gws::input::WAIT)
-                                }
                                 MAP_INPUT0 | MAP_INPUT1 => {
                                     self.app_state = AppState::Map {
                                         opened_from_game: true,
@@ -1105,14 +1102,15 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 self.interactive = Some(interactive);
                                 match interactive.typ {
                                     gws::InteractiveType::Flame => {
-                                        let spent = game_state.game.spent();
-                                        if spent.is_empty() {
-                                            self.message = Some("You must have spent cards to interact with the Cleansing Flame.".to_string());
+                                        let waste = game_state.game.waste();
+                                        if waste.is_empty() {
+                                            self.message = Some("You must have wasted cards to interact with the Cleansing Flame.".to_string());
                                         } else {
                                             self.card_menu_title =
-                                                "Cleansing Flame: Burn a spent card. Lose 1 life.".to_string();
+                                                "Cleansing Flame: Burn a wasted card."
+                                                    .to_string();
                                             self.card_menu = menus::card_menu::create(
-                                                spent,
+                                                waste,
                                                 &self.card_table,
                                             );
                                             self.app_state = AppState::CardMenu;
@@ -1270,7 +1268,11 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     card_selection = None;
                 } else {
                     let choice = match card {
-                        gws::Card::Bump | gws::Card::Spark | gws::Card::Bash => {
+                        gws::Card::Bump
+                        | gws::Card::Spark
+                        | gws::Card::Bash
+                        | gws::Card::Deposit
+                        | gws::Card::Caltrop => {
                             message = Some("Choose a direction.".to_string());
                             CardParamChoice::Direction
                         }

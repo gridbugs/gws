@@ -54,7 +54,7 @@ impl CommitmentGrid {
         cell.direction = Some(direction);
         cell.typ = typ;
     }
-    fn is_committed(&self, coord: Coord) -> bool {
+    pub fn is_committed(&self, coord: Coord) -> bool {
         self.grid.get_checked(coord).seq == self.seq
     }
     pub fn get_checked(
