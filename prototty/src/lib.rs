@@ -742,7 +742,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     }
                                     NotEnoughEnergy => {
                                         self.message =
-                                            Some("Not enough energy!".to_string())
+                                            Some("Not enough power!".to_string())
                                     }
                                     _ => (),
                                 }
@@ -826,7 +826,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
         if let Some(&maybe_card) = hand.get(card_index) {
             if let Some(card) = maybe_card {
                 if game_state.game.draw_countdown().current < card.cost() {
-                    message = Some("Not enough energy!".to_string());
+                    message = Some("Not enough power!".to_string());
                     card_selection = None;
                 } else {
                     let choice = match card {
@@ -840,7 +840,10 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 game_state.game.to_render().player.coord(),
                             )
                         }
-                        gws::Card::Heal => {
+                        gws::Card::Heal
+                        | gws::Card::Clog
+                        | gws::Card::Parasite
+                        | gws::Card::Drain => {
                             message = Some("Confirm selection.".to_string());
                             CardParamChoice::Confirm
                         }

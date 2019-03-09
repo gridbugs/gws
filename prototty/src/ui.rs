@@ -208,6 +208,9 @@ pub struct CardTable {
     blink: CardInfo,
     heal: CardInfo,
     spark: CardInfo,
+    clog: CardInfo,
+    parasite: CardInfo,
+    drain: CardInfo,
 }
 
 impl CardTable {
@@ -237,6 +240,24 @@ impl CardTable {
                 "Shoot a spark dealing 1 damage with 12 range.".to_string(),
                 rgb24(20, 0, 0),
             ),
+            clog: CardInfo::new(
+                Card::Clog,
+                "Clog".to_string(),
+                "Has no effect.".to_string(),
+                rgb24(20, 20, 20),
+            ),
+            parasite: CardInfo::new(
+                Card::Parasite,
+                "Parasite".to_string(),
+                "Take 2 damage. Burn this card.".to_string(),
+                rgb24(20, 20, 20),
+            ),
+            drain: CardInfo::new(
+                Card::Drain,
+                "Drain".to_string(),
+                "Burn this card.".to_string(),
+                rgb24(20, 20, 20),
+            ),
         }
     }
     pub fn get(&self, card: Card) -> &CardInfo {
@@ -245,6 +266,9 @@ impl CardTable {
             Card::Blink => &self.blink,
             Card::Heal => &self.heal,
             Card::Spark => &self.spark,
+            Card::Clog => &self.clog,
+            Card::Parasite => &self.parasite,
+            Card::Drain => &self.drain,
         }
     }
 }

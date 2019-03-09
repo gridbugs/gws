@@ -98,8 +98,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -227,6 +227,9 @@ pub enum Card {
     Blink,
     Heal,
     Spark,
+    Clog,
+    Parasite,
+    Drain,
 }
 
 impl Card {
@@ -236,6 +239,9 @@ impl Card {
             Card::Bump => 10,
             Card::Heal => 5,
             Card::Spark => 20,
+            Card::Clog => 10,
+            Card::Parasite => 10,
+            Card::Drain => 40,
         }
     }
 }
@@ -518,20 +524,34 @@ impl Gws {
                 if card.cost() > self.draw_countdown.current {
                     return Err(CancelAction::NotEnoughEnergy);
                 }
-                let result = match (card, param) {
-                    (Card::Blink, CardParam::Coord(coord)) => self.blink(coord),
+                enum Deck {
+                    Spent,
+                    Burnt,
+                }
+                use Deck::*;
+                let (result, deck) = match (card, param) {
+                    (Card::Blink, CardParam::Coord(coord)) => (self.blink(coord), Spent),
                     (Card::Bump, CardParam::CardinalDirection(direction)) => {
-                        self.bump(direction)
+                        (self.bump(direction), Spent)
                     }
                     (Card::Spark, CardParam::CardinalDirection(direction)) => {
-                        self.spark(direction)
+                        (self.spark(direction), Spent)
                     }
-                    (Card::Heal, CardParam::Confirm) => self.heal(1),
+                    (Card::Heal, CardParam::Confirm) => (self.heal(1), Spent),
+                    (Card::Clog, CardParam::Confirm) => (Ok(ApplyAction::Done), Spent),
+                    (Card::Parasite, CardParam::Confirm) => {
+                        self.world.deal_damage(self.player_id, 2);
+                        (Ok(ApplyAction::Done), Burnt)
+                    }
+                    (Card::Drain, CardParam::Confirm) => (Ok(ApplyAction::Done), Burnt),
                     _ => return Err(CancelAction::InvalidCard),
                 };
                 if result.is_ok() {
                     self.hand[slot] = None;
-                    self.spent.push(card);
+                    match deck {
+                        Spent => self.spent.push(card),
+                        Burnt => self.burnt.push(card),
+                    }
                 }
                 (result, card.cost())
             }
