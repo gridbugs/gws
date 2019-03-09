@@ -52,7 +52,7 @@ pub mod input {
     }
 }
 
-const INITIAL_DRAW_COUNTDOWN: u32 = 120;
+const INITIAL_DRAW_COUNTDOWN: u32 = 100;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct DrawCountdown {
@@ -76,6 +76,7 @@ pub struct Gws {
     waste: Vec<Card>,
     burnt: Vec<Card>,
     draw_countdown: DrawCountdown,
+    level: u32,
 }
 
 pub struct ToRender<'a> {
@@ -91,8 +92,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -101,6 +102,7 @@ pub struct BetweenLevels {
     burnt: Vec<Card>,
     hand_size: usize,
     max_draw_countdown: u32,
+    next_level: u32,
 }
 
 impl BetweenLevels {
@@ -130,11 +132,18 @@ impl BetweenLevels {
             Card::Spike,
         ];
         let deck = vec![
-            Card::Burn,
-            Card::Spend,
-            Card::Save,
-            Card::Garden,
-            Card::Empower,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
+            Card::Blink,
         ];
         let burnt = Vec::new();
         let hand_size = 5;
@@ -145,6 +154,7 @@ impl BetweenLevels {
             burnt,
             hand_size,
             max_draw_countdown,
+            next_level: 0,
         }
     }
 }
@@ -152,6 +162,7 @@ impl BetweenLevels {
 pub enum End {
     ExitLevel(BetweenLevels),
     PlayerDied,
+    Victory,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -482,6 +493,14 @@ impl Gws {
         rng: &mut R,
         debug_terrain_string: Option<&str>,
     ) -> Self {
+        let BetweenLevels {
+            player,
+            mut deck,
+            burnt,
+            hand_size,
+            max_draw_countdown,
+            next_level,
+        } = between_levels.unwrap_or_else(BetweenLevels::initial);
         let terrain::TerrainDescription {
             size,
             player_coord,
@@ -489,16 +508,10 @@ impl Gws {
         } = match TERRAIN_CHOICE {
             TerrainChoice::StringDemo => terrain::from_str(
                 debug_terrain_string.unwrap_or(include_str!("terrain_string.txt")),
+                rng,
             ),
-            TerrainChoice::WfcIceCave(size) => terrain::wfc_ice_cave(size, rng),
+            TerrainChoice::WfcIceCave(size) => terrain::wfc(size, next_level, rng),
         };
-        let BetweenLevels {
-            player,
-            mut deck,
-            burnt,
-            hand_size,
-            max_draw_countdown,
-        } = between_levels.unwrap_or_else(BetweenLevels::initial);
         deck.shuffle(rng);
         let draw_countdown = DrawCountdown {
             max: max_draw_countdown,
@@ -525,6 +538,7 @@ impl Gws {
             spent: Vec::new(),
             waste: Vec::new(),
             burnt,
+            level: next_level,
         };
         s.engine_commit();
         s.draw_hand();
@@ -1056,12 +1070,16 @@ impl Gws {
             player,
             hand_size: self.hand.len(),
             max_draw_countdown: self.draw_countdown.max,
+            next_level: self.level + 1,
         }
     }
 
     fn check_end(&self) -> Option<End> {
         let player = self.player();
         if let Some(cell) = self.world.grid().get(player.coord()) {
+            if cell.is_end() {
+                return Some(End::Victory);
+            }
             for entity in cell.entity_iter(self.world.entities()) {
                 if entity.foreground_tile() == Some(ForegroundTile::Stairs) {
                     return Some(End::ExitLevel(self.between_levels()));

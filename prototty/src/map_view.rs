@@ -59,18 +59,22 @@ impl View<Gws> for MapView {
             }
             let mut view_cell = match cell.background_tile() {
                 BackgroundTile::Floor | BackgroundTile::Ground => FLOOR,
-                BackgroundTile::IceWall => WALL,
+                BackgroundTile::IceWall
+                | BackgroundTile::StoneWall
+                | BackgroundTile::BrickWall => WALL,
             };
             for entity in cell.entity_iter(to_render.world.entities()) {
                 let foreground_view_cell =
                     entity.foreground_tile().and_then(|foreground_tile| {
                         match foreground_tile {
-                            ForegroundTile::Bumper => None,
+                            ForegroundTile::Bruiser => None,
                             ForegroundTile::Block => None,
                             ForegroundTile::Spike => None,
+                            ForegroundTile::NaturalSpike => None,
                             ForegroundTile::Caster => None,
                             ForegroundTile::Healer => None,
                             ForegroundTile::Spark => None,
+                            ForegroundTile::End => None,
                             ForegroundTile::Blink0 => None,
                             ForegroundTile::Blink1 => None,
                             ForegroundTile::Player => Some(PLAYER),

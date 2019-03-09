@@ -35,18 +35,21 @@ fn string_to_char_grid(s: &str) -> Grid<char> {
     Grid::new_fn(size, |Coord { x, y }| v[y as usize][x as usize])
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 enum Base {
     Floor,
     Ground,
     Tree,
     IceWall,
+    BrickWall,
+    StoneWall,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Contents {
+    End,
     Player,
-    Bumper,
+    Bruiser,
     Caster,
     Healer,
     Light(Rgb24),
@@ -54,12 +57,14 @@ enum Contents {
     Flame,
     Altar,
     Fountain,
+    NaturalSpike,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct Cell {
     base: Base,
     contents: Option<Contents>,
+    upgrade: Option<Upgrade>,
 }
 
 impl Cell {
@@ -67,6 +72,7 @@ impl Cell {
         Self {
             base,
             contents: None,
+            upgrade: None,
         }
     }
     fn with_contents(self, contents: Contents) -> Self {
@@ -75,31 +81,51 @@ impl Cell {
             ..self
         }
     }
+    fn with_upgrade(self, upgrade: Upgrade) -> Self {
+        Self {
+            upgrade: Some(upgrade),
+            ..self
+        }
+    }
 }
 
-fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
+fn cell_grid_to_terrain_description<R: Rng>(
+    grid: &Grid<Cell>,
+    _rng: &mut R,
+) -> TerrainDescription {
     fn basic_light(rgb24: Rgb24) -> PackedLight {
         PackedLight::new(rgb24.floor(10), 90, Rational::new(1, 10))
     }
     let mut player_coord = None;
     let mut instructions = Vec::new();
-    for (coord, &cell) in grid.enumerate() {
+    for (coord, cell) in grid.enumerate() {
         use Instruction::*;
-        if let Some(contents) = cell.contents {
+        if let Some(ref contents) = cell.contents {
             match contents {
+                Contents::NaturalSpike => {
+                    instructions.push(AddEntity(coord, PackedEntity::natural_spike()));
+                }
                 Contents::Flame => {
                     instructions.push(AddEntity(coord, PackedEntity::flame()));
                 }
                 Contents::Altar => {
-                    instructions.push(AddEntity(coord, PackedEntity::altar()));
+                    if let Some(upgrade) = cell.upgrade.as_ref() {
+                        instructions
+                            .push(AddEntity(coord, PackedEntity::altar(upgrade.clone())));
+                    }
                 }
                 Contents::Fountain => {
-                    instructions.push(AddEntity(coord, PackedEntity::fountain()));
+                    if let Some(upgrade) = cell.upgrade.as_ref() {
+                        instructions.push(AddEntity(
+                            coord,
+                            PackedEntity::fountain(upgrade.clone()),
+                        ));
+                    }
                 }
                 Contents::Player => {
                     player_coord = Some(coord);
                 }
-                Contents::Bumper => {
+                Contents::Bruiser => {
                     instructions.push(AddEntity(coord, PackedEntity::bumper()));
                 }
                 Contents::Caster => {
@@ -107,6 +133,9 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
                 }
                 Contents::Healer => {
                     instructions.push(AddEntity(coord, PackedEntity::healer()));
+                }
+                Contents::End => {
+                    instructions.push(AddEntity(coord, PackedEntity::end()));
                 }
                 Contents::Stairs => {
                     instructions.push(AddEntity(
@@ -122,7 +151,7 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
                     coord,
                     PackedEntity {
                         foreground_tile: None,
-                        light: Some(basic_light(colour)),
+                        light: Some(basic_light(*colour)),
                         ..Default::default()
                     },
                 )),
@@ -135,6 +164,12 @@ fn cell_grid_to_terrain_description(grid: &Grid<Cell>) -> TerrainDescription {
             }
             Base::IceWall => {
                 instructions.push(SetBackground(coord, BackgroundTile::IceWall))
+            }
+            Base::StoneWall => {
+                instructions.push(SetBackground(coord, BackgroundTile::StoneWall))
+            }
+            Base::BrickWall => {
+                instructions.push(SetBackground(coord, BackgroundTile::BrickWall))
             }
             Base::Tree => {
                 instructions.push(SetBackground(coord, BackgroundTile::Ground));
@@ -161,13 +196,13 @@ fn char_to_base(ch: char) -> Option<Base> {
     }
 }
 
-fn char_to_cell(ch: char) -> Option<Cell> {
+fn char_to_cell<R: Rng>(ch: char, config: &Config, rng: &mut R) -> Option<Cell> {
     if let Some(base) = char_to_base(ch) {
         Some(Cell::new(base))
     } else {
         match ch {
             '@' => Some(Cell::new(Base::Floor).with_contents(Contents::Player)),
-            'd' => Some(Cell::new(Base::Floor).with_contents(Contents::Bumper)),
+            'd' => Some(Cell::new(Base::Floor).with_contents(Contents::Bruiser)),
             'c' => Some(Cell::new(Base::Floor).with_contents(Contents::Caster)),
             'h' => Some(Cell::new(Base::Floor).with_contents(Contents::Healer)),
             '1' => Some(
@@ -180,8 +215,16 @@ fn char_to_cell(ch: char) -> Option<Cell> {
                 Cell::new(Base::Floor).with_contents(Contents::Light(rgb24(0, 0, 255))),
             ),
             'f' => Some(Cell::new(Base::Floor).with_contents(Contents::Flame)),
-            'a' => Some(Cell::new(Base::Floor).with_contents(Contents::Altar)),
-            'p' => Some(Cell::new(Base::Floor).with_contents(Contents::Fountain)),
+            'a' => Some(
+                Cell::new(Base::Floor)
+                    .with_contents(Contents::Altar)
+                    .with_upgrade(Upgrade::new(&config.card_dist, rng)),
+            ),
+            'p' => Some(
+                Cell::new(Base::Floor)
+                    .with_contents(Contents::Fountain)
+                    .with_upgrade(Upgrade::new(&config.card_dist, rng)),
+            ),
             _ => None,
         }
     }
@@ -193,22 +236,30 @@ fn char_grid_to_base_grid(char_grid: &Grid<char>) -> Grid<Base> {
     })
 }
 
-fn char_grid_to_cell_grid(char_grid: &Grid<char>) -> Grid<Cell> {
+fn char_grid_to_cell_grid<R: Rng>(
+    char_grid: &Grid<char>,
+    config: &Config,
+    rng: &mut R,
+) -> Grid<Cell> {
     Grid::new_grid_map_ref(char_grid, |&ch| {
-        char_to_cell(ch).expect(&format!("unrecognised char: {}", ch))
+        char_to_cell(ch, config, rng).expect(&format!("unrecognised char: {}", ch))
     })
 }
 
-fn char_grid_to_terrain_description(grid: &Grid<char>) -> TerrainDescription {
-    cell_grid_to_terrain_description(&char_grid_to_cell_grid(grid))
+fn char_grid_to_terrain_description<R: Rng>(
+    grid: &Grid<char>,
+    rng: &mut R,
+) -> TerrainDescription {
+    let config = Config::testing();
+    cell_grid_to_terrain_description(&char_grid_to_cell_grid(grid, &config, rng), rng)
 }
 
 fn base_grid_to_default_cell_grid(base_grid: &Grid<Base>) -> Grid<Cell> {
     Grid::new_grid_map_ref(&base_grid, |base| Cell::new(*base))
 }
 
-pub fn from_str(s: &str) -> TerrainDescription {
-    char_grid_to_terrain_description(&string_to_char_grid(s))
+pub fn from_str<R: Rng>(s: &str, rng: &mut R) -> TerrainDescription {
+    char_grid_to_terrain_description(&string_to_char_grid(s), rng)
 }
 
 fn binary_distance_map<T, Z, C>(
@@ -287,16 +338,15 @@ where
 struct BadLevel;
 const MIN_ACCESSIBLE_CELLS: usize = 500;
 const NUM_STAIRS_CANDIDATES: usize = 100;
-const NUM_NPCS: usize = 10;
-const NUM_UPGRADES: usize = 4;
 
 fn populate_base_grid<R: Rng>(
     base_grid: &Grid<Base>,
+    config: &Config,
     rng: &mut R,
 ) -> Result<Grid<Cell>, BadLevel> {
     let mut areas = classify(base_grid, |&base| match base {
         Base::Floor | Base::Ground => true,
-        Base::IceWall | Base::Tree => false,
+        Base::IceWall | Base::Tree | Base::StoneWall | Base::BrickWall => false,
     });
     let (to_keep, to_fill) = if let Some(last) = areas.pop() {
         (last, areas)
@@ -308,12 +358,17 @@ fn populate_base_grid<R: Rng>(
     }
     let mut cell_grid = base_grid_to_default_cell_grid(base_grid);
     for &coord in to_fill.iter().flat_map(|a| a.iter()) {
-        cell_grid.get_checked_mut(coord).base = Base::IceWall;
+        cell_grid.get_checked_mut(coord).base = config.wall;
+    }
+    for cell in cell_grid.iter_mut() {
+        if cell.base == Base::IceWall {
+            cell.base = config.wall;
+        }
     }
     let distance_map = binary_distance_map(
         &cell_grid,
         |_coord, cell| match cell.base {
-            Base::IceWall | Base::Tree => true,
+            Base::StoneWall | Base::BrickWall | Base::IceWall | Base::Tree => true,
             Base::Floor | Base::Ground => false,
         },
         |_, _| true,
@@ -337,7 +392,7 @@ fn populate_base_grid<R: Rng>(
         &cell_grid,
         |_coord, cell| cell.contents == Some(Contents::Player),
         |_coord, cell| match cell.base {
-            Base::IceWall | Base::Tree => false,
+            Base::StoneWall | Base::BrickWall | Base::IceWall | Base::Tree => false,
             Base::Floor | Base::Ground => true,
         },
     );
@@ -363,27 +418,41 @@ fn populate_base_grid<R: Rng>(
         return Err(BadLevel);
     }
     let (stairs_coord, _distance) = *stairs_candidates.choose(rng).unwrap();
-    cell_grid.get_checked_mut(stairs_coord).contents = Some(Contents::Stairs);
+    cell_grid.get_checked_mut(stairs_coord).contents = Some(if config.include_end {
+        Contents::End
+    } else {
+        Contents::Stairs
+    });
     let mut npc_candidates = item_candidates
         .iter()
         .cloned()
         .filter(|&coord| cell_grid.get_checked(coord).contents.is_none())
         .collect::<Vec<_>>();
     npc_candidates.shuffle(rng);
-    let npcs = [Contents::Bumper, Contents::Caster, Contents::Healer];
-    for &coord in npc_candidates.iter().take(NUM_NPCS) {
-        let &npc = npcs.choose(rng).unwrap();
-        cell_grid.get_checked_mut(coord).contents = Some(npc);
+    for _ in 0..config.npc_count {
+        if let Some(coord) = npc_candidates.pop() {
+            let npc = config.npc_dist.choose(rng).unwrap().clone();
+            cell_grid.get_checked_mut(coord).contents = Some(npc);
+        }
     }
     let upgrades = [Contents::Flame, Contents::Altar, Contents::Fountain];
-    for &coord in npc_candidates.iter().take(NUM_UPGRADES) {
-        let &upgrade = upgrades.choose(rng).unwrap();
-        cell_grid.get_checked_mut(coord).contents = Some(upgrade);
+    for _ in 0..config.num_upgrades {
+        if let Some(coord) = npc_candidates.pop() {
+            let upgrade = upgrades.choose(rng).unwrap();
+            let cell = cell_grid.get_checked_mut(coord);
+            cell.contents = Some(upgrade.clone());
+            cell.upgrade = Some(Upgrade::new(&config.card_dist, rng));
+        }
+    }
+    for _ in 0..config.num_spikes {
+        if let Some(coord) = npc_candidates.pop() {
+            cell_grid.get_checked_mut(coord).contents = Some(Contents::NaturalSpike);
+        }
     }
     Ok(cell_grid)
 }
 
-fn wfc_ice_cave_base_grid<R: Rng>(output_size: Size, rng: &mut R) -> Grid<Base> {
+fn wfc_base_grid<R: Rng>(input: &str, output_size: Size, rng: &mut R) -> Grid<Base> {
     struct Forbid {
         bottom_right_id: PatternId,
         ids_to_forbid_bottom_right: HashSet<PatternId>,
@@ -420,7 +489,7 @@ fn wfc_ice_cave_base_grid<R: Rng>(output_size: Size, rng: &mut R) -> Grid<Base> 
         }
     }
     let pattern_size = 4;
-    let grid = string_to_char_grid(include_str!("wfc_ice_cave.txt"));
+    let grid = string_to_char_grid(input);
     let input_size = grid.size();
     // we will discard the bottom row and right column
     let virtual_output_size = output_size + Size::new(1, 1);
@@ -479,12 +548,101 @@ fn wfc_ice_cave_base_grid<R: Rng>(output_size: Size, rng: &mut R) -> Grid<Base> 
     char_grid_to_base_grid(&output_grid)
 }
 
-pub fn wfc_ice_cave<R: Rng>(output_size: Size, rng: &mut R) -> TerrainDescription {
+fn wfc_common<R: Rng>(
+    input: &str,
+    output_size: Size,
+    config: Config,
+    rng: &mut R,
+) -> TerrainDescription {
     let cell_grid = loop {
-        let base_grid = wfc_ice_cave_base_grid(output_size, rng);
-        if let Ok(cell_grid) = populate_base_grid(&base_grid, rng) {
+        let base_grid = wfc_base_grid(input, output_size, rng);
+        if let Ok(cell_grid) = populate_base_grid(&base_grid, &config, rng) {
             break cell_grid;
         }
     };
-    cell_grid_to_terrain_description(&cell_grid)
+    cell_grid_to_terrain_description(&cell_grid, rng)
+}
+
+pub fn wfc<R: Rng>(output_size: Size, level: u32, rng: &mut R) -> TerrainDescription {
+    use Card::*;
+    use Contents::*;
+    match level {
+        1 => {
+            let config = Config {
+                wall: Base::BrickWall,
+                npc_count: 12,
+                npc_dist: vec![
+                    Bruiser, Bruiser, Bruiser, Bruiser, Bruiser, Caster, Caster, Caster,
+                    Healer,
+                ],
+                card_dist: vec![Bump, Bump, Blink, Heal, Spark],
+                num_spikes: 8,
+                num_upgrades: 4,
+                include_end: false,
+            };
+            wfc_common(include_str!("wfc_ruins.txt"), output_size, config, rng)
+        }
+        0 => {
+            let config = Config {
+                wall: Base::StoneWall,
+                npc_count: 20,
+                npc_dist: vec![
+                    Bruiser, Bruiser, Caster, Caster, Caster, Healer, Healer, Healer,
+                ],
+                card_dist: vec![
+                    Burn, Save, Shred, Shred, Shred, Surround, Surround, Surround,
+                    Recover, Recover, Garden, Garden, Armour, Armour, Bash, Bash, Bash,
+                ],
+                num_spikes: 20,
+                num_upgrades: 3,
+                include_end: true,
+            };
+            wfc_common(include_str!("wfc_finale.txt"), output_size, config, rng)
+        }
+
+        _ => {
+            let config = Config {
+                wall: Base::IceWall,
+                npc_count: 12,
+                npc_dist: vec![
+                    Bruiser, Bruiser, Bruiser, Bruiser, Bruiser, Caster, Caster, Caster,
+                    Healer,
+                ],
+                card_dist: vec![Bump, Bump, Blink, Heal, Spark],
+                num_spikes: 8,
+                num_upgrades: 4,
+                include_end: false,
+            };
+            wfc_common(include_str!("wfc_ice_cave.txt"), output_size, config, rng)
+        }
+    }
+}
+
+struct Config {
+    wall: Base,
+    npc_count: u32,
+    npc_dist: Vec<Contents>,
+    card_dist: Vec<Card>,
+    num_spikes: u32,
+    num_upgrades: u32,
+    include_end: bool,
+}
+
+impl Config {
+    fn testing() -> Self {
+        use Card::*;
+        use Contents::*;
+        Config {
+            wall: Base::IceWall,
+            npc_count: 12,
+            npc_dist: vec![
+                Bruiser, Bruiser, Bruiser, Bruiser, Bruiser, Caster, Caster, Caster,
+                Healer,
+            ],
+            card_dist: vec![Bump, Bump, Blink, Heal, Spark],
+            num_spikes: 8,
+            num_upgrades: 4,
+            include_end: false,
+        }
+    }
 }

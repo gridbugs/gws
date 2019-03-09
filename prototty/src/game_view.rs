@@ -6,7 +6,7 @@ pub struct GameView;
 
 const FLOOR_BACKGROUND: Rgb24 = rgb24(0, 10, 30);
 const FLOOR_FOREGROUND: Rgb24 = rgb24(120, 150, 240);
-const GROUND_BACKGROUND: Rgb24 = rgb24(2, 20, 5);
+const GROUND_BACKGROUND: Rgb24 = rgb24(0, 0, 0);
 const GROUND_FOREGROUND: Rgb24 = rgb24(255, 255, 255);
 const TREE_COLOUR: Rgb24 = rgb24(30, 200, 60);
 const STAIRS_COLOUR: Rgb24 = rgb24(220, 100, 50);
@@ -20,6 +20,26 @@ const ICE_WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
 const ICE_WALL_ABOVE_WALL: ViewCell = ViewCell::new()
     .with_character(' ')
     .with_background(ICE_WALL_TOP_COLOUR);
+
+const BRICK_WALL_TOP_COLOUR: Rgb24 = rgb24(50, 20, 10);
+const BRICK_WALL_FRONT_COLOUR: Rgb24 = rgb24(220, 170, 100);
+const BRICK_WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
+    .with_character('▀')
+    .with_foreground(BRICK_WALL_TOP_COLOUR)
+    .with_background(BRICK_WALL_FRONT_COLOUR);
+const BRICK_WALL_ABOVE_WALL: ViewCell = ViewCell::new()
+    .with_character(' ')
+    .with_background(BRICK_WALL_TOP_COLOUR);
+
+const STONE_WALL_TOP_COLOUR: Rgb24 = rgb24(60, 60, 60);
+const STONE_WALL_FRONT_COLOUR: Rgb24 = rgb24(160, 160, 160);
+const STONE_WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
+    .with_character('▀')
+    .with_foreground(STONE_WALL_TOP_COLOUR)
+    .with_background(STONE_WALL_FRONT_COLOUR);
+const STONE_WALL_ABOVE_WALL: ViewCell = ViewCell::new()
+    .with_character(' ')
+    .with_background(STONE_WALL_TOP_COLOUR);
 
 const BLOCK_TOP_COLOUR: Rgb24 = rgb24(60, 140, 100);
 const BLOCK_FRONT_COLOUR: Rgb24 = rgb24(100, 200, 140);
@@ -46,8 +66,13 @@ const STAIRS: ViewCell = ViewCell::new()
     .with_foreground(STAIRS_COLOUR);
 const PLAYER: ViewCell = ViewCell::new().with_character('@').with_bold(true);
 
-const BUMPER_CHAR: char = 'b';
-const BUMPER_VIEW_CELL: ViewCell = ViewCell::new()
+const END: ViewCell = ViewCell::new()
+    .with_character('@')
+    .with_bold(true)
+    .with_foreground(rgb24(200, 0, 255));
+
+const BRUISER_CHAR: char = 'b';
+const BRUISER_VIEW_CELL: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(rgb24(200, 20, 80));
 
@@ -107,12 +132,17 @@ const FOUNTAIN: ViewCell = ViewCell::new()
 const SPIKE: ViewCell = ViewCell::new()
     .with_character('▲')
     .with_bold(true)
+    .with_foreground(rgb24(100, 200, 140));
+
+const NATURAL_SPIKE: ViewCell = ViewCell::new()
+    .with_character('▲')
+    .with_bold(true)
     .with_foreground(rgb24(0, 255, 255));
 
 fn npc_view_cell(entity: &Entity) -> ViewCell {
     // TODO messy
     let (ch, view_cell) = match entity.foreground_tile().unwrap() {
-        ForegroundTile::Bumper => (BUMPER_CHAR, BUMPER_VIEW_CELL),
+        ForegroundTile::Bruiser => (BRUISER_CHAR, BRUISER_VIEW_CELL),
         ForegroundTile::Caster => (CASTER_CHAR, CASTER_VIEW_CELL),
         ForegroundTile::Healer => (HEALER_CHAR, HEALER_VIEW_CELL),
         _ => panic!("not npc"),
@@ -161,11 +191,33 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
                 ICE_WALL_ABOVE_FLOOR
             }
         }
+        BackgroundTile::BrickWall => {
+            if let Some(cell_below) = to_render.world.grid().get(coord + Coord::new(0, 1))
+            {
+                match cell_below.background_tile() {
+                    BackgroundTile::BrickWall => BRICK_WALL_ABOVE_WALL,
+                    _ => BRICK_WALL_ABOVE_FLOOR,
+                }
+            } else {
+                BRICK_WALL_ABOVE_FLOOR
+            }
+        }
+        BackgroundTile::StoneWall => {
+            if let Some(cell_below) = to_render.world.grid().get(coord + Coord::new(0, 1))
+            {
+                match cell_below.background_tile() {
+                    BackgroundTile::StoneWall => STONE_WALL_ABOVE_WALL,
+                    _ => STONE_WALL_ABOVE_FLOOR,
+                }
+            } else {
+                STONE_WALL_ABOVE_FLOOR
+            }
+        }
     };
     // TODO this rule should live somewhere else
-    let entity = if cell.contains_npc() {
+    let entity = if cell.contains_npc() || cell.contains_player() {
         cell.entity_iter(to_render.world.entities())
-            .find(|e| e.is_npc())
+            .find(|e| e.is_npc() || e.is_player())
     } else {
         cell.entity_iter(to_render.world.entities())
             .find(|e| e.foreground_tile().is_some())
@@ -192,8 +244,10 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
         } else if let Some(foreground_tile) = entity.foreground_tile() {
             match foreground_tile {
                 ForegroundTile::Player => PLAYER,
+                ForegroundTile::End => END,
                 ForegroundTile::Block => BLOCK,
                 ForegroundTile::Spike => SPIKE,
+                ForegroundTile::NaturalSpike => NATURAL_SPIKE,
                 ForegroundTile::Spark => SPARK,
                 ForegroundTile::Tree => TREE,
                 ForegroundTile::Stairs => STAIRS,

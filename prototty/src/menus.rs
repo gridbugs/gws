@@ -141,12 +141,25 @@ pub mod altar_menu {
 
     pub type T = MenuInstance<(CharacterUpgrade, Card)>;
 
-    pub fn create<R: Rng>(game: &Gws, card_table: &CardTable, rng: &mut R) -> T {
-        let num_choices = 3;
-        let choices = game
-            .choose_upgrades(num_choices, rng)
+    pub fn create<R: Rng>(
+        id: EntityId,
+        game: &Gws,
+        card_table: &CardTable,
+        _rng: &mut R,
+    ) -> T {
+        let upgrade = game
+            .to_render()
+            .world
+            .entities()
+            .get(&id)
+            .unwrap()
+            .upgrade()
+            .unwrap();
+        let choices = upgrade
+            .character_upgrades
+            .iter()
             .cloned()
-            .zip(game.choose_negative_cards(num_choices, rng).cloned());
+            .zip(upgrade.negative_cards.iter().cloned());
         let menu = Menu::smallest(
             choices
                 .map(|(upgrade, card)| {
@@ -162,17 +175,28 @@ pub mod altar_menu {
 
 pub mod fountain_menu {
     use super::*;
-    use rand::seq::SliceRandom;
 
     pub type T = MenuInstance<(Card, usize)>;
 
-    const COUNTS: &'static [usize] = &[3, 4, 4, 4, 5, 5, 6];
-    pub fn create<R: Rng>(game: &Gws, card_table: &CardTable, rng: &mut R) -> T {
-        let num_choices = 3;
-        let choices = game
-            .choose_positive_cards(num_choices, rng)
+    pub fn create<R: Rng>(
+        id: EntityId,
+        game: &Gws,
+        card_table: &CardTable,
+        _rng: &mut R,
+    ) -> T {
+        let upgrade = game
+            .to_render()
+            .world
+            .entities()
+            .get(&id)
+            .unwrap()
+            .upgrade()
+            .unwrap();
+        let choices = upgrade
+            .positive_cards
+            .iter()
             .cloned()
-            .zip(COUNTS.choose_multiple(rng, num_choices).cloned());
+            .zip(upgrade.counts.iter().cloned());
         let menu = Menu::smallest(
             choices
                 .map(|(card, count)| {

@@ -24,7 +24,7 @@ use std::marker::PhantomData;
 use std::time::Duration;
 use ui::*;
 
-const TITLE: &'static str = "Get Well Soon";
+const TITLE: &'static str = "Get well soon";
 const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
 
 pub const APP_SIZE: Size = Size::new_u16(74, 58);
@@ -96,6 +96,7 @@ enum AppState {
     ListWaste,
     ListBurnt,
     ViewCursor,
+    End(u32),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -184,12 +185,144 @@ fn list_cards<G>(
     }
 }
 
+const NUM_END_DIALOG: u32 = 7;
+
 impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
     fn view<G>(&mut self, app: &App<F, S>, offset: Coord, depth: i32, grid: &mut G)
     where
         G: ViewGrid,
     {
         match app.app_state {
+            AppState::End(n) => {
+                let offset = offset + Coord::new(1, 1);
+                let mut line = 0;
+                let end = TextInfo::default().foreground_colour(rgb24(200, 0, 255));
+                let end_bg = TextInfo::default()
+                    .background_colour(rgb24(200, 0, 255))
+                    .foreground_colour(rgb24(0, 0, 0))
+                    .bold();
+
+                let player = TextInfo::default().foreground_colour(rgb24(255, 255, 255));
+                match n {
+                    0 => {
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("Come with me.", player)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                        line += 2;
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("You're sick.", player)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                        line += 2;
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("It's not safe here.", player)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                        line += 2;
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![(
+                                "Let me take you to someone who can help.",
+                                player,
+                            )]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                    }
+                    1 => {
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("I'd prefer to stay.", end)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                        line += 2;
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("This is my home now.", end)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                        line += 2;
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![(
+                                "There's nothing you can do for me.",
+                                end,
+                            )]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                    }
+                    2 => {
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("I'm sor...", player)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                    }
+                    3 => {
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("LEAVE!!!", end_bg)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                    }
+                    4 => {
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("...", player)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                    }
+                    5 => {
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("...OK I'm going now...", player)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                    }
+                    6 => {
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![("Get well soon...", player)]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                        line = 20;
+                        DefaultRichTextView.view(
+                            &RichText::one_line(vec![(
+                                "(ENTER to ascend from the dungeon)",
+                                player,
+                            )]),
+                            offset + Coord::new(0, line),
+                            depth,
+                            grid,
+                        );
+                    }
+                    _ => (),
+                }
+                if n < 6 {
+                    line = 20;
+                    DefaultRichTextView.view(
+                        &RichText::one_line(vec![("(ENTER to continue)", player)]),
+                        offset + Coord::new(0, line),
+                        depth,
+                        grid,
+                    );
+                }
+            }
             AppState::ViewCursor => {
                 if let Some(game_state) = app.game_state.as_ref() {
                     UiView(GameView).view(
@@ -423,6 +556,24 @@ impl<F: Frontend, S: Storage> App<F, S> {
         I: IntoIterator<Item = ProtottyInput>,
     {
         match self.app_state {
+            AppState::End(n) => {
+                for input in inputs {
+                    match input {
+                        prototty_inputs::ETX => return Some(Tick::Quit),
+                        prototty_inputs::RETURN => {
+                            self.delete_save();
+                            self.game_state = None;
+                            let next = n + 1;
+                            if next >= NUM_END_DIALOG {
+                                self.app_state = AppState::Menu;
+                            } else {
+                                self.app_state = AppState::End(next);
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+            }
             AppState::ViewCursor => {
                 // TODO centralise these dimensions
                 if let Some(game_state) = self.game_state.as_ref() {
@@ -470,10 +621,18 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 cell.foreground_tiles(to_render.world.entities()).next()
                             {
                                 self.message = match foreground_tile {
-                                    ForegroundTile::Bumper => Some("Bumper".to_string()),
+                                    ForegroundTile::Bruiser => {
+                                        Some("Bruiser".to_string())
+                                    }
+                                    ForegroundTile::End => Some(
+                                        "Your search is finaly at an end.".to_string(),
+                                    ),
                                     ForegroundTile::Caster => Some("Caster".to_string()),
                                     ForegroundTile::Healer => Some("Healer".to_string()),
                                     ForegroundTile::Spike => Some("Spike".to_string()),
+                                    ForegroundTile::NaturalSpike => {
+                                        Some("Natural Spike".to_string())
+                                    }
                                     ForegroundTile::Spark => None,
                                     ForegroundTile::Blink0 => None,
                                     ForegroundTile::Blink1 => None,
@@ -499,6 +658,12 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     BackgroundTile::Ground => Some("Ground".to_string()),
                                     BackgroundTile::IceWall => {
                                         Some("Ice Wall".to_string())
+                                    }
+                                    BackgroundTile::StoneWall => {
+                                        Some("Stone Wall".to_string())
+                                    }
+                                    BackgroundTile::BrickWall => {
+                                        Some("Brick Wall".to_string())
                                     }
                                 };
                             }
@@ -915,6 +1080,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     gws::InteractiveType::Altar => {
                                         self.altar_menu =
                                             Some(menus::altar_menu::create(
+                                                interactive.entity_id,
                                                 &game_state.game,
                                                 &self.card_table,
                                                 &mut game_state.rng_with_seed.rng,
@@ -924,6 +1090,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     gws::InteractiveType::Fountain => {
                                         self.fountain_menu =
                                             Some(menus::fountain_menu::create(
+                                                interactive.entity_id,
                                                 &game_state.game,
                                                 &self.card_table,
                                                 &mut game_state.rng_with_seed.rng,
@@ -942,6 +1109,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 gws::End::PlayerDied => {
                                     self.save();
                                     self.app_state = AppState::Death;
+                                }
+                                gws::End::Victory => {
+                                    self.app_state = AppState::End(0);
                                 }
                             },
                             gws::Tick::CancelAction(cancel_action) => {
