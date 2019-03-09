@@ -60,6 +60,19 @@ impl<'a> View<UiData<'a>> for StatusView {
         let burnt_colour = rgb24(150, 100, 40);
         let draw_countdown = ui_data.game.draw_countdown();
         let mut offset = offset;
+        StringView.view("Level:", offset, depth, grid);
+        RichStringView::with_info(
+            TextInfo::default()
+                .bold()
+                .foreground_colour(rgb24(50, 50, 200)),
+        )
+        .view(
+            &format!("{}/{}", ui_data.game.dungeon_level(), 6),
+            offset + Coord::new(7, 0),
+            depth,
+            grid,
+        );
+        offset += Coord::new(0, 2);
         StringView.view("Life:", offset, depth, grid);
         RichStringView::with_info(
             TextInfo::default().bold().foreground_colour(health_colour),

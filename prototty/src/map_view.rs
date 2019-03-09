@@ -70,6 +70,7 @@ impl View<Gws> for MapView {
                             ForegroundTile::Bruiser => None,
                             ForegroundTile::Block => None,
                             ForegroundTile::Spike => None,
+                            ForegroundTile::HealthPickup => None,
                             ForegroundTile::NaturalSpike => None,
                             ForegroundTile::Caster => None,
                             ForegroundTile::Healer => None,

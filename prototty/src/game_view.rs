@@ -139,6 +139,11 @@ const NATURAL_SPIKE: ViewCell = ViewCell::new()
     .with_bold(true)
     .with_foreground(rgb24(0, 255, 255));
 
+const HEALTH_PICKUP: ViewCell = ViewCell::new()
+    .with_character('+')
+    .with_bold(true)
+    .with_foreground(rgb24(140, 0, 0));
+
 fn npc_view_cell(entity: &Entity) -> ViewCell {
     // TODO messy
     let (ch, view_cell) = match entity.foreground_tile().unwrap() {
@@ -249,6 +254,7 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
                 ForegroundTile::Spike => SPIKE,
                 ForegroundTile::NaturalSpike => NATURAL_SPIKE,
                 ForegroundTile::Spark => SPARK,
+                ForegroundTile::HealthPickup => HEALTH_PICKUP,
                 ForegroundTile::Tree => TREE,
                 ForegroundTile::Stairs => STAIRS,
                 ForegroundTile::Blink0 => BLINK0,

@@ -88,6 +88,7 @@ pub enum BackgroundTile {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ForegroundTile {
+    HealthPickup,
     End,
     Spike,
     NaturalSpike,
@@ -193,6 +194,7 @@ pub struct Entity {
     frozen: Option<u32>,
     spike: bool,
     end: bool,
+    pickup: bool,
     upgrade: Option<Upgrade>,
 }
 
@@ -244,6 +246,7 @@ pub struct PackedEntity {
     pub(crate) solid: bool,
     pub(crate) spike: bool,
     pub(crate) end: bool,
+    pub(crate) pickup: bool,
     pub(crate) upgrade: Option<Upgrade>,
 }
 
@@ -261,6 +264,7 @@ impl Default for PackedEntity {
             spike: false,
             end: false,
             upgrade: None,
+            pickup: false,
         }
     }
 }
@@ -373,6 +377,13 @@ impl PackedEntity {
             ..Default::default()
         }
     }
+    pub(crate) fn health_pickup() -> Self {
+        Self {
+            foreground_tile: Some(ForegroundTile::HealthPickup),
+            pickup: true,
+            ..Default::default()
+        }
+    }
 
     pub(crate) fn player() -> Self {
         let player_light = PackedLight::new(grey24(128), 30, Rational::new(1, 10));
@@ -381,7 +392,7 @@ impl PackedEntity {
             light: Some(player_light),
             npc: false,
             player: true,
-            hit_points: Some(HitPoints::new(2, 4)),
+            hit_points: Some(HitPoints::new(3, 3)),
             interactive: false,
             ..Default::default()
         }
@@ -563,6 +574,7 @@ fn move_entity_to_coord(
 ) {
     if let Some(current_cell) = grid.get_mut(entity.coord) {
         current_cell.entities.remove(&entity.id);
+        // TODO many entities will get out of sync with the grid
         if entity.npc {
             current_cell.npc_count -= 1;
         }
@@ -622,6 +634,7 @@ impl World {
             spike: entity.spike,
             upgrade: entity.upgrade.clone(),
             end: entity.end,
+            pickup: entity.pickup,
         }
     }
     pub(crate) fn lights(&self) -> &HashMap<LightId, Light> {
@@ -693,6 +706,7 @@ impl World {
             spike,
             upgrade,
             end,
+            pickup,
         } = entity;
         let id = self.next_id;
         self.next_id += 1;
@@ -721,6 +735,7 @@ impl World {
             spike,
             upgrade,
             end,
+            pickup,
         };
         self.entities.insert(id, entity);
         if let Some(cell) = self.grid.get_mut(coord) {
@@ -776,8 +791,7 @@ impl World {
         direction: CardinalDirection,
     ) -> Result<ApplyAction, CancelAction> {
         if let Some(entity) = self.entities.get(&id) {
-            let id = self
-                .add_entity(entity.coord() + direction.coord(), PackedEntity::spark());
+            let id = self.add_entity(entity.coord(), PackedEntity::spark());
             Ok(ApplyAction::Animation(Animation::spark(id, direction)))
         } else {
             Err(CancelAction::NoEntity)
@@ -789,7 +803,7 @@ impl World {
         id: EntityId,
         coord: Coord,
     ) -> Result<ApplyAction, CancelAction> {
-        if let Some(entity) = self.entities.get_mut(&id) {
+        let result = if let Some(entity) = self.entities.get_mut(&id) {
             if let Some(cell) = self.grid.get(coord) {
                 if cell.is_solid() {
                     Err(CancelAction::MoveIntoSolidCell)
@@ -814,7 +828,22 @@ impl World {
             }
         } else {
             Err(CancelAction::NoEntity)
+        };
+        if result.is_ok() {
+            if let Some(cell) = self.grid.get(coord) {
+                let entity = self.entities.get(&id).unwrap();
+                if entity.is_player() {
+                    if let Some(pickup) = cell
+                        .entity_iter(&self.entities)
+                        .find(|e| e.pickup)
+                        .map(|e| e.id)
+                    {
+                        self.process_pickup(id, pickup);
+                    }
+                }
+            }
         }
+        result
     }
 
     pub(crate) fn heal(
@@ -931,10 +960,30 @@ impl World {
             }
             move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
             if let Some(cell) = self.grid.get(coord) {
+                let pickup = if entity.is_player() {
+                    cell.entity_iter(&self.entities)
+                        .find(|e| e.pickup)
+                        .map(|e| e.id)
+                } else {
+                    None
+                };
                 if cell.contains_spike() {
                     self.deal_damage(id, 1);
                 }
+                if let Some(pickup) = pickup {
+                    self.process_pickup(id, pickup);
+                }
             }
+        }
+    }
+    fn process_pickup(&mut self, player_id: EntityId, pickup_id: EntityId) {
+        match self.entities.get(&pickup_id).unwrap().foreground_tile {
+            Some(ForegroundTile::HealthPickup) => {
+                if self.heal(player_id, 1).is_ok() {
+                    self.remove_entity(pickup_id);
+                }
+            }
+            _ => (),
         }
     }
     pub(crate) fn move_entity_in_direction_with_attack_policy(
@@ -967,6 +1016,12 @@ impl World {
                     if let Some(cell) = self.grid.get(coord) {
                         if cell.contains_spike() {
                             self.deal_damage(id, 1);
+                        } else if let Some(pickup) =
+                            cell.entity_iter(&self.entities).find(|e| e.pickup)
+                        {
+                            if self.entities.get(&id).unwrap().player {
+                                self.process_pickup(id, pickup.id);
+                            }
                         }
                     }
                     Ok(ApplyAction::Done)
@@ -994,6 +1049,7 @@ impl World {
                     .map(|foreground_tile| match foreground_tile {
                         ForegroundTile::Blink0 | ForegroundTile::Blink1 => 0,
                         ForegroundTile::Spark => 0,
+                        ForegroundTile::HealthPickup => 0,
                         ForegroundTile::End => 0,
                         ForegroundTile::NaturalSpike => 0,
                         ForegroundTile::Spike => 0,

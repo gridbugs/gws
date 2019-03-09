@@ -28,12 +28,14 @@ pub mod menu {
     pub enum Choice {
         NewGame,
         Help,
+        Story,
         Quit,
     }
 
     pub fn create() -> MenuInstance<Choice> {
         instantiate_menu(Menu::smallest(vec![
             ("New Game", Choice::NewGame),
+            ("Story", Choice::Story),
             ("Help", Choice::Help),
             ("Quit", Choice::Quit),
         ]))
@@ -49,6 +51,7 @@ pub mod pause_menu {
         NewGame,
         Help,
         Map,
+        Story,
         SaveAndQuit,
     }
 
@@ -58,6 +61,7 @@ pub mod pause_menu {
             ("Map", Choice::Map),
             ("Help", Choice::Help),
             ("New Game", Choice::NewGame),
+            ("Story", Choice::Story),
             ("Save and Quit ", Choice::SaveAndQuit),
         ]))
     }

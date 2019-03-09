@@ -95,6 +95,7 @@ enum AppState {
     ListSpent,
     ListWaste,
     ListBurnt,
+    Story,
     ViewCursor,
     End(u32),
 }
@@ -193,6 +194,26 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
         G: ViewGrid,
     {
         match app.app_state {
+            AppState::Story => {
+                StringView.view(
+                    "The illnes makes you strong, but you're losing control.",
+                    offset + Coord::new(1, 1),
+                    depth,
+                    grid,
+                );
+                StringView.view(
+                    "In the frozen wastes, you find a cave, rumoured to contain a cure.",
+                    offset + Coord::new(1, 3),
+                    depth,
+                    grid,
+                );
+                StringView.view(
+                    "This is your last hope.",
+                    offset + Coord::new(1, 5),
+                    depth,
+                    grid,
+                );
+            }
             AppState::End(n) => {
                 let offset = offset + Coord::new(1, 1);
                 let mut line = 0;
@@ -556,6 +577,17 @@ impl<F: Frontend, S: Storage> App<F, S> {
         I: IntoIterator<Item = ProtottyInput>,
     {
         match self.app_state {
+            AppState::Story => {
+                for input in inputs {
+                    match input {
+                        Input::MouseMove { .. } => (),
+                        prototty_inputs::ETX => return Some(Tick::Quit),
+                        _other => {
+                            self.app_state = AppState::Menu;
+                        }
+                    }
+                }
+            }
             AppState::End(n) => {
                 for input in inputs {
                     match input {
@@ -627,6 +659,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     ForegroundTile::End => Some(
                                         "Your search is finaly at an end.".to_string(),
                                     ),
+                                    ForegroundTile::HealthPickup => {
+                                        Some("Health Potion".to_string())
+                                    }
                                     ForegroundTile::Caster => Some("Caster".to_string()),
                                     ForegroundTile::Healer => Some("Healer".to_string()),
                                     ForegroundTile::Spike => Some("Spike".to_string()),
@@ -840,6 +875,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     opened_from_game: false,
                                 }
                             }
+                            pause_menu::Choice::Story => {
+                                self.app_state = AppState::Story;
+                            }
                             pause_menu::Choice::Map => {
                                 self.app_state = AppState::Map {
                                     opened_from_game: false,
@@ -858,6 +896,9 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             menu::Choice::Quit => return Some(Tick::Quit),
                             menu::Choice::NewGame => {
                                 self.app_state = AppState::BetweenLevels(None);
+                            }
+                            menu::Choice::Story => {
+                                self.app_state = AppState::Story;
                             }
                             menu::Choice::Help => {
                                 self.app_state = AppState::Help {

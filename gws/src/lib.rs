@@ -52,7 +52,7 @@ pub mod input {
     }
 }
 
-const INITIAL_DRAW_COUNTDOWN: u32 = 100;
+const INITIAL_DRAW_COUNTDOWN: u32 = 40;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct DrawCountdown {
@@ -92,8 +92,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -109,11 +109,7 @@ impl BetweenLevels {
     fn initial() -> Self {
         let player = PackedEntity::player();
         let deck = vec![
-            Card::Spark,
-            Card::Spark,
-            Card::Spark,
-            Card::Spark,
-            Card::Spark,
+            Card::Bump,
             Card::Bump,
             Card::Bump,
             Card::Bump,
@@ -121,28 +117,24 @@ impl BetweenLevels {
             Card::Heal,
             Card::Heal,
             Card::Heal,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Block,
             Card::Block,
             Card::Block,
             Card::Freeze,
+            Card::Freeze,
             Card::Spike,
+            Card::Spike,
+            Card::Spike,
+            Card::Spike,
+            Card::Empower,
+            Card::Empower,
+            Card::Blink,
+            Card::Blink,
         ];
         let deck = vec![
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
-            Card::Blink,
+            Card::Bump,
+            Card::Bump,
+            Card::Spark,
+            Card::Spark,
             Card::Blink,
         ];
         let burnt = Vec::new();
@@ -288,27 +280,27 @@ const POSITIVE_CARDS: &'static [Card] = &[
 impl Card {
     pub fn cost(self) -> u32 {
         match self {
-            Card::Blink => 20,
             Card::Bump => 10,
             Card::Heal => 10,
-            Card::Spark => 20,
-            Card::Clog => 10,
-            Card::Parasite => 10,
-            Card::Drain => 40,
-            Card::Block => 10,
             Card::Freeze => 10,
+            Card::Block => 10,
             Card::Spike => 10,
-            Card::Blast => 30,
-            Card::Recover => 40,
-            Card::Bash => 20,
-            Card::Surround => 30,
-            Card::Shred => 40,
+            Card::Empower => 10,
+            Card::Spend => 0,
+            Card::Blink => 20,
+            Card::Spark => 20,
             Card::Garden => 20,
             Card::Armour => 20,
-            Card::Empower => 10,
-            Card::Save => 40,
-            Card::Spend => 0,
+            Card::Bash => 20,
             Card::Burn => 99,
+            Card::Blast => 30,
+            Card::Surround => 30,
+            Card::Recover => 40,
+            Card::Shred => 40,
+            Card::Save => 40,
+            Card::Parasite => 10,
+            Card::Clog => 10,
+            Card::Drain => 40,
         }
     }
 }
@@ -1097,9 +1089,13 @@ impl Gws {
             if let Some(animation) = animation.tick(period, &mut self.world) {
                 self.animation.push(animation);
             }
-        }
-        if self.animation.is_empty() && self.turn == Turn::Engine {
-            self.engine_commit();
+            if self.animation.is_empty() {
+                if self.turn == Turn::Engine {
+                    self.engine_commit();
+                } else {
+                    self.turn = Turn::Engine;
+                }
+            }
         }
     }
 
@@ -1130,11 +1126,9 @@ impl Gws {
                             return Some(Tick::Interact(Interactive { typ, entity_id }));
                         }
                         Ok(ApplyAction::Animation(animation)) => {
-                            self.turn = Turn::Engine;
                             self.animation.push(animation);
                         }
                         Ok(ApplyAction::MultiAnimation(mut animations)) => {
-                            self.turn = Turn::Engine;
                             self.animation.append(&mut animations);
                         }
                     }
@@ -1144,6 +1138,9 @@ impl Gws {
         if self.animation.is_empty() {
             if self.turn == Turn::Engine {
                 self.engine_turn();
+            }
+            if self.animation.is_empty() {
+                self.engine_commit();
             }
         }
         self.animate(Duration::from_secs(0));
@@ -1214,5 +1211,8 @@ impl Gws {
         rng: &mut R,
     ) -> impl Iterator<Item = &'static Card> {
         POSITIVE_CARDS.choose_multiple(rng, amount)
+    }
+    pub fn dungeon_level(&self) -> u32 {
+        self.level + 1
     }
 }
