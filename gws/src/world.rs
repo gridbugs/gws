@@ -469,6 +469,7 @@ pub enum CancelAction {
 pub(crate) enum ApplyAction {
     Done,
     Animation(Animation),
+    MultiAnimation(Vec<Animation>),
     Interact(EntityId),
 }
 
@@ -733,7 +734,8 @@ impl World {
         if let Some(entity) = self.entities.get_mut(&id) {
             if let Some(hit_points) = entity.hit_points.as_mut() {
                 if hit_points.current < hit_points.max {
-                    hit_points.current = (hit_points.current + by).min(hit_points.max);
+                    hit_points.current =
+                        (hit_points.current.saturating_add(by)).min(hit_points.max);
                     Ok(ApplyAction::Done)
                 } else {
                     Err(CancelAction::AlreadyFullHitPoints)
@@ -759,6 +761,32 @@ impl World {
                         .entity_iter(&self.entities)
                         .find_map(|e| if e.npc { Some(e.id) } else { None })
                         .unwrap();
+                    Ok(ApplyAction::Animation(Animation::damage(id, direction)))
+                } else {
+                    Err(CancelAction::NothingToAttack)
+                }
+            } else {
+                Err(CancelAction::OutOfBounds)
+            }
+        } else {
+            Err(CancelAction::NoEntity)
+        }
+    }
+
+    pub(crate) fn bash_npc_in_direction(
+        &mut self,
+        id: EntityId,
+        direction: CardinalDirection,
+    ) -> Result<ApplyAction, CancelAction> {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            let coord = entity.coord + direction.coord();
+            if let Some(cell) = self.grid.get(coord) {
+                if entity.player && cell.contains_npc() {
+                    let id = cell
+                        .entity_iter(&self.entities)
+                        .find_map(|e| if e.npc { Some(e.id) } else { None })
+                        .unwrap();
+                    let _ = self.move_entity_in_direction(id, direction);
                     Ok(ApplyAction::Animation(Animation::damage(id, direction)))
                 } else {
                     Err(CancelAction::NothingToAttack)
@@ -805,6 +833,11 @@ impl World {
     ) {
         if let Some(entity) = self.entities.get_mut(&id) {
             let coord = entity.coord + direction.coord();
+            if let Some(cell) = self.grid.get(coord) {
+                if cell.is_solid() {
+                    return;
+                }
+            }
             move_entity_to_coord(coord, entity, &mut self.grid, &mut self.lights);
             if let Some(cell) = self.grid.get(coord) {
                 if cell.contains_spike() {
@@ -869,7 +902,7 @@ impl World {
                         ForegroundTile::Blink0 | ForegroundTile::Blink1 => 0,
                         ForegroundTile::Spark => 0,
                         ForegroundTile::Spike => 0,
-                        ForegroundTile::Block => 255,
+                        ForegroundTile::Block => 128,
                         ForegroundTile::Caster => 0,
                         ForegroundTile::Healer => 0,
                         ForegroundTile::Player => 0,

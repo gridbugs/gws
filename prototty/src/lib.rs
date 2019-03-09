@@ -1059,13 +1059,15 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     card_selection = None;
                 } else {
                     let choice = match card {
-                        gws::Card::Bump | gws::Card::Spark => {
+                        gws::Card::Bump | gws::Card::Spark | gws::Card::Bash => {
                             message = Some("Choose a direction.".to_string());
                             CardParamChoice::Direction
                         }
                         gws::Card::Blink
                         | gws::Card::Block
+                        | gws::Card::Surround
                         | gws::Card::Freeze
+                        | gws::Card::Shred
                         | gws::Card::Spike => {
                             message = Some("Choose a location.".to_string());
                             CardParamChoice::Coord(
@@ -1073,8 +1075,16 @@ impl<F: Frontend, S: Storage> App<F, S> {
                             )
                         }
                         gws::Card::Heal
+                        | gws::Card::Blast
+                        | gws::Card::Save
+                        | gws::Card::Spend
+                        | gws::Card::Burn
+                        | gws::Card::Recover
                         | gws::Card::Clog
                         | gws::Card::Parasite
+                        | gws::Card::Garden
+                        | gws::Card::Armour
+                        | gws::Card::Empower
                         | gws::Card::Drain => {
                             message = Some("Confirm selection.".to_string());
                             CardParamChoice::Confirm

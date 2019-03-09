@@ -230,6 +230,17 @@ pub struct CardTable {
     block: CardInfo,
     freeze: CardInfo,
     spike: CardInfo,
+    blast: CardInfo,
+    recover: CardInfo,
+    bash: CardInfo,
+    surround: CardInfo,
+    shred: CardInfo,
+    garden: CardInfo,
+    armour: CardInfo,
+    empower: CardInfo,
+    save: CardInfo,
+    burn: CardInfo,
+    spend: CardInfo,
 }
 
 impl CardTable {
@@ -295,6 +306,72 @@ impl CardTable {
                 "Summon a spike trap which lasts 4 turns.".to_string(),
                 rgb24(20, 0, 0),
             ),
+            blast: CardInfo::new(
+                Card::Blast,
+                "Blast".to_string(),
+                "Shoot 4 sparks dealing 1 damage each.".to_string(),
+                rgb24(20, 0, 0),
+            ),
+            recover: CardInfo::new(
+                Card::Recover,
+                "Recover".to_string(),
+                "Heal to max life.".to_string(),
+                rgb24(0, 20, 0),
+            ),
+            bash: CardInfo::new(
+                Card::Bash,
+                "Bash".to_string(),
+                "Attack adjacent square for 1 damage and push 1 space.".to_string(),
+                rgb24(20, 0, 0),
+            ),
+            surround: CardInfo::new(
+                Card::Surround,
+                "Surround".to_string(),
+                "Surround a square with walls lasting 4 turns each.".to_string(),
+                rgb24(0, 20, 0),
+            ),
+            shred: CardInfo::new(
+                Card::Shred,
+                "Shred".to_string(),
+                "Summon 5 spike traps lasting 4 turns each.".to_string(),
+                rgb24(20, 0, 0),
+            ),
+            garden: CardInfo::new(
+                Card::Garden,
+                "Garden".to_string(),
+                "Surround yourself with spike traps lasting 4 turns.".to_string(),
+                rgb24(20, 0, 0),
+            ),
+            armour: CardInfo::new(
+                Card::Armour,
+                "Armour".to_string(),
+                "Surround yourself with walls lasting 4 turns.".to_string(),
+                rgb24(0, 20, 0),
+            ),
+            empower: CardInfo::new(
+                Card::Empower,
+                "Empower".to_string(),
+                "Gain (gross) 40 power.".to_string(),
+                rgb24(0, 20, 0),
+            ),
+            save: CardInfo::new(
+                Card::Save,
+                "Save".to_string(),
+                "Shuffle your hand into your deck.".to_string(),
+                rgb24(0, 0, 20),
+            ),
+            spend: CardInfo::new(
+                Card::Spend,
+                "Spend".to_string(),
+                "Move your hand into the spent pile.".to_string(),
+                rgb24(0, 0, 20),
+            ),
+            burn: CardInfo::new(
+                Card::Burn,
+                "Burn".to_string(),
+                "Burn all the cards in your hand.".to_string(),
+                rgb24(0, 0, 20),
+            ),
         }
     }
     pub fn get(&self, card: Card) -> &CardInfo {
@@ -309,6 +386,17 @@ impl CardTable {
             Card::Block => &self.block,
             Card::Freeze => &self.freeze,
             Card::Spike => &self.spike,
+            Card::Blast => &self.blast,
+            Card::Recover => &self.recover,
+            Card::Bash => &self.bash,
+            Card::Surround => &self.surround,
+            Card::Shred => &self.shred,
+            Card::Garden => &self.garden,
+            Card::Armour => &self.armour,
+            Card::Empower => &self.empower,
+            Card::Save => &self.save,
+            Card::Spend => &self.spend,
+            Card::Burn => &self.burn,
         }
     }
 }

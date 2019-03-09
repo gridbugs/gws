@@ -52,7 +52,7 @@ pub mod input {
     }
 }
 
-const INITIAL_DRAW_COUNTDOWN: u32 = 40;
+const INITIAL_DRAW_COUNTDOWN: u32 = 120;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct DrawCountdown {
@@ -91,8 +91,8 @@ enum TerrainChoice {
     WfcIceCave(Size),
 }
 
-const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
-//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
+//const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::WfcIceCave(Size::new_u16(60, 40));
+const TERRAIN_CHOICE: TerrainChoice = TerrainChoice::StringDemo;
 
 #[derive(Clone)]
 pub struct BetweenLevels {
@@ -128,6 +128,13 @@ impl BetweenLevels {
             Card::Block,
             Card::Freeze,
             Card::Spike,
+        ];
+        let deck = vec![
+            Card::Burn,
+            Card::Spend,
+            Card::Save,
+            Card::Garden,
+            Card::Empower,
         ];
         let burnt = Vec::new();
         let hand_size = 5;
@@ -232,6 +239,17 @@ pub enum Card {
     Block,
     Freeze,
     Spike,
+    Blast,
+    Recover,
+    Bash,
+    Surround,
+    Shred,
+    Garden,
+    Armour,
+    Empower,
+    Save,
+    Spend,
+    Burn,
 }
 
 const NEGATIVE_CARDS: &'static [Card] = &[Card::Clog, Card::Parasite, Card::Drain];
@@ -243,6 +261,17 @@ const POSITIVE_CARDS: &'static [Card] = &[
     Card::Block,
     Card::Freeze,
     Card::Spike,
+    Card::Blast,
+    Card::Recover,
+    Card::Bash,
+    Card::Surround,
+    Card::Shred,
+    Card::Garden,
+    Card::Armour,
+    Card::Empower,
+    Card::Save,
+    Card::Spend,
+    Card::Burn,
 ];
 
 impl Card {
@@ -258,6 +287,17 @@ impl Card {
             Card::Block => 10,
             Card::Freeze => 10,
             Card::Spike => 10,
+            Card::Blast => 30,
+            Card::Recover => 40,
+            Card::Bash => 20,
+            Card::Surround => 30,
+            Card::Shred => 40,
+            Card::Garden => 20,
+            Card::Armour => 20,
+            Card::Empower => 10,
+            Card::Save => 40,
+            Card::Spend => 0,
+            Card::Burn => 99,
         }
     }
 }
@@ -570,6 +610,9 @@ impl Gws {
                 enum Deck {
                     Spent,
                     Burnt,
+                    AllToDeck,
+                    AllToSpent,
+                    AllToBurnt,
                 }
                 use Deck::*;
                 let (result, deck) = match (card, param) {
@@ -577,10 +620,32 @@ impl Gws {
                     (Card::Bump, CardParam::CardinalDirection(direction)) => {
                         (self.bump(direction), Spent)
                     }
+                    (Card::Bash, CardParam::CardinalDirection(direction)) => {
+                        (self.bash(direction), Spent)
+                    }
                     (Card::Spark, CardParam::CardinalDirection(direction)) => {
                         (self.spark(direction), Spent)
                     }
                     (Card::Heal, CardParam::Confirm) => (self.heal(1), Spent),
+                    (Card::Empower, CardParam::Confirm) => {
+                        // TODO hacky
+                        self.draw_countdown.current = (self.draw_countdown.current + 40)
+                            .min(self.draw_countdown.max + Card::Empower.cost());
+                        (Ok(ApplyAction::Done), Spent)
+                    }
+                    // TODO easier healing to full
+                    (Card::Recover, CardParam::Confirm) => {
+                        (self.heal(::std::u32::MAX), Spent)
+                    }
+                    (Card::Save, CardParam::Confirm) => {
+                        (Ok(ApplyAction::Done), AllToDeck)
+                    }
+                    (Card::Spend, CardParam::Confirm) => {
+                        (Ok(ApplyAction::Done), AllToSpent)
+                    }
+                    (Card::Burn, CardParam::Confirm) => {
+                        (Ok(ApplyAction::Done), AllToBurnt)
+                    }
                     (Card::Clog, CardParam::Confirm) => (Ok(ApplyAction::Done), Spent),
                     (Card::Parasite, CardParam::Confirm) => {
                         self.world.deal_damage(self.player_id, 2);
@@ -588,10 +653,55 @@ impl Gws {
                     }
                     (Card::Drain, CardParam::Confirm) => (Ok(ApplyAction::Done), Burnt),
                     (Card::Block, CardParam::Coord(coord)) => (self.block(coord), Spent),
+                    (Card::Surround, CardParam::Coord(coord)) => {
+                        for d in CardinalDirections {
+                            let _ = self.block(coord + d.coord());
+                        }
+                        (Ok(ApplyAction::Done), Spent)
+                    }
                     (Card::Freeze, CardParam::Coord(coord)) => {
                         (self.freeze(coord), Spent)
                     }
                     (Card::Spike, CardParam::Coord(coord)) => (self.spike(coord), Spent),
+                    (Card::Shred, CardParam::Coord(coord)) => {
+                        let _ = self.spike(coord);
+                        for d in CardinalDirections {
+                            let _ = self.spike(coord + d.coord());
+                        }
+                        (Ok(ApplyAction::Done), Spent)
+                    }
+                    (Card::Garden, CardParam::Confirm) => {
+                        let coord =
+                            self.world.entities().get(&self.player_id).unwrap().coord();
+                        for d in CardinalDirections {
+                            let _ = self.spike(coord + d.coord());
+                        }
+                        (Ok(ApplyAction::Done), Spent)
+                    }
+                    (Card::Armour, CardParam::Confirm) => {
+                        let coord =
+                            self.world.entities().get(&self.player_id).unwrap().coord();
+                        for d in CardinalDirections {
+                            let _ = self.block(coord + d.coord());
+                        }
+                        (Ok(ApplyAction::Done), Spent)
+                    }
+                    (Card::Blast, CardParam::Confirm) => {
+                        let mut animations = Vec::new();
+                        use CardinalDirection::*;
+                        // TODO it should be easier to reverse a CardinalDirections iterator
+                        for &d in &[West, South, East, North] {
+                            match self.spark(d) {
+                                Ok(ApplyAction::Animation(a)) => animations.push(a),
+                                _ => (),
+                            }
+                        }
+                        if animations.is_empty() {
+                            (Err(CancelAction::LocationBlocked), Spent)
+                        } else {
+                            (Ok(ApplyAction::MultiAnimation(animations)), Spent)
+                        }
+                    }
                     _ => return Err(CancelAction::InvalidCard),
                 };
                 if result.is_ok() {
@@ -599,6 +709,35 @@ impl Gws {
                     match deck {
                         Spent => self.spent.push(card),
                         Burnt => self.burnt.push(card),
+                        // TODO duplication
+                        AllToDeck => {
+                            self.spent.push(card);
+                            for slot in self.hand.iter_mut() {
+                                if let Some(card) = *slot {
+                                    self.deck.push(card);
+                                    *slot = None;
+                                }
+                            }
+                            self.deck.shuffle(rng);
+                        }
+                        AllToSpent => {
+                            self.spent.push(card);
+                            for slot in self.hand.iter_mut() {
+                                if let Some(card) = *slot {
+                                    self.spent.push(card);
+                                    *slot = None;
+                                }
+                            }
+                        }
+                        AllToBurnt => {
+                            self.spent.push(card);
+                            for slot in self.hand.iter_mut() {
+                                if let Some(card) = *slot {
+                                    self.burnt.push(card);
+                                    *slot = None;
+                                }
+                            }
+                        }
                     }
                 }
                 (result, card.cost())
@@ -682,7 +821,7 @@ impl Gws {
             && self.visible_area.light_colour(coord) != grey24(0)
         {
             if let Some(cell) = self.world.grid().get(coord) {
-                if cell.contains_npc() || cell.is_solid() {
+                if cell.contains_npc() || cell.is_solid() || cell.contains_player() {
                     Err(CancelAction::LocationBlocked)
                 } else {
                     self.world.add_entity(coord, PackedEntity::block());
@@ -710,6 +849,13 @@ impl Gws {
         direction: CardinalDirection,
     ) -> Result<ApplyAction, CancelAction> {
         self.world.bump_npc_in_direction(self.player_id, direction)
+    }
+
+    fn bash(
+        &mut self,
+        direction: CardinalDirection,
+    ) -> Result<ApplyAction, CancelAction> {
+        self.world.bash_npc_in_direction(self.player_id, direction)
     }
 
     fn heal(&mut self, by: u32) -> Result<ApplyAction, CancelAction> {
@@ -791,6 +937,9 @@ impl Gws {
                     Ok(ApplyAction::Done) => (),
                     Ok(ApplyAction::Animation(animation)) => {
                         self.animation.push(animation)
+                    }
+                    Ok(ApplyAction::MultiAnimation(mut animations)) => {
+                        self.animation.append(&mut animations);
                     }
                     Ok(ApplyAction::Interact(_)) => (),
                     Err(_) => (),
@@ -965,6 +1114,10 @@ impl Gws {
                         Ok(ApplyAction::Animation(animation)) => {
                             self.turn = Turn::Engine;
                             self.animation.push(animation);
+                        }
+                        Ok(ApplyAction::MultiAnimation(mut animations)) => {
+                            self.turn = Turn::Engine;
+                            self.animation.append(&mut animations);
                         }
                     }
                 };
