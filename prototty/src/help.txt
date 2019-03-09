@@ -19,16 +19,29 @@ When you descend to the next level of the dungeon, the hand, and spent and waste
 
 Permanently destroy a card from your spent pile, and lose 1 life, up to 3 times.
 
+## Cursed Altar ₪
+
+Gain a character upgrade, and a cursed card.
+
+## Plentiful Fountain ≈
+
+Gain some number of cards.
+
+
+# Enemies
+
+Enemies are represented by letters. A lowercase letter means the enemy has 1 hit point. An uppercase letter means 2 hit points. An underline means 3 hit points.
 
 # Controls
 
 Move: Arrow keys
 Wait: Space
-Toggle Help: h/F1
-Toggle Map: m/F2
-Toggle Menu: ESC
+View: v
 Select Card: 1-8
 List Deck: d
 List Spent: s
 List Waste: w
 List Burnt: b
+Toggle Help: h/F1
+Toggle Map: m/F2
+Toggle Menu: ESC

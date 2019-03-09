@@ -95,6 +95,7 @@ enum AppState {
     ListSpent,
     ListWaste,
     ListBurnt,
+    ViewCursor,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -156,6 +157,7 @@ pub struct App<F: Frontend, S: Storage> {
     altar_menu: Option<menus::altar_menu::T>,
     fountain_menu: Option<menus::fountain_menu::T>,
     interactive: Option<gws::Interactive>,
+    view_cursor: Option<Coord>,
 }
 
 fn list_cards<G>(
@@ -188,6 +190,22 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
         G: ViewGrid,
     {
         match app.app_state {
+            AppState::ViewCursor => {
+                if let Some(game_state) = app.game_state.as_ref() {
+                    UiView(GameView).view(
+                        &UiData {
+                            game: &game_state.game,
+                            message: app.message.as_ref().map(String::as_str),
+                            card_table: &app.card_table,
+                            card_selection: app.card_selection.as_ref(),
+                            view_cursor: app.view_cursor.as_ref(),
+                        },
+                        offset,
+                        depth,
+                        grid,
+                    );
+                }
+            }
             AppState::ListDeck => list_cards(
                 app.game_state.as_ref().unwrap().game.deck(),
                 &app.card_table,
@@ -278,6 +296,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             message: app.message.as_ref().map(String::as_str),
                             card_table: &app.card_table,
                             card_selection: app.card_selection.as_ref(),
+                            view_cursor: None,
                         },
                         offset,
                         depth,
@@ -293,6 +312,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             message: app.message.as_ref().map(String::as_str),
                             card_table: &app.card_table,
                             card_selection: None,
+                            view_cursor: None,
                         },
                         offset,
                         depth,
@@ -319,6 +339,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             message: app.message.as_ref().map(String::as_str),
                             card_table: &app.card_table,
                             card_selection: None,
+                            view_cursor: None,
                         },
                         offset,
                         depth,
@@ -364,7 +385,8 @@ impl<F: Frontend, S: Storage> App<F, S> {
             time_until_next_auto_save: AUTO_SAVE_PERIOD,
             help_pager: Pager::new(
                 include_str!("help.txt"),
-                APP_SIZE,
+                // TODO in glutin the right line of cells is missing
+                APP_SIZE - Size::new(1, 0),
                 Default::default(),
             ),
             debug_terrain_string,
@@ -376,6 +398,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
             altar_menu: None,
             fountain_menu: None,
             interactive: None,
+            view_cursor: None,
         };
         (app, init_status)
     }
@@ -400,6 +423,89 @@ impl<F: Frontend, S: Storage> App<F, S> {
         I: IntoIterator<Item = ProtottyInput>,
     {
         match self.app_state {
+            AppState::ViewCursor => {
+                // TODO centralise these dimensions
+                if let Some(game_state) = self.game_state.as_ref() {
+                    let to_render = game_state.game.to_render();
+                    let size = Size::new(60, 40);
+                    let view_cursor = if let Some(view_cursor) = self.view_cursor {
+                        view_cursor
+                    } else {
+                        to_render.player.coord()
+                    };
+                    let view_cursor = if let Some(input) = inputs.into_iter().next() {
+                        let delta = match input {
+                            ProtottyInput::Up => Some(Coord::new(0, -1)),
+                            ProtottyInput::Down => Some(Coord::new(0, 1)),
+                            ProtottyInput::Left => Some(Coord::new(-1, 0)),
+                            ProtottyInput::Right => Some(Coord::new(1, 0)),
+                            Input::MouseMove { .. } => None,
+                            prototty_inputs::ETX => return Some(Tick::Quit),
+                            _ => {
+                                self.app_state = AppState::Game;
+                                None
+                            }
+                        };
+                        if let Some(delta) = delta {
+                            let next_cursor = view_cursor + delta;
+                            if next_cursor.is_valid(size) {
+                                next_cursor
+                            } else {
+                                view_cursor
+                            }
+                        } else {
+                            view_cursor
+                        }
+                    } else {
+                        view_cursor
+                    };
+                    self.view_cursor = Some(view_cursor);
+                    if let Some(cell) = to_render.world.grid().get(view_cursor) {
+                        if to_render.visible_area.is_visible(view_cursor)
+                            && to_render.visible_area.light_colour(view_cursor)
+                                != grey24(0)
+                        {
+                            use gws::*;
+                            if let Some(foreground_tile) =
+                                cell.foreground_tiles(to_render.world.entities()).next()
+                            {
+                                self.message = match foreground_tile {
+                                    ForegroundTile::Bumper => Some("Bumper".to_string()),
+                                    ForegroundTile::Caster => Some("Caster".to_string()),
+                                    ForegroundTile::Healer => Some("Healer".to_string()),
+                                    ForegroundTile::Spark => None,
+                                    ForegroundTile::Blink0 => None,
+                                    ForegroundTile::Blink1 => None,
+                                    ForegroundTile::Player => Some("You".to_string()),
+                                    ForegroundTile::Tree => Some("Tree".to_string()),
+                                    ForegroundTile::Stairs => {
+                                        Some("Stairs to the next level".to_string())
+                                    }
+                                    ForegroundTile::Flame => {
+                                        Some("Cleansing Flame".to_string())
+                                    }
+                                    ForegroundTile::Altar => {
+                                        Some("Cursed Altar".to_string())
+                                    }
+                                    ForegroundTile::Fountain => {
+                                        Some("Plentiful Fountain".to_string())
+                                    }
+                                }
+                            } else {
+                                self.message = match cell.background_tile() {
+                                    BackgroundTile::Floor => Some("Floor".to_string()),
+                                    BackgroundTile::Ground => Some("Ground".to_string()),
+                                    BackgroundTile::IceWall => {
+                                        Some("Ice Wall".to_string())
+                                    }
+                                };
+                            }
+                        } else {
+                            self.message = None;
+                        }
+                    }
+                }
+            }
             AppState::ListDeck
             | AppState::ListSpent
             | AppState::ListWaste
@@ -753,6 +859,11 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                 }
                                 ProtottyInput::Char('b') => {
                                     self.app_state = AppState::ListBurnt;
+                                }
+                                ProtottyInput::Char('v') => {
+                                    self.view_cursor =
+                                        Some(game_state.game.to_render().player.coord());
+                                    self.app_state = AppState::ViewCursor;
                                 }
                                 ProtottyInput::Char(card_num @ '1'...'8') => {
                                     let (message, card_selection) =

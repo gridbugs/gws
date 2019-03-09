@@ -26,9 +26,8 @@ const ICE_WALL_ABOVE_FLOOR: ViewCell = ViewCell::new()
     .with_foreground(ICE_WALL_TOP_COLOUR)
     .with_background(ICE_WALL_FRONT_COLOUR);
 const ICE_WALL_ABOVE_WALL: ViewCell = ViewCell::new()
-    .with_character('█')
-    .with_foreground(ICE_WALL_TOP_COLOUR)
-    .with_background(ICE_WALL_FRONT_COLOUR);
+    .with_character(' ')
+    .with_background(ICE_WALL_TOP_COLOUR);
 const TREE: ViewCell = ViewCell::new()
     .with_character('♣')
     .with_bold(true)
@@ -209,8 +208,11 @@ impl View<Gws> for GameView {
             if !visibility.is_visible(visibility_state) {
                 continue;
             }
-            let mut view_cell = game_view_cell(&to_render, cell, coord);
             let light_colour = visibility.light_colour(visibility_state);
+            if light_colour == grey24(0) {
+                continue;
+            }
+            let mut view_cell = game_view_cell(&to_render, cell, coord);
             light_view_cell(&mut view_cell, light_colour);
             grid.set_cell(offset + coord, depth, view_cell);
         }

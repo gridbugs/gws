@@ -39,6 +39,7 @@ pub struct UiData<'a> {
     pub message: Option<&'a str>,
     pub card_table: &'a CardTable,
     pub card_selection: Option<&'a CardInSlot>,
+    pub view_cursor: Option<&'a Coord>,
 }
 
 impl<'a> View<UiData<'a>> for StatusView {
@@ -156,6 +157,13 @@ impl<'a, V: View<Gws>> View<UiData<'a>> for UiView<V> {
                     }
                 }
             }
+        }
+        if let Some(coord) = ui_data.view_cursor {
+            grid.set_cell(
+                offset + GAME_OFFSET + coord,
+                depth + 1,
+                ViewCell::new().with_background(rgb24(0, 255, 255)),
+            );
         }
         StatusView.view(ui_data, offset + STATUS_OFFSET, depth, grid);
         CardAreaView.view(
