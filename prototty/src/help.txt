@@ -17,7 +17,7 @@ When you descend to the next level of the dungeon, the hand, and spent and waste
 
 ## Cleansing Flame Ψ
 
-Permanently destroy a card from your spent pile, and lose 1 life, up to 3 times.
+Permanently destroy a card from your waste pile.
 
 ## Cursed Altar ₪
 
