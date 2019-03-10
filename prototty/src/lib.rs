@@ -196,7 +196,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
         match app.app_state {
             AppState::Story => {
                 StringView.view(
-                    "The illnes makes you strong, but you're losing control.",
+                    "The illness makes you strong, but you're losing control.",
                     offset + Coord::new(1, 1),
                     depth,
                     grid,
