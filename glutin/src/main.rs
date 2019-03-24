@@ -52,7 +52,13 @@ fn main() {
     let grid_size = gws_prototty::APP_SIZE;
     let font_size = match args.font_size {
         FontSize::Specified(font_size) => font_size,
-        FontSize::Auto => 16,
+        FontSize::Auto => {
+            let monitor_info = MonitorInfo::get_current();
+            let font_size = (monitor_info.logical_width() / grid_size.width() as f64)
+                .min(monitor_info.logical_height() / grid_size.height() as f64)
+                * MONITOR_SIZE_WINDOW_RATIO;
+            font_size as u32
+        }
     };
     let size = grid_size * font_size;
     let mut context =
