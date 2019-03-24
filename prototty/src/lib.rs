@@ -29,13 +29,15 @@ const AUTO_SAVE_PERIOD: Duration = Duration::from_millis(5000);
 
 pub const APP_SIZE: Size = Size::new_u16(74, 58);
 const TITLE_COLOUR: Rgb24 = Rgb24::new(0, 120, 240);
+const TITLE_VIEW: StringViewSingleLine =
+    StringViewSingleLine::new(Style::new().with_foreground(TITLE_COLOUR).with_bold(true));
 
 pub struct AppView {
-    menu_and_title_view: MenuAndTitleView<menu::EntryView>,
-    pause_menu_and_title_view: MenuAndTitleView<pause_menu::EntryView>,
-    flame_view: MenuAndTitleView<DummyEntryView>,
-    altar_view: MenuAndTitleView<DummyEntryView>,
-    fountain_view: MenuAndTitleView<DummyEntryView>,
+    menu_and_title_view: MenuInstanceView<menus::main::EntryView>,
+    pause_menu_and_title_view: MenuInstanceView<pause::EntryView>,
+    flame_view: MenuInstanceView<card::EntryView>,
+    altar_view: MenuInstanceView<altar::EntryView>,
+    fountain_view: MenuInstanceView<fountain::EntryView>,
     string_view_word_wrap: StringView<wrap::Word>,
 }
 
@@ -148,8 +150,8 @@ pub struct App<F: Frontend, S: Storage> {
     app_state: AppState,
     game_state: Option<GameState>,
     rng_source: RngSource,
-    menu: MenuInstance<menu::Choice>,
-    pause_menu: MenuInstance<pause_menu::Choice>,
+    menu: MenuInstance<main::Entry>,
+    pause_menu: MenuInstance<pause::Entry>,
     time_until_next_auto_save: Duration,
     help: String,
     debug_terrain_string: Option<String>,
@@ -158,8 +160,8 @@ pub struct App<F: Frontend, S: Storage> {
     card_selection: Option<CardInSlot>,
     card_menu_title: String,
     card_menu: Option<MenuInstance<gws::Card>>,
-    altar_menu: Option<menus::altar_menu::T>,
-    fountain_menu: Option<menus::fountain_menu::T>,
+    altar_menu: Option<MenuInstance<altar::Entry>>,
+    fountain_menu: Option<MenuInstance<fountain::Entry>>,
     interactive: Option<gws::Interactive>,
     view_cursor: Option<Coord>,
 }
@@ -398,46 +400,58 @@ impl<'a, F: Frontend, S: Storage> View<&'a App<F, S>> for AppView {
                 grid,
             ),
             AppState::AltarMenu => {
-                self.altar_view.view(
-                    MenuAndTitle::new(
-                        app.altar_menu.as_ref().unwrap(),
+                StringViewSingleLine::new(Style::new().with_foreground(
+                rgb24(0, 200, 50))).view(
                         "Cursed Altar: Better yourself, but shuffle a cursed card into your deck.",
-                    ),
-                    context.add_offset(Coord::new(1, 1)),
+                        context.add_offset(Coord::new(1, 1)), grid);
+                self.altar_view.view(
+                    (app.altar_menu.as_ref().unwrap(), &app.card_table),
+                    context.add_offset(Coord::new(1, 3)),
                     grid,
                 );
             }
             AppState::FountainMenu => {
-                self.fountain_view.view(
-                    MenuAndTitle::new(
-                        app.fountain_menu.as_ref().unwrap(),
-                        "Bountiful Fountain: Shuffle cards into your deck.",
-                    ),
+                StringViewSingleLine::new(
+                    Style::new().with_foreground(rgb24(50, 100, 200)),
+                )
+                .view(
+                    "Bountiful Fountain: Shuffle cards into your deck.",
                     context.add_offset(Coord::new(1, 1)),
+                    grid,
+                );
+                self.fountain_view.view(
+                    (app.fountain_menu.as_ref().unwrap(), &app.card_table),
+                    context.add_offset(Coord::new(1, 3)),
                     grid,
                 );
             }
             AppState::CardMenu => {
-                self.flame_view.view(
-                    MenuAndTitle::new(
-                        app.card_menu.as_ref().unwrap(),
-                        app.card_menu_title.as_str(),
-                    ),
+                StringViewSingleLine::new(
+                    Style::new().with_foreground(rgb24(255, 120, 0)),
+                )
+                .view(
+                    app.card_menu_title.as_str(),
                     context.add_offset(Coord::new(1, 1)),
+                    grid,
+                );
+                self.flame_view.view(
+                    (app.card_menu.as_ref().unwrap(), &app.card_table),
+                    context.add_offset(Coord::new(1, 3)),
                     grid,
                 );
             }
             AppState::Menu => {
+                TITLE_VIEW.view(TITLE, context.add_offset(Coord::new(1, 1)), grid);
                 if app.game_state.is_some() {
                     self.pause_menu_and_title_view.view(
-                        MenuAndTitle::new(&app.pause_menu, TITLE),
-                        context.add_offset(Coord::new(1, 1)),
+                        &app.pause_menu,
+                        context.add_offset(Coord::new(1, 3)),
                         grid,
                     );
                 } else {
                     self.menu_and_title_view.view(
-                        MenuAndTitle::new(&app.menu, TITLE),
-                        context.add_offset(Coord::new(1, 1)),
+                        &app.menu,
+                        context.add_offset(Coord::new(1, 3)),
                         grid,
                     );
                 }
@@ -522,8 +536,8 @@ impl<F: Frontend, S: Storage> App<F, S> {
             Err(_) => (InitStatus::NoSaveFound, None),
         };
         let rng_source = RngSource::new(first_rng_seed);
-        let menu = menu::create();
-        let pause_menu = pause_menu::create();
+        let menu = MenuInstance::new(main::choices()).unwrap();
+        let pause_menu = MenuInstance::new(pause::choices()).unwrap();
         let app = Self {
             frontend: PhantomData,
             storage,
@@ -718,7 +732,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     .altar_menu
                     .as_mut()
                     .unwrap()
-                    .tick_with_mouse(inputs, &view.altar_view.menu_view)
+                    .tick_with_mouse(inputs, &view.altar_view)
                 {
                     None => (),
                     Some(MenuOutput::Cancel) => {
@@ -757,7 +771,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     .fountain_menu
                     .as_mut()
                     .unwrap()
-                    .tick_with_mouse(inputs, &view.fountain_view.menu_view)
+                    .tick_with_mouse(inputs, &view.fountain_view)
                 {
                     None => (),
                     Some(MenuOutput::Cancel) => {
@@ -796,7 +810,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                     .card_menu
                     .as_mut()
                     .unwrap()
-                    .tick_with_mouse(inputs, &view.flame_view.menu_view)
+                    .tick_with_mouse(inputs, &view.flame_view)
                 {
                     None => (),
                     Some(MenuOutput::Cancel) => {
@@ -843,7 +857,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                 if self.game_state.is_some() {
                     match self
                         .pause_menu
-                        .tick_with_mouse(inputs, &view.menu_and_title_view.menu_view)
+                        .tick_with_mouse(inputs, &view.menu_and_title_view)
                     {
                         None => (),
                         Some(MenuOutput::Cancel) => {
@@ -851,25 +865,25 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         }
                         Some(MenuOutput::Quit) => return Some(Tick::Quit),
                         Some(MenuOutput::Finalise(selection)) => match selection {
-                            pause_menu::Choice::Resume => {
+                            pause::Entry::Resume => {
                                 self.app_state = AppState::Game;
                             }
-                            pause_menu::Choice::SaveAndQuit => {
+                            pause::Entry::SaveAndQuit => {
                                 self.save();
                                 return Some(Tick::Quit);
                             }
-                            pause_menu::Choice::NewGame => {
+                            pause::Entry::NewGame => {
                                 self.app_state = AppState::BetweenLevels(None);
                             }
-                            pause_menu::Choice::Help => {
+                            pause::Entry::Help => {
                                 self.app_state = AppState::Help {
                                     opened_from_game: false,
                                 }
                             }
-                            pause_menu::Choice::Story => {
+                            pause::Entry::Story => {
                                 self.app_state = AppState::Story;
                             }
-                            pause_menu::Choice::Map => {
+                            pause::Entry::Map => {
                                 self.app_state = AppState::Map {
                                     opened_from_game: false,
                                 }
@@ -877,21 +891,18 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         },
                     }
                 } else {
-                    match self
-                        .menu
-                        .tick_with_mouse(inputs, &view.menu_and_title_view.menu_view)
-                    {
+                    match self.menu.tick_with_mouse(inputs, &view.menu_and_title_view) {
                         None | Some(MenuOutput::Cancel) => (),
                         Some(MenuOutput::Quit) => return Some(Tick::Quit),
                         Some(MenuOutput::Finalise(selection)) => match selection {
-                            menu::Choice::Quit => return Some(Tick::Quit),
-                            menu::Choice::NewGame => {
+                            main::Entry::Quit => return Some(Tick::Quit),
+                            main::Entry::NewGame => {
                                 self.app_state = AppState::BetweenLevels(None);
                             }
-                            menu::Choice::Story => {
+                            main::Entry::Story => {
                                 self.app_state = AppState::Story;
                             }
-                            menu::Choice::Help => {
+                            main::Entry::Help => {
                                 self.app_state = AppState::Help {
                                     opened_from_game: false,
                                 }
@@ -1100,31 +1111,31 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                             self.card_menu_title =
                                                 "Cleansing Flame: Burn a wasted card."
                                                     .to_string();
-                                            self.card_menu = menus::card_menu::create(
-                                                waste,
-                                                &self.card_table,
-                                            );
+                                            self.card_menu = MenuInstance::new(
+                                                menus::card::create(waste),
+                                            )
+                                            .ok();
                                             self.app_state = AppState::CardMenu;
                                         }
                                     }
                                     gws::InteractiveType::Altar => {
-                                        self.altar_menu =
-                                            Some(menus::altar_menu::create(
+                                        self.altar_menu = Some(
+                                            MenuInstance::new(menus::altar::choices(
                                                 interactive.entity_id,
                                                 &game_state.game,
-                                                &self.card_table,
-                                                &mut game_state.rng_with_seed.rng,
-                                            ));
+                                            ))
+                                            .unwrap(),
+                                        );
                                         self.app_state = AppState::AltarMenu;
                                     }
                                     gws::InteractiveType::Fountain => {
-                                        self.fountain_menu =
-                                            Some(menus::fountain_menu::create(
+                                        self.fountain_menu = Some(
+                                            MenuInstance::new(menus::fountain::choices(
                                                 interactive.entity_id,
                                                 &game_state.game,
-                                                &self.card_table,
-                                                &mut game_state.rng_with_seed.rng,
-                                            ));
+                                            ))
+                                            .unwrap(),
+                                        );
                                         self.app_state = AppState::FountainMenu;
                                     }
                                 }
@@ -1314,14 +1325,11 @@ impl<F: Frontend, S: Storage> App<F, S> {
 impl AppView {
     pub fn new() -> Self {
         Self {
-            menu_and_title_view: MenuAndTitleView::new(TITLE_COLOUR, menu::EntryView),
-            pause_menu_and_title_view: MenuAndTitleView::new(
-                TITLE_COLOUR,
-                pause_menu::EntryView,
-            ),
-            flame_view: MenuAndTitleView::new(rgb24(255, 120, 0), DummyEntryView),
-            altar_view: MenuAndTitleView::new(rgb24(0, 200, 50), DummyEntryView),
-            fountain_view: MenuAndTitleView::new(rgb24(50, 100, 200), DummyEntryView),
+            menu_and_title_view: MenuInstanceView::new(main::EntryView),
+            pause_menu_and_title_view: MenuInstanceView::new(pause::EntryView),
+            flame_view: MenuInstanceView::new(card::EntryView),
+            altar_view: MenuInstanceView::new(altar::EntryView),
+            fountain_view: MenuInstanceView::new(fountain::EntryView),
             string_view_word_wrap: StringView::new_default_style(wrap::Word::new()),
         }
     }
