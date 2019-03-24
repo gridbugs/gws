@@ -523,7 +523,7 @@ version = "0.1.0"
 dependencies = [
  "gws_prototty 0.1.0",
  "simon 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "whoami 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "whoami 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1477,7 +1477,7 @@ dependencies = [
 
 [[package]]
 name = "whoami"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.49 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1725,7 +1725,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum wayland-scanner 0.21.11 (registry+https://github.com/rust-lang/crates.io-index)" = "3611f231e675e15c2feb7623103e6449edc6f10b0598cafb3e16e590a0561355"
 "checksum wayland-sys 0.21.11 (registry+https://github.com/rust-lang/crates.io-index)" = "2a69d729a1747a5bf40ae05b94c7904b64fbf2381e365c046d872ce4a34aa826"
 "checksum wfc 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "019c785c03d00814da807f27d4f0a424957f8c5146c4437ced4009a6baa0af98"
-"checksum whoami 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1b9c210f9606a8560c558ce6fe3b1a6d10ade8549ac14f5fdee4b0bd8efb2bf4"
+"checksum whoami 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "26a97763f20903e18047d20af1f1a667afe2fe6cbd22b80334f2f5fe4441db80"
 "checksum winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "92c1eb33641e276cfa214a0522acad57be5c56b10cb348b3c5117db75f3ac4b0"
 "checksum winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 "checksum winapi-util 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7168bab6e1daee33b4557efd0e95d5ca70a03706d39fa5f3fe7a236f584b03c9"

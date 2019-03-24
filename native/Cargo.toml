@@ -6,5 +6,5 @@ edition = "2018"
 
 [dependencies]
 simon = "0.2"
-whoami = "0.4"
+whoami = "0.5"
 gws_prototty = { path = "../prototty" }
