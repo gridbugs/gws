@@ -4,7 +4,7 @@ use grid_2d::coord_system::XThenYIter;
 use gws::*;
 use prototty::*;
 
-pub struct UiView<V: View<Gws>>(pub V);
+pub struct UiView<V>(pub V);
 
 const STATUS_SIZE_X: i32 = 11;
 
@@ -42,12 +42,11 @@ pub struct UiData<'a> {
     pub view_cursor: Option<&'a Coord>,
 }
 
-impl<'a> View<UiData<'a>> for StatusView {
-    fn view<G: ViewGrid>(
+impl<'a> View<&'a UiData<'a>> for StatusView {
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
         &mut self,
-        ui_data: &UiData<'a>,
-        offset: Coord,
-        depth: i32,
+        ui_data: &'a UiData<'a>,
+        context: ViewContext<R>,
         grid: &mut G,
     ) {
         let to_render = ui_data.game.to_render();
@@ -59,7 +58,8 @@ impl<'a> View<UiData<'a>> for StatusView {
         let waste_colour = rgb24(100, 120, 20);
         let burnt_colour = rgb24(150, 100, 40);
         let draw_countdown = ui_data.game.draw_countdown();
-        let mut offset = offset;
+        let mut offset = Coord::new(0, 0);
+        /*
         StringView.view("Level:", offset, depth, grid);
         RichStringView::with_info(
             TextInfo::default()
@@ -138,18 +138,19 @@ impl<'a> View<UiData<'a>> for StatusView {
             depth,
             grid,
         );
+            */
     }
 }
 
-impl<'a, V: View<Gws>> View<UiData<'a>> for UiView<V> {
-    fn view<G: ViewGrid>(
+impl<'a, V: View<&'a Gws>> View<&'a UiData<'a>> for UiView<V> {
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
         &mut self,
-        ui_data: &UiData<'a>,
-        offset: Coord,
-        depth: i32,
+        ui_data: &'a UiData<'a>,
+        context: ViewContext<R>,
         grid: &mut G,
     ) {
-        self.0.view(ui_data.game, offset + GAME_OFFSET, depth, grid);
+        self.0
+            .view(ui_data.game, context.add_offset(GAME_OFFSET), grid);
         if let Some(card_selection) = ui_data.card_selection {
             match card_selection.choice {
                 CardParamChoice::Confirm | CardParamChoice::Direction => (),
@@ -159,39 +160,44 @@ impl<'a, V: View<Gws>> View<UiData<'a>> for UiView<V> {
                         && coord.x < GAME_SIZE.x
                         && coord.y < GAME_SIZE.y
                     {
-                        grid.set_cell(
-                            offset + GAME_OFFSET + coord,
-                            depth + 1,
+                        grid.set_cell_relative(
+                            GAME_OFFSET + coord,
+                            1,
                             ViewCell::new()
                                 .with_character('Х')
                                 .with_bold(true)
                                 .with_foreground(rgb24(0, 255, 255)),
+                            context,
                         );
                     }
                 }
             }
         }
         if let Some(coord) = ui_data.view_cursor {
-            grid.set_cell(
-                offset + GAME_OFFSET + coord,
-                depth + 1,
+            grid.set_cell_relative(
+                GAME_OFFSET + coord,
+                1,
                 ViewCell::new().with_background(rgb24(0, 255, 255)),
+                context,
             );
         }
-        StatusView.view(ui_data, offset + STATUS_OFFSET, depth, grid);
+        StatusView.view(ui_data, context.add_offset(STATUS_OFFSET), grid);
         CardAreaView.view(
-            &(
+            (
                 ui_data.game.hand(),
                 ui_data.card_table,
                 ui_data.card_selection.map(|cs| cs.slot),
                 *ui_data.game.draw_countdown(),
             ),
-            offset + CARDS_OFFSET,
-            depth,
+            context.add_offset(CARDS_OFFSET),
             grid,
         );
         if let Some(message) = ui_data.message {
-            StringView.view(message, offset + MESSAGE_OFFSET, depth, grid);
+            StringViewSingleLine::default().view(
+                message,
+                context.add_offset(MESSAGE_OFFSET),
+                grid,
+            );
         }
     }
 }
@@ -203,22 +209,15 @@ pub struct CardInfo {
     pub card: Card,
     pub title: String,
     pub description: String,
-    pub description_pager: Pager,
     pub background: Rgb24,
 }
 
 impl CardInfo {
     fn new(card: Card, title: String, description: String, background: Rgb24) -> Self {
-        let description_pager = Pager::new(
-            &description,
-            CARD_SIZE.to_size().unwrap(),
-            Default::default(),
-        );
         Self {
             card,
             title,
             description,
-            description_pager,
             background,
         }
     }
@@ -438,42 +437,40 @@ impl<'a>
         DrawCountdown,
     )> for CardAreaView
 {
-    fn view<G: ViewGrid>(
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
         &mut self,
-        &(cards, card_table, selected_slot, draw_countdown): &(
+        (cards, card_table, selected_slot, draw_countdown): (
             &'a [Option<Card>],
             &'a CardTable,
             Option<usize>,
             DrawCountdown,
         ),
-        offset: Coord,
-        depth: i32,
+
+        context: ViewContext<R>,
         grid: &mut G,
     ) {
         for i in 0..MAX_NUM_CARDS {
             let offset_x = i as i32 * (CARD_SIZE.x + CARD_PADDING_X);
-            StringView.view(
+            StringViewSingleLine::default().view(
                 &format!("{}.", i + 1),
-                offset + Coord::new(offset_x + 4, 0),
-                depth,
+                context.add_offset(Coord::new(offset_x + 4, 0)),
                 grid,
             );
-            let coord = offset + Coord::new(offset_x, 1);
+            let offset = Coord::new(offset_x, 1);
             if let Some(maybe_card) = cards.get(i) {
                 if let Some(card) = maybe_card.as_ref() {
                     let selected =
                         selected_slot.map(|s| s == i as usize).unwrap_or(false);
                     CardView.view(
-                        &(card_table.get(*card), selected, draw_countdown),
-                        coord,
-                        depth,
+                        (card_table.get(*card), selected, draw_countdown),
+                        context.add_offset(offset),
                         grid,
                     );
                 } else {
-                    empty_card_view(coord, depth, grid);
+                    empty_card_view(context.add_offset(offset), grid);
                 }
             } else {
-                locked_card_view(coord, depth, grid);
+                locked_card_view(context.add_offset(offset), grid);
             }
         }
     }
@@ -481,51 +478,60 @@ impl<'a>
 
 struct LockedView;
 impl View<Size> for LockedView {
-    fn view<G: ViewGrid>(
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
         &mut self,
-        _size: &Size,
-        offset: Coord,
-        depth: i32,
+        data: Size,
+        context: ViewContext<R>,
         grid: &mut G,
     ) {
-        RichStringView::with_info(TextInfo::default().foreground_colour(grey24(128)))
-            .view("Locked", offset + Coord::new(0, 4), depth, grid);
+        StringViewSingleLine::new(Style::new().with_foreground(grey24(128))).view(
+            "Locked",
+            context.add_offset(Coord::new(0, 4)),
+            grid,
+        );
     }
-}
-impl ViewSize<Size> for LockedView {
-    fn size(&mut self, size: &Size) -> Size {
-        *size
+
+    fn visible_bounds<R: ViewTransformRgb24>(
+        &mut self,
+        size: Size,
+        _context: ViewContext<R>,
+    ) -> Size {
+        size
     }
 }
 
-fn locked_card_view<G: ViewGrid>(offset: Coord, depth: i32, grid: &mut G) {
+fn locked_card_view<G: ViewGrid, R: ViewTransformRgb24>(
+    context: ViewContext<R>,
+    grid: &mut G,
+) {
     let border = Border {
-        foreground_colour: grey24(128),
-        ..Border::new()
+        foreground: grey24(128),
+        ..Default::default()
     };
-    Decorated::new(LockedView, border).view(
-        &(CARD_SIZE - Coord::new(1, 1)).to_size().unwrap(),
-        offset,
-        depth,
+    Bordered::new(LockedView, border).view(
+        (CARD_SIZE - Coord::new(1, 1)).to_size().unwrap(),
+        context,
         grid,
     );
 }
 
-fn empty_card_view<G: ViewGrid>(offset: Coord, depth: i32, grid: &mut G) {
+fn empty_card_view<G: ViewGrid, R: ViewTransformRgb24>(
+    context: ViewContext<R>,
+    grid: &mut G,
+) {
     let view_cell = ViewCell::new()
         .with_character('░')
         .with_foreground(grey24(20));
     for coord in XThenYIter::new(CARD_SIZE.to_size().unwrap()) {
-        grid.set_cell(offset + coord + Coord::new(1, 1), depth, view_cell);
+        grid.set_cell_relative(coord + Coord::new(1, 1), 0, view_cell, context);
     }
 }
 
 impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
-    fn view<G: ViewGrid>(
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
         &mut self,
-        &(card_info, selected, draw_countdown): &(&'a CardInfo, bool, DrawCountdown),
-        offset: Coord,
-        depth: i32,
+        (card_info, selected, draw_countdown): (&'a CardInfo, bool, DrawCountdown),
+        context: ViewContext<R>,
         grid: &mut G,
     ) {
         let selected_offset = if selected {
@@ -533,16 +539,21 @@ impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
         } else {
             Coord::new(1, 1)
         };
-        RichStringView::with_info(TextInfo::default().bold().underline()).view(
-            &card_info.title,
-            offset + selected_offset,
-            depth + 1,
-            grid,
-        );
-        PagerView.view(
-            &card_info.description_pager,
-            offset + selected_offset + Coord::new(0, 2),
-            depth + 1,
+        StringViewSingleLine::new(Style::new().with_bold(true).with_underline(true))
+            .view(
+                &card_info.title,
+                context.add_offset(selected_offset).add_depth(1),
+                grid,
+            );
+        Bounded::new(
+            StringView::new_default_style(wrap::Word::new()),
+            CARD_SIZE.to_size().unwrap(),
+        )
+        .view(
+            &card_info.description,
+            context
+                .add_offset(selected_offset + Coord::new(0, 2))
+                .add_depth(1),
             grid,
         );
         let energy_cost = card_info.card.cost();
@@ -550,29 +561,30 @@ impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
             rgb24(255, 0, 0)
         } else {
             rgb24(255, 255, 255)
-        };
-        DefaultRichTextView.view(
-            &RichText::one_line(vec![
-                ("Cost: ".to_string(), Default::default()),
-                (
-                    format!("{}", energy_cost),
-                    TextInfo::default().foreground_colour(energy_colour).bold(),
-                ),
-            ]),
-            offset + selected_offset + Coord::new(0, 9),
-            depth + 1,
-            grid,
-        );
+        }; /*
+           DefaultRichTextView.view(
+               &RichText::one_line(vec![
+                   ("Cost: ".to_string(), Default::default()),
+                   (
+                       format!("{}", energy_cost),
+                       TextInfo::default().foreground_colour(energy_colour).bold(),
+                   ),
+               ]),
+               offset + selected_offset + Coord::new(0, 9),
+               depth + 1,
+               grid,
+           ); */
         let background = if selected {
             card_info.background.saturating_scalar_mul_div(2, 1)
         } else {
             card_info.background
         };
         for coord in XThenYIter::new(CARD_SIZE.to_size().unwrap()) {
-            grid.set_cell(
-                offset + selected_offset + coord,
-                depth,
+            grid.set_cell_relative(
+                selected_offset + coord,
+                0,
                 ViewCell::new().with_background(background),
+                context,
             );
         }
         if selected {
@@ -583,30 +595,33 @@ impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
             let shadow_bottom_right_ch = shadow_ch;
             for i in 0..(CARD_SIZE.x - 1) {
                 let coord = Coord::new(i + 1, CARD_SIZE.y);
-                grid.set_cell(
-                    offset + coord,
-                    depth,
+                grid.set_cell_relative(
+                    coord,
+                    0,
                     ViewCell::new()
                         .with_character(shadow_bottom_ch)
                         .with_foreground(shadow_colour),
+                    context,
                 );
             }
             for i in 0..(CARD_SIZE.y - 1) {
                 let coord = Coord::new(CARD_SIZE.x, i + 1);
-                grid.set_cell(
-                    offset + coord,
-                    depth,
+                grid.set_cell_relative(
+                    coord,
+                    0,
                     ViewCell::new()
                         .with_character(shadow_right_ch)
                         .with_foreground(shadow_colour),
+                    context,
                 );
             }
-            grid.set_cell(
-                offset + CARD_SIZE,
-                depth,
+            grid.set_cell_relative(
+                CARD_SIZE,
+                0,
                 ViewCell::new()
                     .with_character(shadow_bottom_right_ch)
                     .with_foreground(shadow_colour),
+                context,
             );
         }
     }
@@ -614,31 +629,30 @@ impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
 
 pub struct DeathView;
 
-impl<'a> View<UiData<'a>> for DeathView {
-    fn view<G: ViewGrid>(
+impl<'a> View<&'a UiData<'a>> for DeathView {
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
         &mut self,
-        ui_data: &UiData<'a>,
-        offset: Coord,
-        depth: i32,
+        ui_data: &'a UiData<'a>,
+        context: ViewContext<R>,
         grid: &mut G,
     ) {
-        DeathGameView.view(ui_data.game, offset + GAME_OFFSET, depth, grid);
-        StatusView.view(ui_data, offset + STATUS_OFFSET, depth, grid);
+        DeathGameView.view(ui_data.game, context.add_offset(GAME_OFFSET), grid);
+        StatusView.view(ui_data, context.add_offset(STATUS_OFFSET), grid);
+        /*
         StringView.view(
             "You died. Press any key...",
             offset + MESSAGE_OFFSET,
             depth,
             grid,
-        );
+        ); */
         CardAreaView.view(
-            &(
+            (
                 ui_data.game.hand(),
                 ui_data.card_table,
                 None,
                 *ui_data.game.draw_countdown(),
             ),
-            offset + CARDS_OFFSET,
-            depth,
+            context.add_offset(CARDS_OFFSET),
             grid,
         );
     }

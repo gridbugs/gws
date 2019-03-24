@@ -31,10 +31,12 @@ pub const APP_SIZE: Size = Size::new_u16(74, 58);
 const TITLE_COLOUR: Rgb24 = Rgb24::new(0, 120, 240);
 
 pub struct AppView {
-    menu_and_title_view: MenuAndTitleView,
-    flame_view: MenuAndTitleView,
-    altar_view: MenuAndTitleView,
-    fountain_view: MenuAndTitleView,
+    menu_and_title_view: MenuAndTitleView<menu::EntryView>,
+    pause_menu_and_title_view: MenuAndTitleView<pause_menu::EntryView>,
+    flame_view: MenuAndTitleView<DummyEntryView>,
+    altar_view: MenuAndTitleView<DummyEntryView>,
+    fountain_view: MenuAndTitleView<DummyEntryView>,
+    string_view_word_wrap: StringView<wrap::Word>,
 }
 
 pub enum Tick {
@@ -149,7 +151,7 @@ pub struct App<F: Frontend, S: Storage> {
     menu: MenuInstance<menu::Choice>,
     pause_menu: MenuInstance<pause_menu::Choice>,
     time_until_next_auto_save: Duration,
-    help_pager: Pager,
+    help: String,
     debug_terrain_string: Option<String>,
     message: Option<String>,
     card_table: CardTable,
@@ -162,39 +164,44 @@ pub struct App<F: Frontend, S: Storage> {
     view_cursor: Option<Coord>,
 }
 
-fn list_cards<G>(
+fn list_cards<G, R>(
     cards: &[gws::Card],
     card_table: &CardTable,
     title: &str,
-    offset: Coord,
-    depth: i32,
+    context: ViewContext<R>,
     grid: &mut G,
 ) where
     G: ViewGrid,
+    R: ViewTransformRgb24,
 {
     let mut cards = cards.iter().cloned().collect::<Vec<_>>();
     cards.sort();
-    StringView.view(title, offset + Coord::new(1, 1), depth, grid);
+    //StringView.view(title, offset + Coord::new(1, 1), depth, grid);
     for (i, &card) in cards.iter().enumerate() {
         let info = card_table.get(card);
+        /*
         StringView.view(
             &format!("{}: {}", info.title, info.description),
             offset + Coord::new(1, i as i32 + 3),
             depth,
             grid,
         );
+        */
     }
 }
 
 const NUM_END_DIALOG: u32 = 7;
 
-impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
-    fn view<G>(&mut self, app: &App<F, S>, offset: Coord, depth: i32, grid: &mut G)
-    where
-        G: ViewGrid,
-    {
+impl<'a, F: Frontend, S: Storage> View<&'a App<F, S>> for AppView {
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
+        &mut self,
+        app: &'a App<F, S>,
+        context: ViewContext<R>,
+        grid: &mut G,
+    ) {
         match app.app_state {
             AppState::Story => {
+                /*
                 StringView.view(
                     "The illness makes you strong, but you're losing control.",
                     offset + Coord::new(1, 1),
@@ -213,17 +220,19 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                     depth,
                     grid,
                 );
+                */
             }
             AppState::End(n) => {
-                let offset = offset + Coord::new(1, 1);
+                let offset = Coord::new(1, 1);
                 let mut line = 0;
-                let end = TextInfo::default().foreground_colour(rgb24(200, 0, 255));
-                let end_bg = TextInfo::default()
-                    .background_colour(rgb24(200, 0, 255))
-                    .foreground_colour(rgb24(0, 0, 0))
-                    .bold();
+                let end = Style::new().with_foreground(rgb24(200, 0, 255));
+                let end_bg = Style::new()
+                    .with_background(rgb24(200, 0, 255))
+                    .with_foreground(rgb24(0, 0, 0))
+                    .with_bold(true);
 
-                let player = TextInfo::default().foreground_colour(rgb24(255, 255, 255));
+                let player = Style::new().with_foreground(rgb24(255, 255, 255));
+                /*
                 match n {
                     0 => {
                         DefaultRichTextView.view(
@@ -343,6 +352,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                         grid,
                     );
                 }
+                */
             }
             AppState::ViewCursor => {
                 if let Some(game_state) = app.game_state.as_ref() {
@@ -354,8 +364,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             card_selection: app.card_selection.as_ref(),
                             view_cursor: app.view_cursor.as_ref(),
                         },
-                        offset,
-                        depth,
+                        context,
                         grid,
                     );
                 }
@@ -364,80 +373,71 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                 app.game_state.as_ref().unwrap().game.deck(),
                 &app.card_table,
                 "Deck",
-                offset,
-                depth,
+                context,
                 grid,
             ),
             AppState::ListSpent => list_cards(
                 app.game_state.as_ref().unwrap().game.spent(),
                 &app.card_table,
                 "Spent",
-                offset,
-                depth,
+                context,
                 grid,
             ),
             AppState::ListWaste => list_cards(
                 app.game_state.as_ref().unwrap().game.waste(),
                 &app.card_table,
                 "Waste",
-                offset,
-                depth,
+                context,
                 grid,
             ),
             AppState::ListBurnt => list_cards(
                 app.game_state.as_ref().unwrap().game.burnt(),
                 &app.card_table,
                 "Burnt",
-                offset,
-                depth,
+                context,
                 grid,
             ),
             AppState::AltarMenu => {
                 self.altar_view.view(
-                    &MenuAndTitle::new(
+                    MenuAndTitle::new(
                         app.altar_menu.as_ref().unwrap(),
                         "Cursed Altar: Better yourself, but shuffle a cursed card into your deck.",
                     ),
-                    offset + Coord::new(1, 1),
-                    depth,
+                    context.add_offset(Coord::new(1, 1)),
                     grid,
                 );
             }
             AppState::FountainMenu => {
                 self.fountain_view.view(
-                    &MenuAndTitle::new(
+                    MenuAndTitle::new(
                         app.fountain_menu.as_ref().unwrap(),
                         "Bountiful Fountain: Shuffle cards into your deck.",
                     ),
-                    offset + Coord::new(1, 1),
-                    depth,
+                    context.add_offset(Coord::new(1, 1)),
                     grid,
                 );
             }
             AppState::CardMenu => {
                 self.flame_view.view(
-                    &MenuAndTitle::new(
+                    MenuAndTitle::new(
                         app.card_menu.as_ref().unwrap(),
                         app.card_menu_title.as_str(),
                     ),
-                    offset + Coord::new(1, 1),
-                    depth,
+                    context.add_offset(Coord::new(1, 1)),
                     grid,
                 );
             }
             AppState::Menu => {
                 if app.game_state.is_some() {
-                    self.menu_and_title_view.view(
-                        &MenuAndTitle::new(&app.pause_menu, TITLE),
-                        offset + Coord::new(1, 1),
-                        depth,
+                    self.pause_menu_and_title_view.view(
+                        MenuAndTitle::new(&app.pause_menu, TITLE),
+                        context.add_offset(Coord::new(1, 1)),
                         grid,
                     );
                 } else {
                     self.menu_and_title_view.view(
-                        &MenuAndTitle::new(&app.menu, TITLE),
-                        offset + Coord::new(1, 1),
-                        depth,
+                        MenuAndTitle::new(&app.menu, TITLE),
+                        context.add_offset(Coord::new(1, 1)),
                         grid,
                     );
                 }
@@ -452,8 +452,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             card_selection: app.card_selection.as_ref(),
                             view_cursor: None,
                         },
-                        offset,
-                        depth,
+                        context,
                         grid,
                     );
                 }
@@ -468,20 +467,18 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             card_selection: None,
                             view_cursor: None,
                         },
-                        offset,
-                        depth,
+                        context,
                         grid,
                     );
                 }
             }
             AppState::Help { .. } => {
-                PagerView.view(&app.help_pager, offset, depth, grid);
+                self.string_view_word_wrap.view(&app.help, context, grid);
             }
             AppState::BetweenLevels(_) => {
-                StringView.view(
+                StringViewSingleLine::default().view(
                     "Generating level...",
-                    offset + Coord::new(1, 1),
-                    depth,
+                    context.add_offset(Coord::new(1, 1)),
                     grid,
                 );
             }
@@ -495,8 +492,7 @@ impl<F: Frontend, S: Storage> View<App<F, S>> for AppView {
                             card_selection: None,
                             view_cursor: None,
                         },
-                        offset,
-                        depth,
+                        context,
                         grid,
                     );
                 }
@@ -537,12 +533,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
             menu,
             pause_menu,
             time_until_next_auto_save: AUTO_SAVE_PERIOD,
-            help_pager: Pager::new(
-                include_str!("help.txt"),
-                // TODO in glutin the right line of cells is missing
-                APP_SIZE - Size::new(1, 0),
-                Default::default(),
-            ),
+            help: include_str!("help.txt").to_string(),
             debug_terrain_string,
             message: None,
             card_table: CardTable::new(),
@@ -735,7 +726,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         self.altar_menu = None;
                     }
                     Some(MenuOutput::Quit) => return Some(Tick::Quit),
-                    Some(MenuOutput::Finalise((character_upgrade, card))) => {
+                    Some(MenuOutput::Finalise(&(character_upgrade, card))) => {
                         let game_state = self.game_state.as_mut().unwrap();
                         let input_start_index = game_state.all_inputs.len();
                         let interactive = self.interactive.unwrap();
@@ -774,7 +765,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         self.fountain_menu = None;
                     }
                     Some(MenuOutput::Quit) => return Some(Tick::Quit),
-                    Some(MenuOutput::Finalise((card, count))) => {
+                    Some(MenuOutput::Finalise(&(card, count))) => {
                         let game_state = self.game_state.as_mut().unwrap();
                         let input_start_index = game_state.all_inputs.len();
                         let interactive = self.interactive.unwrap();
@@ -813,7 +804,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                         self.card_menu = None;
                     }
                     Some(MenuOutput::Quit) => return Some(Tick::Quit),
-                    Some(MenuOutput::Finalise(card)) => {
+                    Some(MenuOutput::Finalise(&card)) => {
                         let game_state = self.game_state.as_mut().unwrap();
                         let input_start_index = game_state.all_inputs.len();
                         let interactive = self.interactive.unwrap();
@@ -1323,10 +1314,15 @@ impl<F: Frontend, S: Storage> App<F, S> {
 impl AppView {
     pub fn new() -> Self {
         Self {
-            menu_and_title_view: MenuAndTitleView::new(TITLE_COLOUR),
-            flame_view: MenuAndTitleView::new(rgb24(255, 120, 0)),
-            altar_view: MenuAndTitleView::new(rgb24(0, 200, 50)),
-            fountain_view: MenuAndTitleView::new(rgb24(50, 100, 200)),
+            menu_and_title_view: MenuAndTitleView::new(TITLE_COLOUR, menu::EntryView),
+            pause_menu_and_title_view: MenuAndTitleView::new(
+                TITLE_COLOUR,
+                pause_menu::EntryView,
+            ),
+            flame_view: MenuAndTitleView::new(rgb24(255, 120, 0), DummyEntryView),
+            altar_view: MenuAndTitleView::new(rgb24(0, 200, 50), DummyEntryView),
+            fountain_view: MenuAndTitleView::new(rgb24(50, 100, 200), DummyEntryView),
+            string_view_word_wrap: StringView::new_default_style(wrap::Word::new()),
         }
     }
     pub fn set_size(&mut self, _size: Size) {}

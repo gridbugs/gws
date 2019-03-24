@@ -6,25 +6,13 @@ use rand::*;
 const NORMAL_COLOUR: Rgb24 = Rgb24::new(100, 100, 150);
 const SELECTED_COLOUR: Rgb24 = Rgb24::new(0, 120, 240);
 
-fn instantiate_menu<T: Copy>(mut menu: Menu<T>) -> MenuInstance<T> {
-    menu.normal_info = TextInfo {
-        foreground_colour: Some(NORMAL_COLOUR),
-        background_colour: None,
-        bold: false,
-        underline: false,
-    };
-    menu.selected_info = TextInfo {
-        foreground_colour: Some(SELECTED_COLOUR),
-        background_colour: None,
-        bold: true,
-        underline: false,
-    };
+fn instantiate_menu<T: Copy>(mut menu: Vec<T>) -> MenuInstance<T> {
     MenuInstance::new(menu).unwrap()
 }
 pub mod menu {
     use super::*;
 
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, Debug)]
     pub enum Choice {
         NewGame,
         Help,
@@ -32,20 +20,55 @@ pub mod menu {
         Quit,
     }
 
+    pub struct EntryView;
+
+    impl MenuEntryView<Choice> for EntryView {
+        fn normal<G: ViewGrid, R: ViewTransformRgb24>(
+            &mut self,
+            &choice: &Choice,
+            context: ViewContext<R>,
+            grid: &mut G,
+        ) -> Size {
+            let string = match choice {
+                Choice::NewGame => "  New Game",
+                Choice::Help => "  Help",
+                Choice::Story => "  Story",
+                Choice::Quit => "  Quit",
+            };
+            StringViewSingleLine::new(Style::new().with_foreground(NORMAL_COLOUR))
+                .view_reporting_intended_size(string, context, grid)
+        }
+        fn selected<G: ViewGrid, R: ViewTransformRgb24>(
+            &mut self,
+            &choice: &Choice,
+            context: ViewContext<R>,
+            grid: &mut G,
+        ) -> Size {
+            let string = match choice {
+                Choice::NewGame => "> New Game",
+                Choice::Help => "> Help",
+                Choice::Story => "> Story",
+                Choice::Quit => "> Quit",
+            };
+            StringViewSingleLine::new(Style::new().with_foreground(SELECTED_COLOUR))
+                .view_reporting_intended_size(string, context, grid)
+        }
+    }
+
     pub fn create() -> MenuInstance<Choice> {
-        instantiate_menu(Menu::smallest(vec![
-            ("New Game", Choice::NewGame),
-            ("Story", Choice::Story),
-            ("Help", Choice::Help),
-            ("Quit", Choice::Quit),
-        ]))
+        instantiate_menu(vec![
+            Choice::NewGame,
+            Choice::Story,
+            Choice::Help,
+            Choice::Quit,
+        ])
     }
 }
 
 pub mod pause_menu {
     use super::*;
 
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, Debug)]
     pub enum Choice {
         Resume,
         NewGame,
@@ -55,15 +78,54 @@ pub mod pause_menu {
         SaveAndQuit,
     }
 
+    pub struct EntryView;
+
+    impl MenuEntryView<Choice> for EntryView {
+        fn normal<G: ViewGrid, R: ViewTransformRgb24>(
+            &mut self,
+            &choice: &Choice,
+            context: ViewContext<R>,
+            grid: &mut G,
+        ) -> Size {
+            let string = match choice {
+                Choice::Resume => "  Resume",
+                Choice::NewGame => "  New Game",
+                Choice::Help => "  Help",
+                Choice::Map => "  Map",
+                Choice::Story => "  Story",
+                Choice::SaveAndQuit => "  Save and Quit",
+            };
+            StringViewSingleLine::new(Style::new().with_foreground(NORMAL_COLOUR))
+                .view_reporting_intended_size(string, context, grid)
+        }
+        fn selected<G: ViewGrid, R: ViewTransformRgb24>(
+            &mut self,
+            &choice: &Choice,
+            context: ViewContext<R>,
+            grid: &mut G,
+        ) -> Size {
+            let string = match choice {
+                Choice::Resume => "> Resume",
+                Choice::NewGame => "> New Game",
+                Choice::Help => "> Help",
+                Choice::Map => "> Map",
+                Choice::Story => "> Story",
+                Choice::SaveAndQuit => "> Save and Quit",
+            };
+            StringViewSingleLine::new(Style::new().with_foreground(SELECTED_COLOUR))
+                .view_reporting_intended_size(string, context, grid)
+        }
+    }
+
     pub fn create() -> MenuInstance<Choice> {
-        instantiate_menu(Menu::smallest(vec![
-            ("Resume", Choice::Resume),
-            ("Map", Choice::Map),
-            ("Help", Choice::Help),
-            ("New Game", Choice::NewGame),
-            ("Story", Choice::Story),
-            ("Save and Quit ", Choice::SaveAndQuit),
-        ]))
+        instantiate_menu(vec![
+            Choice::Resume,
+            Choice::Map,
+            Choice::Help,
+            Choice::NewGame,
+            Choice::Story,
+            Choice::SaveAndQuit,
+        ])
     }
 }
 pub struct MenuAndTitle<'a, T: Copy> {
@@ -77,36 +139,52 @@ impl<'a, T: Copy> MenuAndTitle<'a, T> {
     }
 }
 
-pub struct MenuAndTitleView {
-    pub title_view: RichStringView,
-    pub menu_view: DefaultMenuInstanceView,
+pub struct MenuAndTitleView<E> {
+    pub title_view: StringViewSingleLine,
+    pub menu_view: MenuInstanceView<E>,
 }
 
-impl MenuAndTitleView {
-    pub fn new(colour: Rgb24) -> Self {
+impl<E> MenuAndTitleView<E> {
+    pub fn new(colour: Rgb24, entry_view: E) -> Self {
         Self {
-            title_view: RichStringView::with_info(TextInfo {
-                bold: true,
-                underline: false,
-                foreground_colour: Some(colour),
-                background_colour: None,
-            }),
-            menu_view: DefaultMenuInstanceView::new(),
+            title_view: StringViewSingleLine::new(
+                Style::new().with_bold(true).with_foreground(colour),
+            ),
+            menu_view: MenuInstanceView::new(entry_view),
         }
     }
 }
 
-impl<'a, T: Copy> View<MenuAndTitle<'a, T>> for MenuAndTitleView {
-    fn view<G: ViewGrid>(
+pub struct DummyEntryView;
+impl<T> MenuEntryView<T> for DummyEntryView {
+    fn normal<G: ViewGrid, R: ViewTransformRgb24>(
         &mut self,
-        &MenuAndTitle { menu, title }: &MenuAndTitle<'a, T>,
-        offset: Coord,
-        depth: i32,
+        entry: &T,
+        context: ViewContext<R>,
+        grid: &mut G,
+    ) -> Size {
+        Size::new(0, 0)
+    }
+    fn selected<G: ViewGrid, R: ViewTransformRgb24>(
+        &mut self,
+        entry: &T,
+        context: ViewContext<R>,
+        grid: &mut G,
+    ) -> Size {
+        Size::new(0, 0)
+    }
+}
+
+impl<'a, T: Copy, E: MenuEntryView<T>> View<MenuAndTitle<'a, T>> for MenuAndTitleView<E> {
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
+        &mut self,
+        MenuAndTitle { menu, title }: MenuAndTitle<'a, T>,
+        context: ViewContext<R>,
         grid: &mut G,
     ) {
-        self.title_view.view(title, offset, depth, grid);
+        self.title_view.view(title, context, grid);
         self.menu_view
-            .view(menu, offset + Coord::new(0, 2), depth, grid);
+            .view(menu, context.add_offset(Coord::new(0, 2)), grid);
     }
 }
 
@@ -114,6 +192,8 @@ pub mod card_menu {
     use super::*;
 
     pub fn create(cards: &[Card], card_table: &CardTable) -> Option<MenuInstance<Card>> {
+        unimplemented!()
+        /*
         let mut cards = cards.iter().collect::<Vec<_>>();
         cards.sort();
         let menu = Menu::smallest(
@@ -126,7 +206,7 @@ pub mod card_menu {
                 })
                 .collect::<Vec<_>>(),
         );
-        MenuInstance::new(menu)
+        MenuInstance::new(menu).ok() */
     }
 }
 
@@ -151,6 +231,8 @@ pub mod altar_menu {
         card_table: &CardTable,
         _rng: &mut R,
     ) -> T {
+        unimplemented!()
+        /*
         let upgrade = game
             .to_render()
             .world
@@ -173,14 +255,34 @@ pub mod altar_menu {
                 })
                 .collect::<Vec<_>>(),
         );
-        MenuInstance::new(menu).unwrap()
+        MenuInstance::new(menu).unwrap() */
     }
 }
 
 pub mod fountain_menu {
     use super::*;
 
-    pub type T = MenuInstance<(Card, usize)>;
+    pub type Choice = (Card, usize);
+    pub struct EntryView;
+    impl MenuEntryView<Choice> for EntryView {
+        fn normal<G: ViewGrid, R: ViewTransformRgb24>(
+            &mut self,
+            &(card, count): &Choice,
+            context: ViewContext<R>,
+            grid: &mut G,
+        ) -> Size {
+            Size::new(0, 0)
+        }
+        fn selected<G: ViewGrid, R: ViewTransformRgb24>(
+            &mut self,
+            &(card, count): &Choice,
+            context: ViewContext<R>,
+            grid: &mut G,
+        ) -> Size {
+            Size::new(0, 0)
+        }
+    }
+    pub type T = MenuInstance<Choice>;
 
     pub fn create<R: Rng>(
         id: EntityId,
@@ -188,6 +290,8 @@ pub mod fountain_menu {
         card_table: &CardTable,
         _rng: &mut R,
     ) -> T {
+        unimplemented!()
+        /*
         let upgrade = game
             .to_render()
             .world
@@ -212,5 +316,6 @@ pub mod fountain_menu {
                 .collect::<Vec<_>>(),
         );
         MenuInstance::new(menu).unwrap()
+        */
     }
 }

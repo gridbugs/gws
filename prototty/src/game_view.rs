@@ -164,19 +164,19 @@ fn npc_view_cell(entity: &Entity) -> ViewCell {
 }
 
 fn light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
-    if let Some(foreground) = view_cell.foreground.as_mut() {
+    if let Some(foreground) = view_cell.style.foreground.as_mut() {
         *foreground = foreground.normalised_mul(light_colour);
     }
-    if let Some(background) = view_cell.background.as_mut() {
+    if let Some(background) = view_cell.style.background.as_mut() {
         *background = background.normalised_mul(light_colour);
     }
 }
 
 fn sub_light_view_cell(view_cell: &mut ViewCell, light_colour: Rgb24) {
-    if let Some(foreground) = view_cell.foreground.as_mut() {
+    if let Some(foreground) = view_cell.style.foreground.as_mut() {
         *foreground = foreground.saturating_sub(light_colour);
     }
-    if let Some(background) = view_cell.background.as_mut() {
+    if let Some(background) = view_cell.style.background.as_mut() {
         *background = background.saturating_sub(light_colour);
     }
 }
@@ -285,8 +285,13 @@ fn game_view_cell(to_render: &ToRender, cell: &WorldCell, coord: Coord) -> ViewC
     }
 }
 
-impl View<Gws> for GameView {
-    fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
+impl<'a> View<&'a Gws> for GameView {
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
+        &mut self,
+        game: &'a Gws,
+        context: ViewContext<R>,
+        grid: &mut G,
+    ) {
         let to_render = game.to_render();
         let visibility_state = to_render.visible_area.state();
         for ((coord, cell), visibility) in to_render
@@ -304,14 +309,19 @@ impl View<Gws> for GameView {
             }
             let mut view_cell = game_view_cell(&to_render, cell, coord);
             light_view_cell(&mut view_cell, light_colour);
-            grid.set_cell(offset + coord, depth, view_cell);
+            grid.set_cell_relative(coord, 0, view_cell, context);
         }
     }
 }
 
 pub struct DeathGameView;
-impl View<Gws> for DeathGameView {
-    fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
+impl<'a> View<&'a Gws> for DeathGameView {
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
+        &mut self,
+        game: &'a Gws,
+        context: ViewContext<R>,
+        grid: &mut G,
+    ) {
         let to_render = game.to_render();
         let visibility_state = to_render.visible_area.state();
         for ((coord, cell), visibility) in to_render
@@ -330,7 +340,7 @@ impl View<Gws> for DeathGameView {
             } else {
                 light_view_cell(&mut view_cell, rgb24(64, 0, 0));
             };
-            grid.set_cell(offset + coord, depth, view_cell);
+            grid.set_cell_relative(coord, 0, view_cell, context);
         }
     }
 }

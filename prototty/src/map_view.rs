@@ -45,8 +45,13 @@ const FOUNTAIN: ViewCell = ViewCell::new()
     .with_foreground(rgb24(50, 100, 200))
     .with_background(colours::BLACK);
 
-impl View<Gws> for MapView {
-    fn view<G: ViewGrid>(&mut self, game: &Gws, offset: Coord, depth: i32, grid: &mut G) {
+impl<'a> View<&'a Gws> for MapView {
+    fn view<G: ViewGrid, R: ViewTransformRgb24>(
+        &mut self,
+        game: &'a Gws,
+        context: ViewContext<R>,
+        grid: &mut G,
+    ) {
         let to_render = game.to_render();
         for ((coord, cell), visibility) in to_render
             .world
@@ -91,7 +96,7 @@ impl View<Gws> for MapView {
                     break;
                 }
             }
-            grid.set_cell(offset + coord, depth, view_cell);
+            grid.set_cell_relative(coord, 0, view_cell, context);
         }
     }
 }
