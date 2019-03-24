@@ -59,86 +59,78 @@ impl<'a> View<&'a UiData<'a>> for StatusView {
         let burnt_colour = rgb24(150, 100, 40);
         let draw_countdown = ui_data.game.draw_countdown();
         let mut offset = Coord::new(0, 0);
-        /*
-        StringView.view("Level:", offset, depth, grid);
-        RichStringView::with_info(
-            TextInfo::default()
-                .bold()
-                .foreground_colour(rgb24(50, 50, 200)),
+        let stat_offset = Coord::new(7, 0);
+        StringViewSingleLine::default().view("Level:", context.add_offset(offset), grid);
+        StringViewSingleLine::new(
+            Style::new()
+                .with_bold(true)
+                .with_foreground(rgb24(50, 50, 200)),
         )
         .view(
             &format!("{}/{}", ui_data.game.dungeon_level(), 6),
-            offset + Coord::new(7, 0),
-            depth,
+            context.add_offset(offset + stat_offset),
             grid,
         );
         offset += Coord::new(0, 2);
-        StringView.view("Life:", offset, depth, grid);
-        RichStringView::with_info(
-            TextInfo::default().bold().foreground_colour(health_colour),
+        StringViewSingleLine::default().view("Life:", context.add_offset(offset), grid);
+        StringViewSingleLine::new(
+            Style::new().with_bold(true).with_foreground(health_colour),
         )
         .view(
             &format!("{}/{}", player_hit_points.current, player_hit_points.max),
-            offset + Coord::new(7, 0),
-            depth,
+            context.add_offset(offset + stat_offset),
             grid,
         );
         offset += Coord::new(0, 2);
-        StringView.view("Power:", offset, depth, grid);
-        RichStringView::with_info(
-            TextInfo::default().bold().foreground_colour(time_colour),
+        StringViewSingleLine::default().view("Power:", context.add_offset(offset), grid);
+        StringViewSingleLine::new(
+            Style::new().with_bold(true).with_foreground(time_colour),
         )
         .view(
             &format!("{}/{}", draw_countdown.current, draw_countdown.max),
-            offset + Coord::new(7, 0),
-            depth,
+            context.add_offset(offset + stat_offset),
             grid,
         );
         offset += Coord::new(0, 2);
-        StringView.view("Deck:", offset, depth, grid);
-        RichStringView::with_info(
-            TextInfo::default().bold().foreground_colour(deck_colour),
+        StringViewSingleLine::default().view("Deck:", context.add_offset(offset), grid);
+        StringViewSingleLine::new(
+            Style::new().with_bold(true).with_foreground(deck_colour),
         )
         .view(
             &format!("{}", ui_data.game.deck().len()),
-            offset + Coord::new(7, 0),
-            depth,
+            context.add_offset(offset + stat_offset),
             grid,
         );
         offset += Coord::new(0, 2);
-        StringView.view("Spent:", offset, depth, grid);
-        RichStringView::with_info(
-            TextInfo::default().bold().foreground_colour(spent_colour),
+        StringViewSingleLine::default().view("Spent:", context.add_offset(offset), grid);
+        StringViewSingleLine::new(
+            Style::new().with_bold(true).with_foreground(spent_colour),
         )
         .view(
             &format!("{}", ui_data.game.spent().len()),
-            offset + Coord::new(7, 0),
-            depth,
+            context.add_offset(offset + stat_offset),
             grid,
         );
         offset += Coord::new(0, 2);
-        StringView.view("Waste:", offset, depth, grid);
-        RichStringView::with_info(
-            TextInfo::default().bold().foreground_colour(waste_colour),
+        StringViewSingleLine::default().view("Waste:", context.add_offset(offset), grid);
+        StringViewSingleLine::new(
+            Style::new().with_bold(true).with_foreground(waste_colour),
         )
         .view(
             &format!("{}", ui_data.game.waste().len()),
-            offset + Coord::new(7, 0),
-            depth,
+            context.add_offset(offset + stat_offset),
             grid,
         );
         offset += Coord::new(0, 2);
-        StringView.view("Burnt:", offset, depth, grid);
-        RichStringView::with_info(
-            TextInfo::default().bold().foreground_colour(burnt_colour),
+        StringViewSingleLine::default().view("Burnt:", context.add_offset(offset), grid);
+        StringViewSingleLine::new(
+            Style::new().with_bold(true).with_foreground(burnt_colour),
         )
         .view(
             &format!("{}", ui_data.game.burnt().len()),
-            offset + Coord::new(7, 0),
-            depth,
+            context.add_offset(offset + stat_offset),
             grid,
         );
-            */
     }
 }
 
@@ -480,7 +472,7 @@ struct LockedView;
 impl View<Size> for LockedView {
     fn view<G: ViewGrid, R: ViewTransformRgb24>(
         &mut self,
-        data: Size,
+        _data: Size,
         context: ViewContext<R>,
         grid: &mut G,
     ) {
@@ -561,19 +553,18 @@ impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
             rgb24(255, 0, 0)
         } else {
             rgb24(255, 255, 255)
-        }; /*
-           DefaultRichTextView.view(
-               &RichText::one_line(vec![
-                   ("Cost: ".to_string(), Default::default()),
-                   (
-                       format!("{}", energy_cost),
-                       TextInfo::default().foreground_colour(energy_colour).bold(),
-                   ),
-               ]),
-               offset + selected_offset + Coord::new(0, 9),
-               depth + 1,
-               grid,
-           ); */
+        };
+        RichTextViewSingleLine::new().view(
+            &[
+                &("Cost: ".to_string(), Style::new()),
+                &(
+                    format!("{}", energy_cost),
+                    Style::new().with_bold(true).with_foreground(energy_colour),
+                ),
+            ],
+            context.add_offset(selected_offset + Coord::new(0, 9)),
+            grid,
+        );
         let background = if selected {
             card_info.background.saturating_scalar_mul_div(2, 1)
         } else {
@@ -638,13 +629,11 @@ impl<'a> View<&'a UiData<'a>> for DeathView {
     ) {
         DeathGameView.view(ui_data.game, context.add_offset(GAME_OFFSET), grid);
         StatusView.view(ui_data, context.add_offset(STATUS_OFFSET), grid);
-        /*
-        StringView.view(
+        StringViewSingleLine::default().view(
             "You died. Press any key...",
-            offset + MESSAGE_OFFSET,
-            depth,
+            context.add_offset(MESSAGE_OFFSET),
             grid,
-        ); */
+        );
         CardAreaView.view(
             (
                 ui_data.game.hand(),

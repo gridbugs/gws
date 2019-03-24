@@ -178,17 +178,18 @@ fn list_cards<G, R>(
 {
     let mut cards = cards.iter().cloned().collect::<Vec<_>>();
     cards.sort();
-    //StringView.view(title, offset + Coord::new(1, 1), depth, grid);
+    StringViewSingleLine::default().view(
+        title,
+        context.add_offset(Coord::new(1, 1)),
+        grid,
+    );
     for (i, &card) in cards.iter().enumerate() {
         let info = card_table.get(card);
-        /*
-        StringView.view(
+        StringViewSingleLine::default().view(
             &format!("{}: {}", info.title, info.description),
-            offset + Coord::new(1, i as i32 + 3),
-            depth,
+            context.add_offset(Coord::new(1, i as i32 + 3)),
             grid,
         );
-        */
     }
 }
 
@@ -203,158 +204,80 @@ impl<'a, F: Frontend, S: Storage> View<&'a App<F, S>> for AppView {
     ) {
         match app.app_state {
             AppState::Story => {
-                /*
-                StringView.view(
+                StringViewSingleLine::default().view(
                     "The illness makes you strong, but you're losing control.",
-                    offset + Coord::new(1, 1),
-                    depth,
+                    context.add_offset(Coord::new(1, 1)),
                     grid,
                 );
-                StringView.view(
+                StringViewSingleLine::default().view(
                     "In the frozen wastes, you find a cave, rumoured to contain a cure.",
-                    offset + Coord::new(1, 3),
-                    depth,
+                    context.add_offset(Coord::new(1, 3)),
                     grid,
                 );
-                StringView.view(
+                StringViewSingleLine::default().view(
                     "This is your last hope.",
-                    offset + Coord::new(1, 5),
-                    depth,
+                    context.add_offset(Coord::new(1, 5)),
                     grid,
                 );
-                */
             }
             AppState::End(n) => {
-                let offset = Coord::new(1, 1);
-                let mut line = 0;
-                let end = Style::new().with_foreground(rgb24(200, 0, 255));
-                let end_bg = Style::new()
-                    .with_background(rgb24(200, 0, 255))
-                    .with_foreground(rgb24(0, 0, 0))
-                    .with_bold(true);
-
-                let player = Style::new().with_foreground(rgb24(255, 255, 255));
-                /*
+                let context = context.add_offset(Coord::new(1, 1));
+                let mut end = StringView::new(
+                    Style::new().with_foreground(rgb24(200, 0, 255)),
+                    wrap::None::new(),
+                );
+                let mut end_bg = StringView::new(
+                    Style::new()
+                        .with_background(rgb24(200, 0, 255))
+                        .with_foreground(rgb24(0, 0, 0))
+                        .with_bold(true),
+                    wrap::None::new(),
+                );
+                let mut player = StringView::new(
+                    Style::new().with_foreground(rgb24(255, 255, 255)),
+                    wrap::None::new(),
+                );
                 match n {
                     0 => {
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("Come with me.", player)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
-                        line += 2;
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("You're sick.", player)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
-                        line += 2;
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("It's not safe here.", player)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
-                        line += 2;
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![(
-                                "Let me take you to someone who can help.",
-                                player,
-                            )]),
-                            offset + Coord::new(0, line),
-                            depth,
+                        player.view(
+                            "Come with me.\n\nYou're sick.\n\nIt's not safe here.\n\nLet me take you to someone who can help.",
+                            context,
                             grid,
                         );
                     }
                     1 => {
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("I'd prefer to stay.", end)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
-                        line += 2;
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("This is my home now.", end)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
-                        line += 2;
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![(
-                                "There's nothing you can do for me.",
-                                end,
-                            )]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
+                        end.view("I'd prefer to stay.\n\nThis is my home now.\n\nThere's nothing you can do for me.",
+                                 context, grid);
                     }
                     2 => {
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("I'm sor...", player)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
+                        player.view("I'm sor...", context, grid);
                     }
                     3 => {
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("LEAVE!!!", end_bg)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
+                        end_bg.view("LEAVE!!!", context, grid);
                     }
                     4 => {
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("...", player)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
+                        player.view("...", context, grid);
                     }
                     5 => {
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("...OK I'm going now...", player)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
+                        player.view("...OK I'm going now...", context, grid);
                     }
                     6 => {
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![("Get well soon...", player)]),
-                            offset + Coord::new(0, line),
-                            depth,
-                            grid,
-                        );
-                        line = 20;
-                        DefaultRichTextView.view(
-                            &RichText::one_line(vec![(
-                                "(ENTER to ascend from the dungeon)",
-                                player,
-                            )]),
-                            offset + Coord::new(0, line),
-                            depth,
+                        player.view("Get well soon...", context, grid);
+                        player.view(
+                            "(ENTER to ascend from the dungeon)",
+                            context.add_offset(Coord::new(0, 20)),
                             grid,
                         );
                     }
                     _ => (),
                 }
                 if n < 6 {
-                    line = 20;
-                    DefaultRichTextView.view(
-                        &RichText::one_line(vec![("(ENTER to continue)", player)]),
-                        offset + Coord::new(0, line),
-                        depth,
+                    player.view(
+                        "(ENTER to continue)",
+                        context.add_offset(Coord::new(0, 20)),
                         grid,
                     );
                 }
-                */
             }
             AppState::ViewCursor => {
                 if let Some(game_state) = app.game_state.as_ref() {
