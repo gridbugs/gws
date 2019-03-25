@@ -916,7 +916,7 @@ name = "prototty"
 version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_decorator 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_decorator 0.26.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "prototty_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prototty_menu 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -926,7 +926,7 @@ dependencies = [
 
 [[package]]
 name = "prototty_decorator"
-version = "0.26.1"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1745,7 +1745,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum png 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9adebf7fb91ccf5eac9da1a8e00e83cb8ae882c3e8d8e4ad59da73cb8c82a2c9"
 "checksum proc-macro2 0.4.27 (registry+https://github.com/rust-lang/crates.io-index)" = "4d317f9caece796be1980837fd5cb3dfec5613ebdb04ad0956deea83ce168915"
 "checksum prototty 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3bc3f5446e867db6f7a7c82d3cec10effaa936093d49e30b0a0e2d5c6fa52325"
-"checksum prototty_decorator 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b9261dceca61b3dbcdc5e048fcaba402de5406c5ae8032103bd6dee03a5e93cd"
+"checksum prototty_decorator 0.26.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7f08f8f542613ea1c0355ed753656da93a497a4ae8bd6729ef09268c877d2249"
 "checksum prototty_file_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f8fe115ccf9c908769069e552d952ce5104eebd3195d6b1be687927a53700c40"
 "checksum prototty_glutin 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4f31f5649c417ca3da4c662c3cad014eb31d5e59a8ee931b6ade72f4f009ab4c"
 "checksum prototty_grid 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e75ad2f9388b01b874689543f15bd2d44d70fea896570a41c17bcc8b702f495a"

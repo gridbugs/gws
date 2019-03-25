@@ -531,12 +531,17 @@ impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
         } else {
             Coord::new(1, 1)
         };
-        StringViewSingleLine::new(Style::new().with_bold(true).with_underline(true))
-            .view(
-                &card_info.title,
-                context.add_offset(selected_offset).add_depth(1),
-                grid,
-            );
+        StringViewSingleLine::new(
+            Style::new()
+                .with_bold(true)
+                .with_underline(true)
+                .with_foreground(colours::WHITE),
+        )
+        .view(
+            &card_info.title,
+            context.add_offset(selected_offset).add_depth(1),
+            grid,
+        );
         Bounded::new(
             StringView::new_default_style(wrap::Word::new()),
             CARD_SIZE.to_size().unwrap(),
@@ -556,7 +561,10 @@ impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
         };
         RichTextViewSingleLine::new().view(
             &[
-                &("Cost: ".to_string(), Style::new()),
+                &(
+                    "Cost: ".to_string(),
+                    Style::new().with_foreground(colours::WHITE),
+                ),
                 &(
                     format!("{}", energy_cost),
                     Style::new().with_bold(true).with_foreground(energy_colour),

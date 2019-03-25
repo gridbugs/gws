@@ -364,14 +364,31 @@ impl<'a, F: Frontend, S: Storage> View<&'a App<F, S>> for AppView {
                 );
             }
             AppState::Menu => {
-                TITLE_VIEW.view(TITLE, context.add_offset(Coord::new(1, 1)), grid);
-                if app.game_state.is_some() {
-                    self.pause_menu_and_title_view.view(
-                        &app.pause_menu,
-                        context.add_offset(Coord::new(1, 3)),
+                if let Some(game_state) = app.game_state.as_ref() {
+                    UiView(GameView).view(
+                        &UiData {
+                            game: &game_state.game,
+                            message: app.message.as_ref().map(String::as_str),
+                            card_table: &app.card_table,
+                            card_selection: app.card_selection.as_ref(),
+                            view_cursor: None,
+                        },
+                        context.compose_transform_rgb24(|r: Rgb24| {
+                            r.normalised_scalar_mul(64)
+                        }),
                         grid,
                     );
+                    Bounded::new(&mut self.pause_menu_and_title_view, Size::new(16, 6))
+                        .border(Default::default())
+                        .fill_background(rgb24(0, 0, 0))
+                        .centre()
+                        .view(
+                            &app.pause_menu,
+                            context.add_offset(Coord::new(1, 3)).add_depth(1),
+                            grid,
+                        );
                 } else {
+                    TITLE_VIEW.view(TITLE, context.add_offset(Coord::new(1, 1)), grid);
                     self.menu_and_title_view.view(
                         &app.menu,
                         context.add_offset(Coord::new(1, 3)),
