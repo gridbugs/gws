@@ -560,7 +560,7 @@ version = "0.1.0"
 dependencies = [
  "gws_native 0.1.0",
  "gws_prototty 0.1.0",
- "prototty_glutin 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_glutin 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "simon 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -580,7 +580,7 @@ dependencies = [
  "direction 0.17.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "grid_2d 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gws 0.1.0",
- "prototty 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_isaac 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -592,7 +592,7 @@ version = "0.1.0"
 dependencies = [
  "gws_native 0.1.0",
  "gws_prototty 0.1.0",
- "prototty_unix 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_unix 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -600,7 +600,7 @@ name = "gws_wasm"
 version = "0.1.0"
 dependencies = [
  "gws_prototty 0.1.0",
- "prototty_wasm 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_wasm 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -913,39 +913,39 @@ dependencies = [
 
 [[package]]
 name = "prototty"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_decorator 0.26.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_menu 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_text 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_decorator 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_menu 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_text 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_decorator"
-version = "0.26.2"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_file_storage"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bincode 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_glutin"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gfx 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -953,24 +953,24 @@ dependencies = [
  "gfx_glyph 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gfx_window_glutin 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glutin 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_file_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_grid 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_file_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_grid 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_grid"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "grid_2d 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_input"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -979,27 +979,27 @@ dependencies = [
 
 [[package]]
 name = "prototty_menu"
-version = "0.26.1"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_monolithic_storage"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bincode 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_render"
-version = "0.26.1"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "coord_2d 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1009,7 +1009,7 @@ dependencies = [
 
 [[package]]
 name = "prototty_storage"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1017,61 +1017,61 @@ dependencies = [
 
 [[package]]
 name = "prototty_text"
-version = "0.26.1"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_unix"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "ansi_colour 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.50 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_file_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_grid 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_file_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_grid 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_wasm"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_wasm_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_wasm_render 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_wasm_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_wasm_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_wasm_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_wasm_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_wasm_input"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_wasm_render"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "prototty_wasm_storage"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_monolithic_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_monolithic_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1744,22 +1744,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum pkg-config 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "676e8eb2b1b4c9043511a9b7bea0915320d7e502b0a079fb03f9635a5252b18c"
 "checksum png 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9adebf7fb91ccf5eac9da1a8e00e83cb8ae882c3e8d8e4ad59da73cb8c82a2c9"
 "checksum proc-macro2 0.4.27 (registry+https://github.com/rust-lang/crates.io-index)" = "4d317f9caece796be1980837fd5cb3dfec5613ebdb04ad0956deea83ce168915"
-"checksum prototty 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3bc3f5446e867db6f7a7c82d3cec10effaa936093d49e30b0a0e2d5c6fa52325"
-"checksum prototty_decorator 0.26.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7f08f8f542613ea1c0355ed753656da93a497a4ae8bd6729ef09268c877d2249"
-"checksum prototty_file_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f8fe115ccf9c908769069e552d952ce5104eebd3195d6b1be687927a53700c40"
-"checksum prototty_glutin 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4f31f5649c417ca3da4c662c3cad014eb31d5e59a8ee931b6ade72f4f009ab4c"
-"checksum prototty_grid 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e75ad2f9388b01b874689543f15bd2d44d70fea896570a41c17bcc8b702f495a"
-"checksum prototty_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "811d8766e130a9e25caab53c33942a3594f00562d86a4f95727ea3281c890cd1"
-"checksum prototty_menu 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8c03633d96e83360ad5d259d6ea5cee0a866de27acd5161fcc3f7d328e2ea0fa"
-"checksum prototty_monolithic_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ba34415f2d35f705acd7896d3d262f2701b7e2b75c5a06eb4a3c735aa663fd52"
-"checksum prototty_render 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4af2dfc1152ab99f2219ef8d85a59a030d2b2f9c324e733aebfd5d359b3f0f20"
-"checksum prototty_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8e50bba547499986e5fa1159a592ef2eb5e9acc50449930842fbaef957f609a3"
-"checksum prototty_text 0.26.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cd56faf10b5c8e9061d4448e2cc114f5be2d0c91ba156e57b4afeed80f50d21e"
-"checksum prototty_unix 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e1cd1d4dd51d44efceb3a4233e0d088dc9a49ec365b201d4ab74e0efbdd8a02c"
-"checksum prototty_wasm 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "750d8fe5b8f28ea2e4e0ff3607e92351b502b944d5a74b45d90a297dedc626f1"
-"checksum prototty_wasm_input 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "691c1fda2f1d9f92a43f9820061e5d53d5c854c22e874ecddb62d07275f1f897"
-"checksum prototty_wasm_render 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "547758a67c3accd3e621849606ed5f9b5e23531242490bf6c5141e01ae5a2838"
-"checksum prototty_wasm_storage 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)" = "024c4dfa6d813c1d7da73d76e18566c1f7173b6867b0a213ce3d0dad8557978c"
+"checksum prototty 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "37f841d850104707834319b13a933f8d8c55819450284e4c5a7fc625f3f3471e"
+"checksum prototty_decorator 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9cd47f55a57596ea9a91079c497fc0e1b6c42461eab3a8cab86a3be1934b6bbe"
+"checksum prototty_file_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6b03e0cc8a256ea3b3090ce594a7e53c205b3e1726310f349ade4a729b3dc4f2"
+"checksum prototty_glutin 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "432430e5c10c9c96bfef4893c6a1cea68f47d1582df88b86aecd20dbb9718da9"
+"checksum prototty_grid 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "af4211360394aa0c51fc73d8124e927b3a3c466e6a026b77be60704d4f3d34b4"
+"checksum prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "066f363cea9f2eb23d8f96756a71044872dab1b9aa1267f9a9be372c21abc329"
+"checksum prototty_menu 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c009c89917f30347e649f095ae232a19859b5d40d5a2b7211bc691a8ffc9cb3b"
+"checksum prototty_monolithic_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "eae345aaaf2a478b6b0fc6e255af3244eee843bfd0367a7702024e1239555f65"
+"checksum prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2e4aae6fe7dad74181aefbc60107bd5f203224fb65998f3282f11e779311cae9"
+"checksum prototty_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "95b48b87ee8de903cdff84abfd7eccdfc7ae154af04fd2715b43226009f656f4"
+"checksum prototty_text 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7c427832c69f56c0b5d296c26cc0178323a481cae7659c87b40205d011b11a62"
+"checksum prototty_unix 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cdd81644bb8f9558eb4b27ae9a0cd9ea16e7804b364f3489082724710aa36497"
+"checksum prototty_wasm 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b821dc440c9c1feedf03e12f3b324d728b85dabd3e8eb2df904d2188d9a79404"
+"checksum prototty_wasm_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5c3fcecd75737bdfa8c2ef2b894c308b93c541e6ab6d979f837464480ea4fd72"
+"checksum prototty_wasm_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "61b71ae5522e35ebdf79b4db15fbde97327336420ecd4254fe19f7dd2cb5f8dd"
+"checksum prototty_wasm_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "41cbc638b25dda9f64c89ec711000e688a376e7dd38ebd84f1c7af8ccde9bddd"
 "checksum quote 0.6.11 (registry+https://github.com/rust-lang/crates.io-index)" = "cdd8e04bd9c52e0342b406469d494fcb033be4bdbe5c606016defbb1681411e1"
 "checksum rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)" = "6d71dacdc3c88c1fde3885a3be3fbab9f35724e6ce99467f7d9c5026132184ca"
 "checksum rand_chacha 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "556d3a1ca6600bfcbab7c7c91ccb085ac7fbbcd70e008a98742e7847f4f7bcef"

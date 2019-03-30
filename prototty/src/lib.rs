@@ -378,15 +378,26 @@ impl<'a, F: Frontend, S: Storage> View<&'a App<F, S>> for AppView {
                         }),
                         grid,
                     );
-                    Bounded::new(&mut self.pause_menu_and_title_view, Size::new(16, 6))
-                        .border(Default::default())
-                        .fill_background(rgb24(0, 0, 0))
-                        .centre()
-                        .view(
-                            &app.pause_menu,
-                            context.add_offset(Coord::new(1, 3)).add_depth(1),
-                            grid,
-                        );
+                    AlignView::new(FillBackgroundView::new(BorderView::new(
+                        BoundView::new(&mut self.pause_menu_and_title_view),
+                    )))
+                    .view(
+                        AlignData {
+                            alignment: Alignment::centre(),
+                            data: FillBackgroundData {
+                                background: rgb24(0, 0, 0),
+                                data: BorderData {
+                                    style: &Default::default(),
+                                    data: BoundData {
+                                        size: Size::new(16, 6),
+                                        data: &app.pause_menu,
+                                    },
+                                },
+                            },
+                        },
+                        context.add_offset(Coord::new(1, 3)).add_depth(1),
+                        grid,
+                    );
                 } else {
                     TITLE_VIEW.view(TITLE, context.add_offset(Coord::new(1, 1)), grid);
                     self.menu_and_title_view.view(

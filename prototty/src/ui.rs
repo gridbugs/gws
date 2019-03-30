@@ -496,12 +496,15 @@ fn locked_card_view<G: ViewGrid, R: ViewTransformRgb24>(
     context: ViewContext<R>,
     grid: &mut G,
 ) {
-    let border = Border {
+    let border_style = BorderStyle {
         foreground: grey24(128),
         ..Default::default()
     };
-    Bordered::new(LockedView, border).view(
-        (CARD_SIZE - Coord::new(1, 1)).to_size().unwrap(),
+    BorderView::new(LockedView).view(
+        BorderData {
+            data: (CARD_SIZE - Coord::new(1, 1)).to_size().unwrap(),
+            style: &border_style,
+        },
         context,
         grid,
     );
@@ -542,12 +545,11 @@ impl<'a> View<(&'a CardInfo, bool, DrawCountdown)> for CardView {
             context.add_offset(selected_offset).add_depth(1),
             grid,
         );
-        Bounded::new(
-            StringView::new_default_style(wrap::Word::new()),
-            CARD_SIZE.to_size().unwrap(),
-        )
-        .view(
-            &card_info.description,
+        BoundView::new(StringView::new_default_style(wrap::Word::new())).view(
+            BoundData {
+                data: &card_info.description,
+                size: CARD_SIZE.to_size().unwrap(),
+            },
             context
                 .add_offset(selected_offset + Coord::new(0, 2))
                 .add_depth(1),
