@@ -880,7 +880,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                     None
                                 }
                                 prototty_inputs::ETX => return Some(Tick::Quit),
-                                ProtottyInput::Char(card_num @ '1'...'8') => {
+                                ProtottyInput::Char(card_num @ '1'..='8') => {
                                     let (message, card_selection) =
                                         Self::select_card(game_state, card_num);
                                     self.message = message;
@@ -1023,7 +1023,7 @@ impl<F: Frontend, S: Storage> App<F, S> {
                                         Some(game_state.game.to_render().player.coord());
                                     self.app_state = AppState::ViewCursor;
                                 }
-                                ProtottyInput::Char(card_num @ '1'...'8') => {
+                                ProtottyInput::Char(card_num @ '1'..='8') => {
                                     let (message, card_selection) =
                                         Self::select_card(game_state, card_num);
                                     self.message = message;

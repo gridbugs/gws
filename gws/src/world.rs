@@ -787,7 +787,8 @@ impl World {
         direction: CardinalDirection,
     ) -> Result<ApplyAction, CancelAction> {
         if let Some(entity) = self.entities.get(&id) {
-            let id = self.add_entity(entity.coord(), PackedEntity::spark());
+            let coord = entity.coord();
+            let id = self.add_entity(coord, PackedEntity::spark());
             Ok(ApplyAction::Animation(Animation::spark(id, direction)))
         } else {
             Err(CancelAction::NoEntity)
@@ -1026,7 +1027,8 @@ impl World {
                             cell.entity_iter(&self.entities).find(|e| e.pickup)
                         {
                             if self.entities.get(&id).unwrap().player {
-                                self.process_pickup(id, pickup.id);
+                                let pickup_id = pickup.id;
+                                self.process_pickup(id, pickup_id);
                             }
                         }
                     }
