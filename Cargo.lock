@@ -984,7 +984,7 @@ dependencies = [
 [[package]]
 name = "prototty"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "prototty_decorator 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "prototty_input 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
@@ -997,7 +997,7 @@ dependencies = [
 [[package]]
 name = "prototty_decorator"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1006,7 +1006,7 @@ dependencies = [
 [[package]]
 name = "prototty_file_storage"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "bincode 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prototty_storage 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
@@ -1026,7 +1026,7 @@ dependencies = [
 [[package]]
 name = "prototty_glutin"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "gfx 0.18.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "gfx_device_gl 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1042,7 +1042,7 @@ dependencies = [
 [[package]]
 name = "prototty_grid"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "grid_2d 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
@@ -1060,7 +1060,7 @@ dependencies = [
 [[package]]
 name = "prototty_input"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "coord_2d 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1077,7 +1077,7 @@ dependencies = [
 [[package]]
 name = "prototty_menu"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "prototty_input 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
@@ -1097,7 +1097,7 @@ dependencies = [
 [[package]]
 name = "prototty_render"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "coord_2d 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb24 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1116,7 +1116,7 @@ dependencies = [
 [[package]]
 name = "prototty_storage"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1132,7 +1132,7 @@ dependencies = [
 [[package]]
 name = "prototty_text"
 version = "0.27.0"
-source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#e7c2df5bf37742423d0ddba4ac036c134c43136a"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#ffb3f422bea652614789016de6a3a9d83118f79a"
 dependencies = [
  "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
