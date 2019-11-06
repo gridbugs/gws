@@ -9,35 +9,20 @@ use prototty_glutin::*;
 use simon::*;
 use std::time::Instant;
 
-#[derive(Clone, Copy)]
-enum FontSize {
-    Specified(u32),
-    Auto,
-}
-
-impl FontSize {
-    fn arg() -> ArgExt<impl Arg<Item = Self>> {
-        opt("s", "font-size", "font size in pixels", "INT")
-            .option_map(FontSize::Specified)
-            .either(
-                flag("a", "font-auto", "choose font size automatically")
-                    .some_if(FontSize::Auto),
-            )
-            .with_default(FontSize::Auto)
-    }
-}
-
 struct Args {
     common: CommonArgs,
-    font_size: FontSize,
+    font_size: u32,
 }
+
+const DEFAULT_FONT_SIZE: u32 = 10;
 
 impl Args {
     fn arg() -> ArgExt<impl Arg<Item = Self>> {
         args_map! {
             let {
                 common = CommonArgs::arg();
-                font_size = FontSize::arg();
+                font_size = opt("s", "font-size", "font size in pixels", "INT")
+                    .with_default(DEFAULT_FONT_SIZE);
             } in {
                 Self { common, font_size }
             }
@@ -45,21 +30,10 @@ impl Args {
     }
 }
 
-const MONITOR_SIZE_WINDOW_RATIO: f64 = 0.8;
-
 fn main() {
     let args = Args::arg().with_help_default().parse_env_default_or_exit();
     let grid_size = gws_prototty::APP_SIZE;
-    let font_size = match args.font_size {
-        FontSize::Specified(font_size) => font_size,
-        FontSize::Auto => {
-            let monitor_info = MonitorInfo::get_current();
-            let font_size = (monitor_info.logical_width() / grid_size.width() as f64)
-                .min(monitor_info.logical_height() / grid_size.height() as f64)
-                * MONITOR_SIZE_WINDOW_RATIO;
-            font_size as u32
-        }
-    };
+    let font_size = args.font_size;
     let size = grid_size * font_size;
     let mut context =
         ContextBuilder::new_with_font(include_bytes!("fonts/PxPlus_IBM_CGAthin.ttf"))
