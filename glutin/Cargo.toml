@@ -5,7 +5,7 @@ authors = ["Stephen Sherratt <sfsherratt@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-prototty_glutin = { version = "0.27", features = ["storage"] }
+prototty_glutin = { git = "https://github.com/stevebob/prototty", branch = "0.27-fix-windows-graphics-error", features = ["storage"] }
 gws_prototty = { path = "../prototty" }
 gws_native = { path = "../native" }
 simon = "0.2"

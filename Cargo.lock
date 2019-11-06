@@ -602,7 +602,7 @@ version = "0.1.0"
 dependencies = [
  "gws_native 0.1.0",
  "gws_prototty 0.1.0",
- "prototty_glutin 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_glutin 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "simon 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -622,7 +622,7 @@ dependencies = [
  "direction 0.17.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "grid_2d 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "gws 0.1.0",
- "prototty 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_isaac 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -973,22 +973,32 @@ dependencies = [
 [[package]]
 name = "prototty"
 version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
 dependencies = [
- "prototty_decorator 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_menu 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_text 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_decorator 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_input 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_menu 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_storage 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_text 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
 ]
 
 [[package]]
 name = "prototty_decorator"
 version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
 dependencies = [
- "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "prototty_file_storage"
+version = "0.27.0"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
+dependencies = [
+ "bincode 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_storage 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1005,17 +1015,26 @@ dependencies = [
 [[package]]
 name = "prototty_glutin"
 version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
 dependencies = [
  "gfx 0.18.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "gfx_device_gl 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "gfx_glyph 0.14.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gfx_window_glutin 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glutin 0.20.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_file_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_grid 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_file_storage 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_grid 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_input 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+]
+
+[[package]]
+name = "prototty_grid"
+version = "0.27.0"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
+dependencies = [
+ "grid_2d 0.12.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
 ]
 
 [[package]]
@@ -1030,19 +1049,27 @@ dependencies = [
 [[package]]
 name = "prototty_input"
 version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
 dependencies = [
  "coord_2d 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
-name = "prototty_menu"
+name = "prototty_input"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coord_2d 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "prototty_menu"
+version = "0.27.0"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
+dependencies = [
+ "prototty_input 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
+ "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1059,10 +1086,27 @@ dependencies = [
 [[package]]
 name = "prototty_render"
 version = "0.27.0"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
+dependencies = [
+ "coord_2d 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rgb24 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "prototty_render"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "coord_2d 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb24 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "prototty_storage"
+version = "0.27.0"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
+dependencies = [
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1077,9 +1121,9 @@ dependencies = [
 [[package]]
 name = "prototty_text"
 version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error#d9b22f331946321ab22ef9130d3c087349a16901"
 dependencies = [
- "prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1922,17 +1966,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum ppv-lite86 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "74490b50b9fbe561ac330df47c08f3f33073d2d00c150f719147d7c54522fa1b"
 "checksum proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)" = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
 "checksum proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "9c9e470a8dc4aeae2dee2f335e8f533e2d4b347e1434e5671afc49b054592f27"
-"checksum prototty 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "37f841d850104707834319b13a933f8d8c55819450284e4c5a7fc625f3f3471e"
-"checksum prototty_decorator 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9cd47f55a57596ea9a91079c497fc0e1b6c42461eab3a8cab86a3be1934b6bbe"
+"checksum prototty 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
+"checksum prototty_decorator 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
+"checksum prototty_file_storage 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
 "checksum prototty_file_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6b03e0cc8a256ea3b3090ce594a7e53c205b3e1726310f349ade4a729b3dc4f2"
-"checksum prototty_glutin 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "432430e5c10c9c96bfef4893c6a1cea68f47d1582df88b86aecd20dbb9718da9"
+"checksum prototty_glutin 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
+"checksum prototty_grid 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
 "checksum prototty_grid 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "af4211360394aa0c51fc73d8124e927b3a3c466e6a026b77be60704d4f3d34b4"
+"checksum prototty_input 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
 "checksum prototty_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "066f363cea9f2eb23d8f96756a71044872dab1b9aa1267f9a9be372c21abc329"
-"checksum prototty_menu 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c009c89917f30347e649f095ae232a19859b5d40d5a2b7211bc691a8ffc9cb3b"
+"checksum prototty_menu 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
 "checksum prototty_monolithic_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "eae345aaaf2a478b6b0fc6e255af3244eee843bfd0367a7702024e1239555f65"
+"checksum prototty_render 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
 "checksum prototty_render 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2e4aae6fe7dad74181aefbc60107bd5f203224fb65998f3282f11e779311cae9"
+"checksum prototty_storage 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
 "checksum prototty_storage 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "95b48b87ee8de903cdff84abfd7eccdfc7ae154af04fd2715b43226009f656f4"
-"checksum prototty_text 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7c427832c69f56c0b5d296c26cc0178323a481cae7659c87b40205d011b11a62"
+"checksum prototty_text 0.27.0 (git+https://github.com/stevebob/prototty?branch=0.27-fix-windows-graphics-error)" = "<none>"
 "checksum prototty_unix 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cdd81644bb8f9558eb4b27ae9a0cd9ea16e7804b364f3489082724710aa36497"
 "checksum prototty_wasm 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b821dc440c9c1feedf03e12f3b324d728b85dabd3e8eb2df904d2188d9a79404"
 "checksum prototty_wasm_input 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5c3fcecd75737bdfa8c2ef2b894c308b93c541e6ab6d979f837464480ea4fd72"
