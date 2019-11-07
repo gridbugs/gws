@@ -6,7 +6,7 @@ environment:
   - TARGET: x86_64-pc-windows-msvc
     IN_NAME: gws_glutin
     OUT_NAME: get-well-soon
-    BIN_PATH: target\release
+    BIN_PATH: target\debug
     BIN_NAME: get-well-soon-windows-x86_64
 install:
 - cmd: >-
@@ -23,7 +23,7 @@ install:
 build_script:
 - cmd: >-
 
-    cargo rustc --manifest-path=glutin/Cargo.toml --release -- -Clink-args="/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup" -Ctarget-feature=+crt-static -Zunstable-options
+    cargo rustc --manifest-path=glutin/Cargo.toml -- -Clink-args="/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup" -Ctarget-feature=+crt-static -Zunstable-options
 
     set FULL_NAME=%BIN_NAME%-%APPVEYOR_REPO_BRANCH%
 
