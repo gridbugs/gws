@@ -31,6 +31,7 @@ impl Args {
 }
 
 fn main() {
+    simple_logger::init().unwrap();
     let args = Args::arg().with_help_default().parse_env_default_or_exit();
     let grid_size = gws_prototty::APP_SIZE;
     let font_size = args.font_size;

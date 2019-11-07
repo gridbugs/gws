@@ -9,3 +9,4 @@ prototty_glutin = { git = "https://github.com/stevebob/prototty", branch = "0.27
 gws_prototty = { path = "../prototty" }
 gws_native = { path = "../native" }
 simon = "0.2"
+simple_logger = "1.3"
